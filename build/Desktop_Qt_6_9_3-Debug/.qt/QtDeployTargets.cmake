@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_logistic_appro_FILE /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro)
+set(__QT_DEPLOY_TARGET_logistic_appro_TYPE EXECUTABLE)
