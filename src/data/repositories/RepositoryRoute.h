@@ -2,7 +2,7 @@
 #define REPOSITORYROUTE_H
 
 #include "IRepository.h"
-#include "../entities/Route.h"
+#include "../../core/entities/Route.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

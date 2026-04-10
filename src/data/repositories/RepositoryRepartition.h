@@ -2,7 +2,7 @@
 #define REPOSITORYREPARTITION_H
 
 #include "IRepository.h"
-#include "../entities/Repartition.h"
+#include "../../core/entities/Repartition.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

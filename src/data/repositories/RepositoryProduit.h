@@ -2,7 +2,7 @@
 #define REPOSITORYPRODUIT_H
 
 #include "IRepository.h"
-#include "../entities/Produit.h"
+#include "../../core/entities/Produit.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

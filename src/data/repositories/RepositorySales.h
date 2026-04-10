@@ -2,7 +2,7 @@
 #define REPOSITORYSALES_H
 
 #include "IRepository.h"
-#include "../entities/Vente.h"
+#include "../../core/entities/Vente.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

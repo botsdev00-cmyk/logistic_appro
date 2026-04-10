@@ -4,6 +4,7 @@
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../core/entities/EntreeStock.h"
 #include "../../core/entities/Produit.h"
+#include "../../core/entities/Utilisateur.h"
 #include <QDebug>
 
 GestionnaireStock::GestionnaireStock()

@@ -2,7 +2,7 @@
 #define REPOSITORYRECEPTIONCAISSE_H
 
 #include "IRepository.h"
-#include "../entities/ReceptionCaisse.h"
+#include "../../core/entities/ReceptionCaisse.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

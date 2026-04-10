@@ -2,7 +2,7 @@
 #define REPOSITORYCLIENT_H
 
 #include "IRepository.h"
-#include "../entities/Client.h"
+#include "../../core/entities/Client.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

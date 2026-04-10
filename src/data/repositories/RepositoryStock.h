@@ -2,7 +2,7 @@
 #define REPOSITORYSTOCK_H
 
 #include "IRepository.h"
-#include "../entities/EntreeStock.h"
+#include "../../core/entities/EntreeStock.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

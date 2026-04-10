@@ -2,7 +2,7 @@
 #define REPOSITORYUTILISATEUR_H
 
 #include "IRepository.h"
-#include "../entities/Utilisateur.h"
+#include "../../core/entities/Utilisateur.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

@@ -2,7 +2,7 @@
 #define REPOSITORYCREDIT_H
 
 #include "IRepository.h"
-#include "../entities/Credit.h"
+#include "../../core/entities/Credit.h"
 #include <QList>
 #include <QString>
 #include <QUuid>

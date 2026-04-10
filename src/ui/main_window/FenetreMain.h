@@ -41,7 +41,7 @@ private slots:
 
 private:
     void creerMenus();
-    void creerBarre Outils();
+    void creerBarreOutils();
     void creerVues();
     void initialiserConnexions();
     void configurerInterface();

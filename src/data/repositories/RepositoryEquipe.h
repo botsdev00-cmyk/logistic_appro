@@ -2,7 +2,7 @@
 #define REPOSITORYEQUIPE_H
 
 #include "IRepository.h"
-#include "../entities/Equipe.h"
+#include "../../core/entities/Equipe.h"
 #include <QList>
 #include <QString>
 #include <QUuid>
