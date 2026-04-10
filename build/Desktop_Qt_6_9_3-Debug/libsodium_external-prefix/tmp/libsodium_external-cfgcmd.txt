@@ -1,0 +1,1 @@
+cmd='/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_external/configure;--prefix=/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install;--enable-static;--disable-shared;--with-pic'

@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project-complete.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-build.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-configure.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-download.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-install.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-mkdir.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-patch.rule"
+		},
+		{
+			"file" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"libsodium_project"
+		],
+		"name" : "libsodium_project"
+	}
+}

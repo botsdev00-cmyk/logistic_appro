@@ -2,13 +2,24 @@
 #include "../exceptions/ValidationException.h"
 #include "../../data/repositories/RepositoryUtilisateur.h"
 #include "../../core/entities/Utilisateur.h"
-#include <QCryptographicHash>
+#include <sodium.h>
 #include <QDebug>
 #include <memory>
+#include <cstring>
 
 ServiceAuthentification::ServiceAuthentification()
     : m_currentUserId(QUuid())
 {
+    // Initialiser libsodium (thread-safe)
+    static bool sodium_initialized = false;
+    if (!sodium_initialized) {
+        if (sodium_init() < 0) {
+            qWarning() << "[ERREUR] Impossible d'initialiser libsodium";
+        } else {
+            qDebug() << "[OK] libsodium initialisé avec succès";
+            sodium_initialized = true;
+        }
+    }
 }
 
 bool ServiceAuthentification::authenticate(const QString& username, const QString& password)
@@ -60,17 +71,48 @@ bool ServiceAuthentification::logout()
 
 QString ServiceAuthentification::hashPassword(const QString& plainPassword)
 {
-    QByteArray hash = QCryptographicHash::hash(
-        plainPassword.toUtf8(),
-        QCryptographicHash::Sha256
-    );
-    return QString(hash.toHex());
+    // Convertir QString en std::string pour libsodium
+    std::string password = plainPassword.toStdString();
+    
+    // Buffer pour le hash (crypto_pwhash_STRBYTES = 128 bytes)
+    char hashed[crypto_pwhash_STRBYTES];
+    memset(hashed, 0, crypto_pwhash_STRBYTES);
+    
+    // Hachage Argon2i avec libsodium
+    // Paramètres : MODERATE pour équilibrer sécurité et performance
+    // crypto_pwhash utilise crypto_pwhash_str_verify en interne
+    if (crypto_pwhash_str(
+        hashed,
+        password.c_str(),
+        password.length(),
+        crypto_pwhash_OPSLIMIT_MODERATE,
+        crypto_pwhash_MEMLIMIT_MODERATE) != 0) {
+        
+        qWarning() << "[ERREUR] Échec du hachage du mot de passe";
+        return QString();
+    }
+    
+    // Convertir le hash en QString
+    return QString::fromLatin1(hashed);
 }
 
 bool ServiceAuthentification::verifyPassword(const QString& plainPassword, const QString& hash)
 {
-    QString computedHash = hashPassword(plainPassword);
-    return computedHash == hash;
+    if (plainPassword.isEmpty() || hash.isEmpty()) {
+        return false;
+    }
+    
+    std::string password = plainPassword.toStdString();
+    std::string hashedPassword = hash.toStdString();
+    
+    // Vérification du mot de passe avec Argon2
+    // crypto_pwhash_str_verify est thread-safe et protégé contre les timing attacks
+    int result = crypto_pwhash_str_verify(
+        hashedPassword.c_str(),
+        password.c_str(),
+        password.length());
+    
+    return result == 0;  // 0 = correspondance, -1 = ne correspond pas
 }
 
 bool ServiceAuthentification::hasRole(const QString& requiredRole) const

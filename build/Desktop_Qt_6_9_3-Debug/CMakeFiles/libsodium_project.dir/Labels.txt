@@ -1,0 +1,13 @@
+# Target labels
+ libsodium_project
+# Source files and their labels
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_project-complete.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-build.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-configure.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-download.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-install.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-mkdir.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-patch.rule
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_project-stamp/libsodium_project-update.rule

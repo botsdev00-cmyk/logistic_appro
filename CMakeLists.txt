@@ -1,16 +1,12 @@
 # ============================================================================
-# SEMULIKI ERP - Configuration CMake
-# Projet: logistic_appro
-# Langage: C++17
-# Framework: Qt6 Widgets, PostgreSQL
-# Base de données: PostgreSQL 12+
+# SEMULIKI ERP - Configuration CMake avec libsodium auto-téléchargé
 # ============================================================================
 
 cmake_minimum_required(VERSION 3.21)
 project(logistic_appro
     VERSION 1.0.0
     DESCRIPTION "SEMULIKI ERP - Système de Gestion de Logistique et Répartition"
-    LANGUAGES CXX
+    LANGUAGES CXX C
 )
 
 # ============================================================================
@@ -40,14 +36,7 @@ endif()
 # ============================================================================
 
 find_package(Qt6 COMPONENTS
-    Core
-    Gui
-    Widgets
-    Sql
-    PrintSupport
-    Concurrent
-    Pdf
-    Network
+    Core Gui Widgets Sql PrintSupport Concurrent Pdf Network
     REQUIRED
 )
 
@@ -61,6 +50,50 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(DATABASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/database)
 set(RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+# ============================================================================
+# LIBSODIUM - AUTO-DOWNLOAD & BUILD
+# ============================================================================
+
+include(ExternalProject)
+
+set(LIBSODIUM_VERSION "1.0.18")
+set(LIBSODIUM_BUILD_DIR ${CMAKE_BINARY_DIR}/libsodium-build)
+set(LIBSODIUM_INSTALL_DIR ${CMAKE_BINARY_DIR}/libsodium-install)
+set(LIBSODIUM_SRC_DIR ${LIBSODIUM_BUILD_DIR}/src/libsodium_external)
+
+if(WIN32)
+    set(LIBSODIUM_LIB_NAME libsodium.lib)
+    set(LIBSODIUM_LIB_PATH ${LIBSODIUM_INSTALL_DIR}/lib/${LIBSODIUM_LIB_NAME})
+else()
+    set(LIBSODIUM_LIB_NAME libsodium.a)
+    set(LIBSODIUM_LIB_PATH ${LIBSODIUM_INSTALL_DIR}/lib/${LIBSODIUM_LIB_NAME})
+endif()
+
+ExternalProject_Add(libsodium_external
+    URL "https://github.com/jedisct1/libsodium/releases/download/${LIBSODIUM_VERSION}-RELEASE/libsodium-${LIBSODIUM_VERSION}.tar.gz"
+    URL_HASH SHA256=06b3b52b8b714f074d44c6647be3814a230ee208b02327145257e2f258e080a6
+    SOURCE_DIR ${LIBSODIUM_SRC_DIR}
+    BINARY_DIR ${LIBSODIUM_BUILD_DIR}/build
+    INSTALL_DIR ${LIBSODIUM_INSTALL_DIR}
+    CONFIGURE_COMMAND ${LIBSODIUM_SRC_DIR}/configure 
+        --prefix=${LIBSODIUM_INSTALL_DIR}
+        --enable-static
+        --disable-shared
+        --with-pic
+    BUILD_COMMAND make -j4
+    INSTALL_COMMAND make install
+    LOG_DOWNLOAD ON
+    LOG_CONFIGURE ON
+    LOG_BUILD ON
+    LOG_INSTALL ON
+)
+
+set(LIBSODIUM_INCLUDE_DIR ${LIBSODIUM_INSTALL_DIR}/include)
+set(LIBSODIUM_LIBRARY ${LIBSODIUM_LIB_PATH})
+
+message(STATUS "✓ libsodium will be downloaded and built to: ${LIBSODIUM_INSTALL_DIR}")
+message(STATUS "✓ libsodium library: ${LIBSODIUM_LIBRARY}")
 
 # ============================================================================
 # SOURCE FILES - CORE ENTITIES
@@ -236,6 +269,9 @@ add_executable(${PROJECT_NAME}
     ${ALL_SOURCES}
 )
 
+# Dépendance: attendre que libsodium soit compilé avant de compiler l'app
+add_dependencies(${PROJECT_NAME} libsodium_external)
+
 # ============================================================================
 # INCLUDE DIRECTORIES
 # ============================================================================
@@ -244,7 +280,29 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${INCLUDE_DIR}
     ${SRC_DIR}
     ${PostgreSQL_INCLUDE_DIRS}
+    ${LIBSODIUM_INCLUDE_DIR}
 )
+
+# ============================================================================
+# COMPILE DEFINITIONS
+# ============================================================================
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    SODIUM_STATIC=1
+)
+
+# ============================================================================
+# COMPILER FLAGS
+# ============================================================================
+
+if(NOT MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -Wno-unused-function
+        -Wno-conversion
+        -Wno-sign-compare
+        -Wno-unused-parameter
+    )
+endif()
 
 # ============================================================================
 # LINK LIBRARIES
@@ -260,18 +318,34 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Pdf
     Qt6::Network
     ${PostgreSQL_LIBRARIES}
+    ${LIBSODIUM_LIBRARY}
 )
+
+# Windows specific
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ws2_32
+        crypt32
+    )
+elseif(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        pthread
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        pthread
+    )
+endif()
 
 # ============================================================================
 # COPY DATABASE SCHEMA & CONFIG FILES
 # ============================================================================
 
-# Copier le schéma de base de données
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts/structure.sql    
     ${CMAKE_BINARY_DIR}/structure.sql
-    COMMENT "Copie du schéma de base de données"
+    COMMENT "Copying database schema"
 )
 
 # ============================================================================
@@ -297,19 +371,6 @@ else()
 endif()
 
 # ============================================================================
-# TESTING - OPTIONAL
-# ============================================================================
-
-# Décommenter pour activer les tests (nécessite GoogleTest)
-# find_package(GTest CONFIG QUIET)
-# if(GTest_FOUND)
-#     enable_testing()
-#     add_subdirectory(tests)
-# else()
-#     message(STATUS "GoogleTest not found. Tests will be skipped.")
-# endif()
-
-# ============================================================================
 # SUMMARY MESSAGE
 # ============================================================================
 
@@ -322,6 +383,17 @@ message(STATUS "║ Version: ${PROJECT_VERSION}")
 message(STATUS "║ C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "║ Qt Version: ${Qt6_VERSION}")
 message(STATUS "║ PostgreSQL: FOUND")
+message(STATUS "║ libsodium: Auto-Downloaded v${LIBSODIUM_VERSION}")
+message(STATUS "║ libsodium Build Dir: ${LIBSODIUM_BUILD_DIR}")
+message(STATUS "║ libsodium Install: ${LIBSODIUM_INSTALL_DIR}")
+message(STATUS "║ Password Hashing: Argon2")
 message(STATUS "║ Build Type: ${CMAKE_BUILD_TYPE}")
+if(WIN32)
+    message(STATUS "║ Platform: Windows")
+elseif(APPLE)
+    message(STATUS "║ Platform: macOS")
+else()
+    message(STATUS "║ Platform: Linux")
+endif()
 message(STATUS "╚════════════════════════════════════════════════════════════╝")
 message(STATUS "")

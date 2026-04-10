@@ -1,0 +1,88 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-e34503712978da90c1ed.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "logistic_appro",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "libsodium_external::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-libsodium_external-Debug-0c2470f3b705d86ceb55.json",
+					"name" : "libsodium_external",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "logistic_appro::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-logistic_appro-Debug-31d38f81d76eefe3cadf.json",
+					"name" : "logistic_appro",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "logistic_appro_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-logistic_appro_autogen-Debug-d01b2373274f418912bd.json",
+					"name" : "logistic_appro_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "logistic_appro_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-logistic_appro_autogen_timestamp_deps-Debug-23a6c6fa133fea9b5c2f.json",
+					"name" : "logistic_appro_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug",
+		"source" : "/home/bots/semuliki_logistic"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}
