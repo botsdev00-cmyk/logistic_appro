@@ -4,8 +4,7 @@
 #include <QString>
 #include <QUuid>
 #include <memory>
-
-class Utilisateur;
+#include "../../core/entities/Utilisateur.h"
 
 class ServiceAuthentification
 {

@@ -18,6 +18,7 @@
 #include <QStatusBar>
 #include <QStyle>
 #include <QDebug>
+#include <QCloseEvent>
 
 FenetreMain::FenetreMain(QWidget* parent)
     : QMainWindow(parent),
@@ -72,7 +73,7 @@ void FenetreMain::creerMenus()
     // Menu Fichier
     QMenu* menuFichier = menuBar()->addMenu("&Fichier");
     m_actionDeconnecter = menuFichier->addAction("&Déconnecter");
-    m_actionDeconnecter->setShortcut(Qt::CTRL + Qt::Key_L);
+    m_actionDeconnecter->setShortcut(Qt::CTRL | Qt::Key_L);
     m_actionQuitter = menuFichier->addAction("&Quitter");
     m_actionQuitter->setShortcut(Qt::CTRL + Qt::Key_Q);
     

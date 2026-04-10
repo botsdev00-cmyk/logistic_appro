@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <climits>
 
 /**
  * @class ValidateurEntrees

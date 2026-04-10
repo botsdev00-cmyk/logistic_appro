@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
     // Configuration de l'application
     app.setApplicationName("SEMULIKI ERP");
     app.setApplicationVersion("1.0.0");
-    app.setApplicationAuthor("SEMULIKI Inc");
     app.setOrganizationName("SEMULIKI");
     
     // Style par défaut
@@ -46,9 +45,9 @@ int main(int argc, char* argv[])
     try {
         // 1. Initialiser la connexion à la base de données
         qDebug() << "\n[INFO] Connexion à la base de données...";
-        ConnexionBaseDonnees db;
         
-        if (!db.connecter()) {
+        auto& db = ConnexionBaseDonnees::getInstance();
+        if (!db.initialiser("localhost", "5432", "semuliki", "postgres", "postgresql")) {
             qCritical() << "[ERREUR] Impossible de se connecter à la base de données";
             QMessageBox::critical(nullptr, "Erreur base de données",
                 "Impossible de se connecter à la base de données.\n"

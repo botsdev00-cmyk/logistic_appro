@@ -22,11 +22,12 @@ public:
     QString getDernierErreur() const { return m_dernierErreur; }
 
     bool executerMigration(const QString& cheminSQL);
+    ~ConnexionBaseDonnees();
+
 
 private:
     ConnexionBaseDonnees();
-    ~ConnexionBaseDonnees();
-
+    
     // Empêcher la copie
     ConnexionBaseDonnees(const ConnexionBaseDonnees&) = delete;
     ConnexionBaseDonnees& operator=(const ConnexionBaseDonnees&) = delete;

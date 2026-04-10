@@ -269,7 +269,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 # Copier le schéma de base de données
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${DATABASE_DIR}/structure.sql
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/structure.sql    
     ${CMAKE_BINARY_DIR}/structure.sql
     COMMENT "Copie du schéma de base de données"
 )

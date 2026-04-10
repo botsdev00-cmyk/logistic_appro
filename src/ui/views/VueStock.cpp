@@ -1,4 +1,4 @@
-#include "VueStock.cpp"
+#include "VueStock.h"
 #include "../widgets/TableauStock.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>

@@ -14,7 +14,7 @@ GestionnaireStock::GestionnaireStock()
 bool GestionnaireStock::ajouterStock(const QUuid& produitId, int quantite, const QString& source)
 {
     try {
-        if (!Utilisateur::stringToRole(source).isNull() || quantite <= 0) {
+        if (quantite <= 0) {
             m_dernierErreur = "Quantité invalide";
             return false;
         }
