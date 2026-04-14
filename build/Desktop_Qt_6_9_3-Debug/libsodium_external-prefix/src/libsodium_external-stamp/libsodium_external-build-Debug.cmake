@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-set(command "make;-j4")
+set(command "bash;-c;cd '/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_external' && make -j$(nproc)")
 set(log_merged "")
 set(log_output_on_failure "")
 set(stdout_log "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium_external-prefix/src/libsodium_external-stamp/libsodium_external-build-out.log")

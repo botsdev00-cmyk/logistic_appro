@@ -1,0 +1,3 @@
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/_deps/libsodium-subbuild/CMakeFiles/libsodium-populate.dir
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/_deps/libsodium-subbuild/CMakeFiles/edit_cache.dir
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/_deps/libsodium-subbuild/CMakeFiles/rebuild_cache.dir

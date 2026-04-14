@@ -11,6 +11,7 @@
 		"commands" : 
 		[
 			"add_executable",
+			"install",
 			"target_link_libraries",
 			"set_property",
 			"find_package",
@@ -19,6 +20,7 @@
 			"include",
 			"set_target_properties",
 			"add_dependencies",
+			"target_compile_options",
 			"add_compile_definitions",
 			"project",
 			"target_compile_definitions",
@@ -44,129 +46,153 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 197,
+				"line" : 277,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 211,
+				"line" : 364,
 				"parent" : 0
-			},
-			{
-				"command" : 3,
-				"file" : 0,
-				"line" : 38,
-				"parent" : 0
-			},
-			{
-				"command" : 3,
-				"file" : 2,
-				"line" : 234,
-				"parent" : 3
-			},
-			{
-				"file" : 7,
-				"parent" : 4
-			},
-			{
-				"command" : 6,
-				"file" : 7,
-				"line" : 43,
-				"parent" : 5
-			},
-			{
-				"file" : 6,
-				"parent" : 6
-			},
-			{
-				"command" : 5,
-				"file" : 6,
-				"line" : 36,
-				"parent" : 7
-			},
-			{
-				"command" : 4,
-				"file" : 5,
-				"line" : 36,
-				"parent" : 8
-			},
-			{
-				"command" : 3,
-				"file" : 4,
-				"line" : 76,
-				"parent" : 9
-			},
-			{
-				"command" : 3,
-				"file" : 2,
-				"line" : 259,
-				"parent" : 10
-			},
-			{
-				"file" : 3,
-				"parent" : 11
-			},
-			{
-				"command" : 3,
-				"file" : 3,
-				"line" : 13,
-				"parent" : 12
-			},
-			{
-				"command" : 3,
-				"file" : 2,
-				"line" : 259,
-				"parent" : 13
-			},
-			{
-				"file" : 1,
-				"parent" : 14
 			},
 			{
 				"command" : 2,
-				"file" : 1,
-				"line" : 712,
-				"parent" : 15
+				"file" : 0,
+				"line" : 320,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 344,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 46,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 234,
+				"parent" : 5
+			},
+			{
+				"file" : 7,
+				"parent" : 6
 			},
 			{
 				"command" : 7,
-				"file" : 1,
-				"line" : 710,
+				"file" : 7,
+				"line" : 43,
+				"parent" : 7
+			},
+			{
+				"file" : 6,
+				"parent" : 8
+			},
+			{
+				"command" : 6,
+				"file" : 6,
+				"line" : 36,
+				"parent" : 9
+			},
+			{
+				"command" : 5,
+				"file" : 5,
+				"line" : 36,
+				"parent" : 10
+			},
+			{
+				"command" : 4,
+				"file" : 4,
+				"line" : 76,
+				"parent" : 11
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 259,
+				"parent" : 12
+			},
+			{
+				"file" : 3,
+				"parent" : 13
+			},
+			{
+				"command" : 4,
+				"file" : 3,
+				"line" : 13,
+				"parent" : 14
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 259,
 				"parent" : 15
 			},
 			{
+				"file" : 1,
+				"parent" : 16
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 712,
+				"parent" : 17
+			},
+			{
 				"command" : 8,
+				"file" : 1,
+				"line" : 710,
+				"parent" : 17
+			},
+			{
+				"command" : 9,
 				"file" : 0,
-				"line" : 200,
+				"line" : 282,
 				"parent" : 0
 			},
 			{
 				"command" : 10,
+				"file" : 0,
+				"line" : 308,
+				"parent" : 0
+			},
+			{
+				"command" : 10,
+				"file" : 0,
+				"line" : 379,
+				"parent" : 0
+			},
+			{
+				"command" : 12,
 				"file" : 0,
 				"line" : 6,
 				"parent" : 0
 			},
 			{
 				"file" : 8,
-				"parent" : 19
-			},
-			{
-				"command" : 9,
-				"file" : 8,
-				"line" : 81,
-				"parent" : 20
+				"parent" : 23
 			},
 			{
 				"command" : 11,
+				"file" : 8,
+				"line" : 81,
+				"parent" : 24
+			},
+			{
+				"command" : 13,
 				"file" : 0,
-				"line" : 209,
+				"line" : 299,
 				"parent" : 0
 			},
 			{
-				"command" : 12,
+				"command" : 14,
 				"file" : 0,
-				"line" : 202,
+				"line" : 288,
 				"parent" : 0
 			}
 		]
@@ -180,50 +206,78 @@
 					"fragment" : "-g -Wall -Wextra -g -fPIC -std=gnu++17 -fdiagnostics-color=always"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 21,
+					"fragment" : "-Wno-unused-function"
+				},
+				{
+					"backtrace" : 21,
+					"fragment" : "-Wno-conversion"
+				},
+				{
+					"backtrace" : 21,
+					"fragment" : "-Wno-sign-compare"
+				},
+				{
+					"backtrace" : 21,
+					"fragment" : "-Wno-unused-parameter"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-Wall"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-Wextra"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-O2"
+				},
+				{
+					"backtrace" : 3,
 					"fragment" : "-fPIC"
 				}
 			],
 			"defines" : 
 			[
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_CONCURRENT_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_CORE_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_GUI_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_NETWORK_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_PDF_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_PRINTSUPPORT_LIB"
 				},
 				{
-					"backtrace" : 21,
+					"backtrace" : 25,
 					"define" : "QT_QML_DEBUG"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_SQL_LIB"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"define" : "QT_WIDGETS_LIB"
 				},
 				{
-					"backtrace" : 22,
+					"backtrace" : 26,
 					"define" : "SODIUM_STATIC=1"
 				}
 			],
@@ -234,68 +288,68 @@
 					"path" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/include"
 				},
 				{
-					"backtrace" : 23,
+					"backtrace" : 27,
 					"path" : "/home/bots/semuliki_logistic/include"
 				},
 				{
-					"backtrace" : 23,
+					"backtrace" : 27,
 					"path" : "/home/bots/semuliki_logistic/src"
 				},
 				{
-					"backtrace" : 23,
+					"backtrace" : 27,
 					"path" : "/usr/include/postgresql"
 				},
 				{
-					"backtrace" : 23,
+					"backtrace" : 27,
 					"path" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install/include"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtCore"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/mkspecs/linux-g++"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtGui"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtSql"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtPrintSupport"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtConcurrent"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtPdf"
 				},
 				{
-					"backtrace" : 2,
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtNetwork"
 				}
@@ -305,8 +359,8 @@
 			{
 				"backtraces" : 
 				[
-					2,
-					2
+					3,
+					3
 				],
 				"standard" : "17"
 			},
@@ -385,7 +439,7 @@
 	"dependencies" : 
 	[
 		{
-			"backtrace" : 18,
+			"backtrace" : 20,
 			"id" : "libsodium_external::@6890427a1f51a3e7e1df"
 		},
 		{
@@ -397,6 +451,20 @@
 		}
 	],
 	"id" : "logistic_appro::@6890427a1f51a3e7e1df",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 2,
+				"path" : "bin"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "/tmp"
+		}
+	},
 	"link" : 
 	{
 		"commandFragments" : 
@@ -410,71 +478,71 @@
 				"role" : "flags"
 			},
 			{
-				"fragment" : "-Wl,-rpath,/home/bots/Qt/6.9.3/gcc_64/lib",
+				"fragment" : "-Wl,-rpath,/home/bots/Qt/6.9.3/gcc_64/lib:",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Sql.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6PrintSupport.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Concurrent.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Pdf.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Network.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/usr/lib/x86_64-linux-gnu/libpq.so",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "libsodium-install/lib/libsodium.a",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 4,
 				"fragment" : "-lpthread",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Widgets.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Gui.so.6.9.3",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 16,
+				"backtrace" : 18,
 				"fragment" : "/usr/lib/x86_64-linux-gnu/libGLX.so",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 17,
+				"backtrace" : 19,
 				"fragment" : "/usr/lib/x86_64-linux-gnu/libOpenGL.so",
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 2,
+				"backtrace" : 3,
 				"fragment" : "/home/bots/Qt/6.9.3/gcc_64/lib/libQt6Core.so.6.9.3",
 				"role" : "libraries"
 			},

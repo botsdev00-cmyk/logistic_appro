@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-set(command "/home/bots/semuliki_logistic/vendor/libsodium-1.0.18/configure;--prefix=/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install;--enable-static;--disable-shared;--with-pic")
+set(command "bash;-c;cd '/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-build/src/libsodium_external' && ./configure --prefix='/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install' --enable-static --disable-shared --with-pic")
 set(log_merged "")
 set(log_output_on_failure "")
 set(stdout_log "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium_external-prefix/src/libsodium_external-stamp/libsodium_external-configure-out.log")
