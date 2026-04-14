@@ -10,6 +10,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20type_traits.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20utility.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q23utility.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qabstractitemmodel.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qalgorithms.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qanystringview.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qarraydata.h \
@@ -79,6 +80,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qprocessordetection.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qrect.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qrefcount.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qregularexpression.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qscopedpointer.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qscopeguard.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qset.h \
@@ -156,10 +158,26 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtransform.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qvalidator.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractbutton.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemdelegate.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractslider.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractspinbox.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qcombobox.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qpushbutton.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qslider.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyle.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyleoption.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabbar.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabwidget.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgets-config.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsglobal.h \

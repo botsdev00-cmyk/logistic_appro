@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QUuid>
+#include <QComboBox>
+#include <QPushButton>
 #include "../../core/entities/Produit.h"
 #include "../../core/entities/CategorieProduit.h"
 
@@ -27,6 +29,8 @@ public:
 private slots:
     void onSkuChanged(const QString& texte);
     void onValiderClicked();
+    void onAjouterNouveauType();
+    void chargerTypes();
 
 private:
     void initializeUI();
@@ -41,6 +45,8 @@ private:
     QComboBox* m_comboCategorie;
     QDoubleSpinBox* m_spinPrix;
     QSpinBox* m_spinStockMin;
+    QComboBox* m_comboType;
+    QPushButton* m_btnNouveauType;
     QTextEdit* m_editDescription;
     QPushButton* m_btnValider;
     QPushButton* m_btnAnnuler;

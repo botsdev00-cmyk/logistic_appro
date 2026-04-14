@@ -173,18 +173,23 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtransform.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qvalidator.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableView \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QWidget \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractbutton.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemdelegate.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemview.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractscrollarea.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractslider.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractspinbox.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qcombobox.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlineedit.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qpushbutton.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qslider.h \

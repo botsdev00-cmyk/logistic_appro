@@ -9,86 +9,72 @@
 -- Activer l'extension UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE DATABASE SEMULIKI WITH OWNER = postgres ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8' TEMPLATE = template0;
-GRANT ALL PRIVILEGES ON DATABASE SEMULIKI TO postgres;
-
-### 1. Initialisation et Tables de Référence
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- ============================================================================
 -- 0. PARAMÉTRAGES (TABLES DE RÉFÉRENCE)
 -- ============================================================================
 
 CREATE TABLE roles (
     role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- ADMIN, CAISSIER, etc.
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE permissions (
     permission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(50) UNIQUE NOT NULL, -- ex: 'STOCK_EDIT'
+    code VARCHAR(50) UNIQUE NOT NULL,
     nom VARCHAR(100) NOT NULL,
     module VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE types_produits (
     type_produit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- MARCHANDISE, EMBALLAGE, SERVICE
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE sources_entree (
     source_entree_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- PRODUCTION, RETOUR, AJUSTEMENT
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE raisons_retour (
     raison_retour_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- INVENDU, ENDOMMAGE, EXPIRE
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE conditions_paiement (
     condition_paiement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- CASH, CREDIT_7J
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL,
     delai_jours INTEGER DEFAULT 0
 );
 
 CREATE TABLE statuts_repartition (
     statut_repartition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- EN_COURS, COMPLETEE
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE types_vente (
     type_vente_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- CASH, CREDIT
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE statuts_credit (
     statut_credit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- PAYE, EN_RETARD
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE statuts_caisse (
     statut_caisse_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(20) UNIQUE NOT NULL, -- VALIDE, DISCREPANCE
+    code VARCHAR(20) UNIQUE NOT NULL,
     nom VARCHAR(50) NOT NULL
 );
-```
 
----
-
-### 2. Sécurité et Utilisateurs
-Gestion des accès basée sur les rôles et permissions.
-
-```sql
 -- ============================================================================
 -- 1. UTILISATEURS & PERMISSIONS
 -- ============================================================================
@@ -110,22 +96,19 @@ CREATE TABLE role_permissions (
     permission_id UUID NOT NULL REFERENCES permissions(permission_id) ON DELETE CASCADE,
     PRIMARY KEY (role_id, permission_id)
 );
-```
 
----
-
-### 3. Logistique et Stock
-Structure des produits, catégories et mouvements de stock.
-
-```sql
 -- ============================================================================
 -- 2. PRODUITS & STOCK
 -- ============================================================================
 
+-- ✅ CORRECTED: Added missing columns
 CREATE TABLE categories_produits (
     categorie_produit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nom VARCHAR(100) NOT NULL UNIQUE,
     code_categorie VARCHAR(20) UNIQUE,
+    description TEXT DEFAULT '',
+    est_actif BOOLEAN DEFAULT true,
+    ordre_affichage INTEGER DEFAULT 0,
     date_mise_a_jour TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -137,6 +120,7 @@ CREATE TABLE produits (
     code_sku VARCHAR(50) UNIQUE NOT NULL,
     prix_unitaire DECIMAL(12, 2) NOT NULL,
     stock_minimum INTEGER DEFAULT 10,
+    est_actif BOOLEAN DEFAULT true,
     date_mise_a_jour TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -156,14 +140,7 @@ CREATE TABLE retours_stock (
     raison_retour_id UUID NOT NULL REFERENCES raisons_retour(raison_retour_id),
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
 
----
-
-### 4. Ventes et Répartitions
-Le cœur de l'activité terrain (Routes, Équipes, Clients).
-
-```sql
 -- ============================================================================
 -- 3. RÉPARTITION ET VENTES
 -- ============================================================================
@@ -217,14 +194,7 @@ CREATE TABLE ventes (
     montant_total DECIMAL(12, 2) GENERATED ALWAYS AS (quantite * prix_unitaire) STORED,
     date_vente TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
 
----
-
-### 5. Finance et Audit
-Suivi des paiements, de la caisse et historique des actions.
-
-```sql
 -- ============================================================================
 -- 4. FINANCE & AUDIT
 -- ============================================================================
@@ -260,14 +230,11 @@ CREATE TABLE journaux_audit (
     nouvelles_valeurs JSONB,
     date_heure TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
 
----
+-- ============================================================================
+-- VIEWS & TRIGGERS
+-- ============================================================================
 
-### 6. Intelligence (Vues et Automates)
-
-```sql
--- Vue du stock actuel
 CREATE VIEW v_statut_stock AS
 SELECT 
     p.nom, p.code_sku, cp.nom as categorie, tp.nom as type,
@@ -278,19 +245,10 @@ JOIN types_produits tp ON p.type_produit_id = tp.type_produit_id
 LEFT JOIN entrees_stock es ON p.produit_id = es.produit_id
 GROUP BY p.nom, p.code_sku, cp.nom, tp.nom;
 
--- Automatisation des dates de mise à jour
 CREATE OR REPLACE FUNCTION trg_maj_date() RETURNS TRIGGER AS $$
 BEGIN NEW.date_mise_a_jour = CURRENT_TIMESTAMP; RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_prod_maj BEFORE UPDATE ON produits FOR EACH ROW EXECUTE FUNCTION trg_maj_date();
+CREATE TRIGGER trg_cat_maj BEFORE UPDATE ON categories_produits FOR EACH ROW EXECUTE FUNCTION trg_maj_date();
 CREATE TRIGGER trg_cli_maj BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION trg_maj_date();
-```
-
----
-
-### Pourquoi ce schéma est robuste :
-1.  **Indépendance du code :** Pour ajouter un nouveau mode de paiement (ex: "Mobile Money"), vous ajoutez juste une ligne dans `types_vente`.
-2.  **Sécurité RBAC :** Le système de permissions permet de définir qui peut "Valider" ou "Supprimer" de manière très fine.
-3.  **Traçabilité totale :** La table `journaux_audit` enregistre qui a fait quoi, avec les anciennes et nouvelles valeurs en format JSON.
-4.  **Calculs automatiques :** Les montants totaux, écarts de caisse et stocks sont calculés par la base de données (champs `GENERATED`), évitant les erreurs de calcul côté application.

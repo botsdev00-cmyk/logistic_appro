@@ -1050,6 +1050,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryTypeProduit.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryTypeProduit.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryUtilisateur.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryUtilisateur.cpp",
@@ -1497,6 +1503,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryTypeProduit.cpp",
 			"MU",
 			null
 		],

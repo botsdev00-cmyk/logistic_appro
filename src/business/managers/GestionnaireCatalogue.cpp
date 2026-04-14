@@ -46,6 +46,7 @@ bool GestionnaireCatalogue::creerCategorie(const CategorieProduit& categorie)
 
     if (!verifierUniciteCodeCategorie(categorie.getCodeCategorie())) {
         m_dernierErreur = "Ce code catégorie existe déjà";
+        qDebug() << "[DEBUG-VERIF-UNICITE] Code=" << categorie.getCodeCategorie() << "- Duplicate found, creation rejected";
         return false;
     }
 
@@ -418,12 +419,16 @@ bool GestionnaireCatalogue::verifierUniciteCodeCategorie(const QString& code, co
     }
 
     CategorieProduit existante = obtenirCategorieParCode(code);
+    qDebug() << "[DEBUG-VERIF-UNICITE] Code=" << code << "Found ID=" << existante.getCategorieProduitId();
+    
     if (!existante.getCategorieProduitId().isNull()) {
         if (categorieIdExclu.isNull() || existante.getCategorieProduitId() != categorieIdExclu) {
+            qDebug() << "[DEBUG-VERIF-UNICITE] Duplicate detected - returning false";
             return false;
         }
     }
 
+    qDebug() << "[DEBUG-VERIF-UNICITE] Code unique - returning true";
     return true;
 }
 

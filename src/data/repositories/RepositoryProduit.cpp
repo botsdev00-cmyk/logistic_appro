@@ -13,24 +13,26 @@ bool RepositoryProduit::create(const Produit& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
+    // Ajout de type_produit_id dans la liste des colonnes et des valeurs
     query.prepare("INSERT INTO produits "
-                  "(produit_id, categorie_produit_id, nom, description, code_sku, prix_unitaire, stock_minimum, est_actif) "
-                  "VALUES (:produit_id, :categorie_id, :nom, :description, :sku, :prix, :stock_min, :actif)");
+                  "(produit_id, categorie_produit_id, type_produit_id, nom, description, code_sku, prix_unitaire, stock_minimum, est_actif) "
+                  "VALUES (:produit_id, :categorie_id, :type_id, :nom, :description, :sku, :prix, :stock_min, :actif)");
 
-    query.addBindValue(entity.getProduitId().toString());
-    query.addBindValue(entity.getCategorieProduitId().toString());
-    query.addBindValue(entity.getNom());
-    query.addBindValue(entity.getDescription());
-    query.addBindValue(entity.getCodeSku());
-    query.addBindValue(entity.getPrixUnitaire());
-    query.addBindValue(entity.getStockMinimum());
-    query.addBindValue(entity.estActif());
+    query.bindValue(":produit_id", entity.getProduitId().toString());
+    query.bindValue(":categorie_id", entity.getCategorieProduitId().toString());
+    query.bindValue(":type_id", entity.getTypeProduitId().toString()); // <--- Nouveau
+    query.bindValue(":nom", entity.getNom());
+    query.bindValue(":description", entity.getDescription());
+    query.bindValue(":sku", entity.getCodeSku());
+    query.bindValue(":prix", entity.getPrixUnitaire());
+    query.bindValue(":stock_min", entity.getStockMinimum());
+    query.bindValue(":actif", entity.estActif());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création produit : " + query.lastError().text();
+        qDebug() << m_dernierErreur;
         return false;
     }
-
     return true;
 }
 
@@ -43,6 +45,9 @@ Produit RepositoryProduit::getById(const QUuid& id)
     query.addBindValue(id.toString());
 
     Produit produit;
+    // CORRECTION : On écrase l'ID généré par le constructeur
+    produit.setProduitId(QUuid());
+
     if (query.exec() && query.next()) {
         produit.setProduitId(QUuid(query.value("produit_id").toString()));
         produit.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
@@ -172,11 +177,18 @@ Produit RepositoryProduit::getByCodeSku(const QString& sku)
     query.addBindValue(sku);
 
     Produit produit;
+    // CORRECTION : On écrase l'ID généré par le constructeur par un Null
+    produit.setProduitId(QUuid());
+
     if (query.exec() && query.next()) {
         produit.setProduitId(QUuid(query.value("produit_id").toString()));
+        produit.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
         produit.setNom(query.value("nom").toString());
+        produit.setDescription(query.value("description").toString());
         produit.setCodeSku(query.value("code_sku").toString());
         produit.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+        produit.setStockMinimum(query.value("stock_minimum").toInt());
+        produit.setEstActif(query.value("est_actif").toBool());
     }
 
     return produit;

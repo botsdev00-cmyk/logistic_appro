@@ -60,6 +60,20 @@ void BoiteDialogProduit::initializeUI()
     formLayout->addRow("Nom :", m_editNom);
     formLayout->addRow("SKU :", m_editSku);
     formLayout->addRow("Catégorie :", m_comboCategorie);
+    QHBoxLayout* layoutType = new QHBoxLayout();
+    m_comboType = new QComboBox();
+    m_btnNouveauType = new QPushButton("+");
+    m_btnNouveauType->setFixedWidth(30);
+    m_btnNouveauType->setToolTip("Créer un nouveau type");
+    
+    layoutType->addWidget(m_comboType, 1);
+    layoutType->addWidget(m_btnNouveauType);
+    
+    formLayout->addRow("Type de produit :", layoutType);
+    
+    connect(m_btnNouveauType, &QPushButton::clicked, this, &BoiteDialogProduit::onAjouterNouveauType);
+    
+    chargerTypes(); // Charger les données au démarrage
     formLayout->addRow("Prix unitaire (€) :", m_spinPrix);
     formLayout->addRow("Stock minimum :", m_spinStockMin);
     formLayout->addRow("Description :", m_editDescription);
@@ -76,6 +90,8 @@ void BoiteDialogProduit::initializeUI()
     boutonsLayout->addWidget(m_btnValider);
     boutonsLayout->addWidget(m_btnAnnuler);
     layoutPrincipal->addLayout(boutonsLayout);
+
+
 }
 
 void BoiteDialogProduit::chargerCategories()
@@ -132,10 +148,12 @@ void BoiteDialogProduit::onValiderClicked()
         return;
     }
     QUuid categorieId(m_comboCategorie->currentData().toString());
+    QUuid typeId(m_comboType->currentData().toString());
     Produit produit;
     produit.setNom(nom);
     produit.setCodeSku(sku);
     produit.setCategorieProduitId(categorieId);
+    produit.setTypeProduitId(typeId);
     produit.setPrixUnitaire(prix);
     produit.setStockMinimum(stockMin);
     produit.setDescription(description);
@@ -152,4 +170,34 @@ void BoiteDialogProduit::onValiderClicked()
         return;
     }
     accept();
+}
+
+void BoiteDialogProduit::chargerTypes() {
+    m_comboType->clear();
+    RepositoryTypeProduit repo;
+    auto types = repo.getAll();
+    
+    for (const auto& t : types) {
+        m_comboType->addItem(t.nom, t.id.toString());
+    }
+}
+
+void BoiteDialogProduit::onAjouterNouveauType() {
+    bool ok;
+    QString nom = QInputDialog::getText(this, "Nouveau Type", 
+                                        "Nom du type (ex: Consommable) :", 
+                                        QLineEdit::Normal, "", &ok);
+    if (ok && !nom.isEmpty()) {
+        QString code = nom.left(3).toUpper(); // Génération simple d'un code
+        
+        RepositoryTypeProduit repo;
+        if (repo.create(nom, code)) {
+            chargerTypes(); // Rafraîchir la liste
+            // Sélectionner le type qu'on vient de créer
+            int index = m_comboType->findText(nom);
+            if (index != -1) m_comboType->setCurrentIndex(index);
+        } else {
+            QMessageBox::critical(this, "Erreur", "Impossible de créer le type : " + repo.getLastError());
+        }
+    }
 }

@@ -67,6 +67,7 @@ set(DATA_DATABASE
 set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryUtilisateur.cpp
     ${SRC_DIR}/data/repositories/RepositoryProduit.cpp
+    ${SRC_DIR}/data/repositories/RepositoryTypeProduit.cpp
     ${SRC_DIR}/data/repositories/RepositoryCategorieProduit.cpp
     ${SRC_DIR}/data/repositories/RepositoryEquipe.cpp
     ${SRC_DIR}/data/repositories/RepositoryRoute.cpp

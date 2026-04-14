@@ -22,6 +22,7 @@ public:
     bool estActif() const { return m_estActif; }
     QDateTime getDateCreation() const { return m_dateCreation; }
     QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    QUuid getTypeProduitId() const { return m_typeProduitId; }
 
     // Setters
     void setProduitId(const QUuid& id) { m_produitId = id; }
@@ -34,10 +35,13 @@ public:
     void setEstActif(bool actif) { m_estActif = actif; }
     void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
     void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
+    void setTypeProduitId(const QUuid& id) { m_typeProduitId = id; }
+
 
 private:
     QUuid m_produitId;
     QUuid m_categorieProduitId;
+    QUuid m_typeProduitId;
     QString m_nom;
     QString m_description;
     QString m_codeSku;
