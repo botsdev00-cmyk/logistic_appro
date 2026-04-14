@@ -1,7 +1,3 @@
-# ===========================================================================
-# SEMULIKI ERP - Version avec bcrypt (implémentation maison)
-# ===========================================================================
-
 cmake_minimum_required(VERSION 3.21)
 project(logistic_appro
     VERSION 1.0.0
@@ -9,19 +5,11 @@ project(logistic_appro
     LANGUAGES CXX C
 )
 
-# ===========================================================================
-# CONFIGURATION CMAKE
-# ===========================================================================
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
-
-# ===========================================================================
-# BUILD FLAGS
-# ===========================================================================
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /W4 /EHsc")
@@ -31,20 +19,11 @@ else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -fPIC")
 endif()
 
-# ===========================================================================
-# PACKAGES
-# ===========================================================================
-
 find_package(Qt6 COMPONENTS
     Core Gui Widgets Sql PrintSupport Concurrent Pdf Network
     REQUIRED
 )
-
 find_package(PostgreSQL REQUIRED)
-
-# ===========================================================================
-# PROJECT DIRECTORIES
-# ===========================================================================
 
 set(SRC_DIR         ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(INCLUDE_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -52,10 +31,7 @@ set(DATABASE_DIR    ${CMAKE_CURRENT_SOURCE_DIR}/database)
 set(RESOURCES_DIR   ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 set(VENDOR_DIR      ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
-# ===========================================================================
-# BCRYPT - Implémentation maison
-# ===========================================================================
-
+# ==================== BCRYPT ====================
 add_library(bcrypt_vendor STATIC
     ${VENDOR_DIR}/bcrypt/bcrypt.c
 )
@@ -63,11 +39,7 @@ target_include_directories(bcrypt_vendor PUBLIC
     ${VENDOR_DIR}/bcrypt
 )
 
-# ===========================================================================
-# SOURCES
-# ===========================================================================
-
-# ... (ci-dessous, recopiez vos listes déjà présentes dans le fichier actuel)
+# ==================== SOURCES ====================
 set(CORE_ENTITIES
     ${SRC_DIR}/core/entities/Utilisateur.cpp
     ${SRC_DIR}/core/entities/Produit.cpp
@@ -188,28 +160,19 @@ set(ALL_SOURCES
     ${MAIN_SOURCE}
 )
 
-# ===========================================================================
-# EXECUTABLE
-# ===========================================================================
-
+# ==================== EXECUTABLE ====================
 add_executable(${PROJECT_NAME}
     ${ALL_SOURCES}
 )
 
-# ===========================================================================
-# INCLUDE DIRECTORIES
-# ===========================================================================
-
+# ==================== INCLUDE DIRS ====================
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${INCLUDE_DIR}
     ${SRC_DIR}
     ${PostgreSQL_INCLUDE_DIRS}
 )
 
-# ===========================================================================
-# LINK BCRYPT (remplace sodium !)
-# ===========================================================================
-
+# ==================== LINK LIBRARIES ====================
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core
     Qt6::Gui
@@ -223,36 +186,25 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     bcrypt_vendor
 )
 
-# Windows specific
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        ws2_32
-        crypt32
-    )
+# ----- Platform specific: pthread, crypt, etc -----
+if(UNIX AND NOT APPLE)
+    # Linux, BSD: crypt et pthread souvent requis
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread crypt)
 elseif(APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        pthread
-    )
-else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        pthread
-    )
+    # macOS : pthread oui, crypt non (crypt intégrée dans libc)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+elseif(WIN32)
+    # Windows – pas de libcrypt, mais librairies Win32 pour réseau/crypto
+    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 crypt32)
 endif()
 
-# ===========================================================================
-# COPY DATABASE SCHEMA & CONFIG FILES
-# ===========================================================================
-
+# ==================== CUSTOM COMMANDS + INSTALL ====================
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts/structure.sql    
     ${CMAKE_BINARY_DIR}/structure.sql
     COMMENT "Copying database schema"
 )
-
-# ===========================================================================
-# INSTALLATION
-# ===========================================================================
 
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
@@ -262,19 +214,11 @@ install(FILES ${DATABASE_DIR}/structure.sql
     DESTINATION share/logistic_appro
 )
 
-# ===========================================================================
-# COMPILER OPTIONS (PRODUCTION)
-# ===========================================================================
-
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /O2)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -O2)
 endif()
-
-# ===========================================================================
-# SUMMARY MESSAGE
-# ===========================================================================
 
 message(STATUS "")
 message(STATUS "╔══════════════════════════════════════════════════════════╗")
@@ -286,14 +230,13 @@ message(STATUS "║ C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "║ Qt Version: ${Qt6_VERSION}")
 message(STATUS "║ PostgreSQL: FOUND")
 message(STATUS "║ bcrypt: custom vendor implementation")
-message(STATUS "║ Password Hashing: Bcrypt")
 message(STATUS "║ Build Type: ${CMAKE_BUILD_TYPE}")
 if(WIN32)
     message(STATUS "║ Platform: Windows")
 elseif(APPLE)
     message(STATUS "║ Platform: macOS")
 else()
-    message(STATUS "║ Platform: Linux")
+    message(STATUS "║ Platform: Linux/BSD")
 endif()
 message(STATUS "╚══════════════════════════════════════════════════════════╝")
 message(STATUS "")

@@ -2,6 +2,7 @@
 #include "../database/ConnexionBaseDonnees.h"
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QSqlRecord>
 #include <QDebug>
 
 RepositoryUtilisateur::RepositoryUtilisateur()
@@ -41,17 +42,26 @@ Utilisateur RepositoryUtilisateur::getById(const QUuid& id)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("SELECT u.*, r.libelle as role_nom "
-                  "FROM utilisateur u "
+                  "FROM utilisateurs u "
                   "LEFT JOIN role r ON u.role_id = r.role_id "
                   "WHERE u.utilisateur_id = :id");
     query.addBindValue(id.toString());
 
     Utilisateur utilisateur;
     if (query.exec() && query.next()) {
+        QSqlRecord rec = query.record();
+        int idx = rec.indexOf("hash_mot_passe");
+        QString hash;
+        if (idx != -1) {
+            hash = query.value(idx).toString();
+            qDebug() << "[getById] hash_mot_passe from SQL =" << hash;
+        } else {
+            qWarning() << "[getById] PAS de champ 'hash_mot_passe' dans ce SELECT !";
+        }
         utilisateur.setUtilisateurId(QUuid(query.value("utilisateur_id").toString()));
         utilisateur.setNomUtilisateur(query.value("nom_utilisateur").toString());
         utilisateur.setEmail(query.value("email").toString());
-        utilisateur.setHashMotPasse(query.value("hash_mot_passe").toString());
+        utilisateur.setHashMotPasse(hash); // Même si vide, pour le debug
         utilisateur.setNomComplet(query.value("nom_complet").toString());
         utilisateur.setRole(Utilisateur::stringToRole(query.value("role_nom").toString()));
         utilisateur.setEstActif(query.value("est_actif").toBool());
@@ -71,16 +81,26 @@ QList<Utilisateur> RepositoryUtilisateur::getAll()
     QList<Utilisateur> utilisateurs;
 
     query.prepare("SELECT u.*, r.libelle as role_nom "
-                  "FROM utilisateur u "
+                  "FROM utilisateurs u "
                   "LEFT JOIN role r ON u.role_id = r.role_id "
                   "WHERE u.est_actif = true ORDER BY u.nom_complet");
 
     if (query.exec()) {
+        QSqlRecord rec = query.record();
+        int idx = rec.indexOf("hash_mot_passe");
         while (query.next()) {
             Utilisateur utilisateur;
+            QString hash;
+            if (idx != -1) {
+                hash = query.value(idx).toString();
+                qDebug() << "[getAll] hash_mot_passe from SQL =" << hash;
+            } else {
+                qWarning() << "[getAll] PAS de champ 'hash_mot_passe' !";
+            }
             utilisateur.setUtilisateurId(QUuid(query.value("utilisateur_id").toString()));
             utilisateur.setNomUtilisateur(query.value("nom_utilisateur").toString());
             utilisateur.setEmail(query.value("email").toString());
+            utilisateur.setHashMotPasse(hash); // Important
             utilisateur.setNomComplet(query.value("nom_complet").toString());
             utilisateur.setRole(Utilisateur::stringToRole(query.value("role_nom").toString()));
             utilisateur.setEstActif(query.value("est_actif").toBool());
@@ -144,18 +164,28 @@ QList<Utilisateur> RepositoryUtilisateur::search(const QString& criterion)
     QList<Utilisateur> utilisateurs;
 
     query.prepare("SELECT u.*, r.libelle as role_nom "
-                  "FROM utilisateur u "
+                  "FROM utilisateurs u "
                   "LEFT JOIN role r ON u.role_id = r.role_id "
                   "WHERE u.nom_complet ILIKE :criterion OR u.nom_utilisateur ILIKE :criterion "
                   "ORDER BY u.nom_complet");
     query.addBindValue("%" + criterion + "%");
 
     if (query.exec()) {
+        QSqlRecord rec = query.record();
+        int idx = rec.indexOf("hash_mot_passe");
         while (query.next()) {
             Utilisateur utilisateur;
+            QString hash;
+            if (idx != -1) {
+                hash = query.value(idx).toString();
+                qDebug() << "[search] hash_mot_passe from SQL =" << hash;
+            } else {
+                qWarning() << "[search] PAS de champ 'hash_mot_passe' !";
+            }
             utilisateur.setUtilisateurId(QUuid(query.value("utilisateur_id").toString()));
             utilisateur.setNomUtilisateur(query.value("nom_utilisateur").toString());
             utilisateur.setEmail(query.value("email").toString());
+            utilisateur.setHashMotPasse(hash); // Important
             utilisateur.setNomComplet(query.value("nom_complet").toString());
             utilisateur.setRole(Utilisateur::stringToRole(query.value("role_nom").toString()));
             utilisateurs.append(utilisateur);
@@ -170,7 +200,7 @@ bool RepositoryUtilisateur::exists(const QUuid& id)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("SELECT 1 FROM utilisateur WHERE utilisateur_id = :id");
+    query.prepare("SELECT 1 FROM utilisateurs WHERE utilisateur_id = :id");
     query.addBindValue(id.toString());
 
     return query.exec() && query.next();
@@ -182,17 +212,26 @@ Utilisateur RepositoryUtilisateur::getByUsername(const QString& username)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("SELECT u.*, r.libelle as role_nom "
-                  "FROM utilisateur u "
+                  "FROM utilisateurs u "
                   "LEFT JOIN role r ON u.role_id = r.role_id "
                   "WHERE u.nom_utilisateur = :username");
     query.addBindValue(username);
 
     Utilisateur utilisateur;
     if (query.exec() && query.next()) {
+        QSqlRecord rec = query.record();
+        int idx = rec.indexOf("hash_mot_passe");
+        QString hash;
+        if (idx != -1) {
+            hash = query.value(idx).toString();
+            qDebug() << "[getByUsername] hash_mot_passe from SQL =" << hash;
+        } else {
+            qWarning() << "[getByUsername] PAS de champ 'hash_mot_passe' dans ce SELECT !";
+        }
         utilisateur.setUtilisateurId(QUuid(query.value("utilisateur_id").toString()));
         utilisateur.setNomUtilisateur(query.value("nom_utilisateur").toString());
         utilisateur.setEmail(query.value("email").toString());
-        utilisateur.setHashMotPasse(query.value("hash_mot_passe").toString());
+        utilisateur.setHashMotPasse(hash);
         utilisateur.setNomComplet(query.value("nom_complet").toString());
         utilisateur.setRole(Utilisateur::stringToRole(query.value("role_nom").toString()));
     }
@@ -206,15 +245,25 @@ Utilisateur RepositoryUtilisateur::getByEmail(const QString& email)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("SELECT u.*, r.libelle as role_nom "
-                  "FROM utilisateur u "
+                  "FROM utilisateurs u "
                   "LEFT JOIN role r ON u.role_id = r.role_id "
                   "WHERE u.email = :email");
     query.addBindValue(email);
 
     Utilisateur utilisateur;
     if (query.exec() && query.next()) {
+        QSqlRecord rec = query.record();
+        int idx = rec.indexOf("hash_mot_passe");
+        QString hash;
+        if (idx != -1) {
+            hash = query.value(idx).toString();
+            qDebug() << "[getByEmail] hash_mot_passe from SQL =" << hash;
+        } else {
+            qWarning() << "[getByEmail] PAS de champ 'hash_mot_passe' dans ce SELECT !";
+        }
         utilisateur.setUtilisateurId(QUuid(query.value("utilisateur_id").toString()));
         utilisateur.setEmail(query.value("email").toString());
+        utilisateur.setHashMotPasse(hash); // Ajout important
         utilisateur.setNomComplet(query.value("nom_complet").toString());
         utilisateur.setRole(Utilisateur::stringToRole(query.value("role_nom").toString()));
     }

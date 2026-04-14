@@ -41,7 +41,13 @@ bool ConnexionBaseDonnees::initialiser(const QString& host, const QString& port,
         return false;
     }
 
-    qDebug() << "Connexion à la base de données réussie !";
+    // Ajoute ces lignes :
+    qDebug() << "[DEBUG DB] Connexion à la base de données RÉUSSIE !";
+    qDebug() << "[DEBUG DB] DB =" << m_database.databaseName()
+             << "Host =" << m_database.hostName()
+             << "Port =" << m_database.port()
+             << "User =" << m_database.userName();
+
     return true;
 }
 
@@ -63,6 +69,7 @@ bool ConnexionBaseDonnees::executerMigration(const QString& cheminSQL)
     QFile fichier(cheminSQL);
     if (!fichier.open(QIODevice::ReadOnly | QIODevice::Text)) {
         m_dernierErreur = "Impossible d'ouvrir le fichier : " + cheminSQL;
+        qDebug() << m_dernierErreur;
         return false;
     }
 

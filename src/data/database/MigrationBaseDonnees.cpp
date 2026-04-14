@@ -3,43 +3,49 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QFile>
 
 bool MigrationBaseDonnees::executerMigrationsInitiales()
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    
     if (!bd.estConnecte()) {
         qDebug() << "Erreur : Base de données non connectée";
         return false;
     }
 
-    // Vérifier si le schéma existe déjà
     if (verifierSchemaExiste()) {
         qDebug() << "Schéma déjà créé";
         return true;
     }
 
     qDebug() << "Exécution des migrations initiales...";
-    return executerMigration("001_initial_schema");
+    // Tu adaptes ici selon ton arborescence de fichier SQL !
+    return executerMigration("scripts/structure.sql");
 }
 
-bool MigrationBaseDonnees::executerMigration(const QString& nomMigration)
+bool MigrationBaseDonnees::executerMigration(const QString& cheminSQL)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QString contenu = obtenirContenuMigration(nomMigration);
+    QString contenu = obtenirContenuMigration(cheminSQL);
 
     if (contenu.isEmpty()) {
-        qDebug() << "Erreur : Migration vide -" << nomMigration;
+        qDebug() << "Erreur : Migration vide -" << cheminSQL;
         return false;
     }
 
+    // On coupe les instructions si besoin, ici naïvement par ';' (attention : simple)
+    QStringList instructions = contenu.split(';', Qt::SkipEmptyParts);
     QSqlQuery query(bd.getDatabase());
-    if (!query.exec(contenu)) {
-        qDebug() << "Erreur de migration :" << query.lastError().text();
-        return false;
+    for (const QString& instr : instructions) {
+        QString sql = instr.trimmed();
+        if (sql.isEmpty()) continue;
+        if (!query.exec(sql)) {
+            qDebug() << "Erreur migration sur :" << sql.left(120) << "..." << query.lastError().text();
+            return false;
+        }
     }
 
-    qDebug() << "Migration réussie :" << nomMigration;
+    qDebug() << "Migration réussie :" << cheminSQL;
     return true;
 }
 
@@ -47,13 +53,22 @@ bool MigrationBaseDonnees::verifierSchemaExiste()
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-
-    return query.exec("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'utilisateurs')");
+    // On vérifie la présence de la table "utilisateurs"
+    if (!query.exec("SELECT 1 FROM utilisateurs LIMIT 1")) {
+        qDebug() << "[DEBUG] Table 'utilisateurs' absente, schema doit être créé.";
+        return false;
+    }
+    return true;
 }
 
-QString MigrationBaseDonnees::obtenirContenuMigration(const QString& nomMigration)
+QString MigrationBaseDonnees::obtenirContenuMigration(const QString& cheminSQL)
 {
-    // À implémenter : charger le contenu SQL du fichier de migration
-    // Pour l'instant, retourner une chaîne vide
-    return "";
+    QFile fichier(cheminSQL);
+    if (!fichier.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << "Impossible d'ouvrir le fichier de migration:" << cheminSQL;
+        return "";
+    }
+    QString contenu = fichier.readAll();
+    fichier.close();
+    return contenu;
 }
