@@ -46,25 +46,25 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 199,
+				"line" : 273,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 244,
+				"line" : 360,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 212,
+				"line" : 316,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 226,
+				"line" : 340,
 				"parent" : 0
 			},
 			{
@@ -152,13 +152,19 @@
 			{
 				"command" : 9,
 				"file" : 0,
-				"line" : 102,
+				"line" : 278,
 				"parent" : 0
 			},
 			{
 				"command" : 10,
 				"file" : 0,
-				"line" : 223,
+				"line" : 304,
+				"parent" : 0
+			},
+			{
+				"command" : 10,
+				"file" : 0,
+				"line" : 375,
 				"parent" : 0
 			},
 			{
@@ -169,24 +175,24 @@
 			},
 			{
 				"file" : 8,
-				"parent" : 22
+				"parent" : 23
 			},
 			{
 				"command" : 11,
 				"file" : 8,
 				"line" : 81,
-				"parent" : 23
+				"parent" : 24
 			},
 			{
 				"command" : 13,
 				"file" : 0,
-				"line" : 219,
+				"line" : 295,
 				"parent" : 0
 			},
 			{
 				"command" : 14,
 				"file" : 0,
-				"line" : 205,
+				"line" : 284,
 				"parent" : 0
 			}
 		]
@@ -214,6 +220,18 @@
 				{
 					"backtrace" : 21,
 					"fragment" : "-Wno-unused-parameter"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-Wall"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-Wextra"
+				},
+				{
+					"backtrace" : 22,
+					"fragment" : "-O2"
 				},
 				{
 					"backtrace" : 3,
@@ -247,7 +265,7 @@
 					"define" : "QT_PRINTSUPPORT_LIB"
 				},
 				{
-					"backtrace" : 24,
+					"backtrace" : 25,
 					"define" : "QT_QML_DEBUG"
 				},
 				{
@@ -259,7 +277,7 @@
 					"define" : "QT_WIDGETS_LIB"
 				},
 				{
-					"backtrace" : 25,
+					"backtrace" : 26,
 					"define" : "SODIUM_STATIC=1"
 				}
 			],
@@ -270,16 +288,20 @@
 					"path" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/include"
 				},
 				{
-					"backtrace" : 26,
+					"backtrace" : 27,
 					"path" : "/home/bots/semuliki_logistic/include"
 				},
 				{
-					"backtrace" : 26,
+					"backtrace" : 27,
 					"path" : "/home/bots/semuliki_logistic/src"
 				},
 				{
-					"backtrace" : 26,
+					"backtrace" : 27,
 					"path" : "/usr/include/postgresql"
+				},
+				{
+					"backtrace" : 27,
+					"path" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install/include"
 				},
 				{
 					"backtrace" : 3,
@@ -330,11 +352,6 @@
 					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "/home/bots/Qt/6.9.3/gcc_64/include/QtNetwork"
-				},
-				{
-					"backtrace" : 3,
-					"isSystem" : true,
-					"path" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install/include"
 				}
 			],
 			"language" : "CXX",

@@ -805,8 +805,6 @@
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/shared_internal_commands.cmake",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/mkdirs.cmake.in",
 		"/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium_external-prefix/tmp/libsodium_external-mkdirs.cmake",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/download.cmake.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/extractfile.cmake.in",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/RepositoryInfo.txt.in",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/UpdateInfo.txt.in",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/PatchInfo.txt.in",

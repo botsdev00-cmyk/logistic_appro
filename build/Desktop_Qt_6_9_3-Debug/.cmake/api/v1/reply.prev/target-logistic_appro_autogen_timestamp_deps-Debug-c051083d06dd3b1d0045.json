@@ -2,10 +2,7 @@
 	"backtrace" : 0,
 	"backtraceGraph" : 
 	{
-		"commands" : 
-		[
-			"add_dependencies"
-		],
+		"commands" : [],
 		"files" : 
 		[
 			"CMakeLists.txt"
@@ -14,19 +11,13 @@
 		[
 			{
 				"file" : 0
-			},
-			{
-				"command" : 0,
-				"file" : 0,
-				"line" : 102,
-				"parent" : 0
 			}
 		]
 	},
 	"dependencies" : 
 	[
 		{
-			"backtrace" : 1,
+			"backtrace" : 0,
 			"id" : "libsodium_external::@6890427a1f51a3e7e1df"
 		}
 	],

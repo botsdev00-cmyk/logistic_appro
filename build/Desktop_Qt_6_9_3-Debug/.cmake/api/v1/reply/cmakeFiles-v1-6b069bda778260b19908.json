@@ -3466,16 +3466,6 @@
 		{
 			"isCMake" : true,
 			"isExternal" : true,
-			"path" : "/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/download.cmake.in"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/extractfile.cmake.in"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
 			"path" : "/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/RepositoryInfo.txt.in"
 		},
 		{

@@ -6,8 +6,7 @@
 			[
 				{
 					"build" : ".",
-					"hasInstallRule" : true,
-					"jsonFile" : "directory-.-Debug-dcb18c9a18cc3b0717e7.json",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.16"
@@ -46,14 +45,14 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "libsodium_external::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-libsodium_external-Debug-0f25b1a448e422368fc2.json",
+					"jsonFile" : "target-libsodium_external-Debug-c83ce9684188525497aa.json",
 					"name" : "libsodium_external",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "logistic_appro::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-logistic_appro-Debug-ec50b9f94afdb8d37e16.json",
+					"jsonFile" : "target-logistic_appro-Debug-1463fb1c87d504c779e9.json",
 					"name" : "logistic_appro",
 					"projectIndex" : 0
 				},
