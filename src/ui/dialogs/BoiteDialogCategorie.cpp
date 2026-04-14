@@ -3,6 +3,7 @@
 #include "../../core/entities/CategorieProduit.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QTextEdit>
@@ -10,7 +11,6 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QRegularExpression>
-#include <QFormLayout>
 #include <QDebug>
 
 BoiteDialogCategorie::BoiteDialogCategorie(GestionnaireCatalogue* gestionnaire, QWidget* parent)
@@ -37,26 +37,22 @@ void BoiteDialogCategorie::initializeUI()
 {
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
 
-    // ---- NOM ----
     QLabel* labelNom = new QLabel("Nom de la catégorie :");
     m_champNom = new QLineEdit();
     m_champNom->setPlaceholderText("Ex: Électronique, Alimentaire, etc.");
     m_champNom->setMaxLength(100);
 
-    // ---- CODE ----
     QLabel* labelCode = new QLabel("Code catégorie (unique) :");
     m_champCode = new QLineEdit();
     m_champCode->setPlaceholderText("Ex: ELEC, ALIM (auto-majuscule)");
     m_champCode->setMaxLength(20);
     connect(m_champCode, &QLineEdit::textChanged, this, &BoiteDialogCategorie::onCodeChanged);
 
-    // ---- DESCRIPTION ----
     QLabel* labelDescription = new QLabel("Description :");
     m_champDescription = new QTextEdit();
     m_champDescription->setPlaceholderText("Description détaillée de la catégorie...");
     m_champDescription->setMaximumHeight(80);
 
-    // ---- ORDRE ----
     QLabel* labelOrdre = new QLabel("Ordre d'affichage :");
     m_spinOrdre = new QSpinBox();
     m_spinOrdre->setMinimum(0);
@@ -70,7 +66,6 @@ void BoiteDialogCategorie::initializeUI()
     formLayout->addRow(labelOrdre, m_spinOrdre);
     layoutPrincipal->addLayout(formLayout);
 
-    // ---- BOUTONS ----
     m_btnValider = new QPushButton("✓ Enregistrer");
     connect(m_btnValider, &QPushButton::clicked, this, &BoiteDialogCategorie::onValider);
 
@@ -92,13 +87,13 @@ void BoiteDialogCategorie::chargerCategorie(const CategorieProduit& categorie)
     m_champCode->setText(categorie.getCodeCategorie());
     m_champDescription->setText(categorie.getDescription());
     m_spinOrdre->setValue(categorie.getOrdreAffichage());
-    m_champCode->setReadOnly(true); // On ne modifie pas le code en modification
+    m_champCode->setReadOnly(true);
     setWindowTitle("Modifier Catégorie");
 }
 
 void BoiteDialogCategorie::onCodeChanged(const QString& texte)
 {
-    QString codeFormate = texte.toUpper();
+    QString codeFormate = texte.trimmed().toUpper();
     codeFormate.remove(QRegularExpression("[^A-Z0-9_-]"));
     if (codeFormate != texte) {
         m_champCode->blockSignals(true);
@@ -110,11 +105,15 @@ void BoiteDialogCategorie::onCodeChanged(const QString& texte)
 void BoiteDialogCategorie::onValider()
 {
     QString nom = m_champNom->text().trimmed();
-    QString code = m_champCode->text().trimmed();
+    QString code = m_champCode->text().trimmed().toUpper();
     QString description = m_champDescription->toPlainText().trimmed();
     int ordre = m_spinOrdre->value();
 
-    // ----- Validations -----
+    // ----- Debug étape essentielle -----
+    qDebug() << "[DEBUG-CAT] onValider code saisi =" << code;
+    qDebug() << "[DEBUG-CAT] m_modeModification=" << m_modeModification << " m_categorieId=" << m_categorieId;
+
+    // ----- Validation -----
     if (nom.isEmpty()) {
         QMessageBox::warning(this, "Erreur de validation", "Le nom de la catégorie ne peut pas être vide");
         m_champNom->setFocus();
@@ -136,8 +135,9 @@ void BoiteDialogCategorie::onValider()
         return;
     }
 
-    // ----- Vérification unicité code -----
+    // ----- Vérification d'unicité du code -----
     CategorieProduit existante = m_gestionnaireCatalogue->obtenirCategorieParCode(code);
+    qDebug() << "[DEBUG-CAT] existante.id=" << existante.getCategorieProduitId();
 
     if (!existante.getCategorieProduitId().isNull()
         && (!m_modeModification || existante.getCategorieProduitId() != m_categorieId)) {
@@ -146,7 +146,7 @@ void BoiteDialogCategorie::onValider()
         return;
     }
 
-    // ----- Création ou modification -----
+    // ----- (Création/Modification) -----
     CategorieProduit categorie;
     if (m_modeModification) {
         categorie.setCategorieProduitId(m_categorieId);
@@ -172,7 +172,7 @@ void BoiteDialogCategorie::onValider()
     if (!succes) {
         QString erreur = m_gestionnaireCatalogue->obtenirDernierErreur();
         QMessageBox::critical(this, "Erreur", "Erreur lors de l'enregistrement :\n" + erreur);
-        qDebug() << "Erreur lors de l'enregistrement catégorie:" << erreur;
+        qDebug() << "[DEBUG-CAT] Erreur lors de l'enregistrement catégorie:" << erreur;
         return;
     }
 
