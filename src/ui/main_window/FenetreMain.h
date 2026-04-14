@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QStackedWidget>
+#include <QLabel>
 #include <memory>
 
 class ServiceAuthentification;
@@ -42,10 +43,12 @@ private slots:
 private:
     void creerMenus();
     void creerBarreOutils();
+    void creerBarreStatut();
     void creerVues();
     void initialiserConnexions();
     void configurerInterface();
     void verifierPermissions();
+    void afficherInfosUtilisateur();
 
     std::unique_ptr<ServiceAuthentification> m_authService;
     std::unique_ptr<QStackedWidget> m_stackedWidget;
@@ -72,6 +75,11 @@ private:
     QAction* m_actionClient;
     QAction* m_actionDeconnecter;
     QAction* m_actionAPropos;
+    
+    // Labels barre de statut
+    QLabel* m_labelUtilisateur;
+    QLabel* m_labelHeure;
+    QLabel* m_labelStatut;
 };
 
 #endif // FENETREMAIN_H

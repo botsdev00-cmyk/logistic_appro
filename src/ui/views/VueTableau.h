@@ -4,9 +4,11 @@
 #include <QWidget>
 #include <memory>
 
+class QVBoxLayout;
+class QHBoxLayout;
 class QLabel;
-class QProgressBar;
-class QLCDNumber;
+class QPushButton;
+class QGridLayout;
 
 class VueTableau : public QWidget
 {
@@ -17,21 +19,38 @@ public:
     ~VueTableau();
 
 private slots:
-    void rafraichirDonnees();
-    void afficherAlertes();
+    void allerVersStock();
+    void allerVersRepartition();
+    void allerVersVentes();
+    void allerVersCredit();
+    void allerVersCaisse();
+    void allerVersClients();
 
 private:
-    void creerWidgets();
-    void initialiserConnexions();
-    void mettreAJourStatistiques();
-
-    std::unique_ptr<QLCDNumber> m_lcdStockTotal;
-    std::unique_ptr<QLCDNumber> m_lcdVentesJour;
-    std::unique_ptr<QLCDNumber> m_lcdCreditsEnCours;
-    std::unique_ptr<QLCDNumber> m_lcdCreditEnRetard;
-    std::unique_ptr<QLabel> m_labelStockBas;
-    std::unique_ptr<QLabel> m_labelAlertes;
-    std::unique_ptr<QProgressBar> m_progressbar;
+    void creerInterface();
+    void creerCarteKPI();
+    void creerRaccourcis();
+    void creerDernieresActivites();
+    void chargerDonnees();
+    void appliquerStyle();
+    
+    // Composants
+    QLabel* m_labelBienvenue;
+    QLabel* m_labelDate;
+    
+    // Cartes KPI
+    QLabel* m_stockTotal;
+    QLabel* m_ventesJour;
+    QLabel* m_clientsActifs;
+    QLabel* m_creditsEnCours;
+    
+    // Boutons raccourcis
+    QPushButton* m_btnStock;
+    QPushButton* m_btnRepartition;
+    QPushButton* m_btnVentes;
+    QPushButton* m_btnCredit;
+    QPushButton* m_btnCaisse;
+    QPushButton* m_btnClients;
 };
 
 #endif // VUETABLEAU_H
