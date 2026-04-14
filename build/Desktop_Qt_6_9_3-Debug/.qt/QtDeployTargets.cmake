@@ -1,2 +1,4 @@
+set(__QT_DEPLOY_TARGET_bcrypt_vendor_FILE /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libbcrypt_vendor.a)
+set(__QT_DEPLOY_TARGET_bcrypt_vendor_TYPE STATIC_LIBRARY)
 set(__QT_DEPLOY_TARGET_logistic_appro_FILE /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro)
 set(__QT_DEPLOY_TARGET_logistic_appro_TYPE EXECUTABLE)

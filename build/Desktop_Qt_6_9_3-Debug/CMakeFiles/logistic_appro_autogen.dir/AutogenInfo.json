@@ -801,16 +801,6 @@
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/SelectLibraryConfigurations.cmake",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake",
 		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject.cmake",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/shared_internal_commands.cmake",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/mkdirs.cmake.in",
-		"/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium_external-prefix/tmp/libsodium_external-mkdirs.cmake",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/download.cmake.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/extractfile.cmake.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/RepositoryInfo.txt.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/UpdateInfo.txt.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/PatchInfo.txt.in",
-		"/home/bots/Qt/Tools/CMake/share/cmake-3.30/Modules/ExternalProject/cfgcmd.txt.in",
 		"/home/bots/semuliki_logistic/resources/ressources.qrc"
 	],
 	"CMAKE_SOURCE_DIR" : "/home/bots/semuliki_logistic",
@@ -1217,8 +1207,7 @@
 		"QT_PRINTSUPPORT_LIB",
 		"QT_QML_DEBUG",
 		"QT_SQL_LIB",
-		"QT_WIDGETS_LIB",
-		"SODIUM_STATIC=1"
+		"QT_WIDGETS_LIB"
 	],
 	"MOC_DEPEND_FILTERS" : 
 	[
@@ -1232,7 +1221,7 @@
 		"/home/bots/semuliki_logistic/include",
 		"/home/bots/semuliki_logistic/src",
 		"/usr/include/postgresql",
-		"/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/libsodium-install/include",
+		"/home/bots/semuliki_logistic/vendor/bcrypt",
 		"/home/bots/Qt/6.9.3/gcc_64/include/QtCore",
 		"/home/bots/Qt/6.9.3/gcc_64/include",
 		"/home/bots/Qt/6.9.3/gcc_64/mkspecs/linux-g++",
@@ -1273,7 +1262,10 @@
 	],
 	"MOC_PREDEFS_FILE" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h",
 	"MOC_RELAXED_MODE" : false,
-	"MOC_SKIP" : [],
+	"MOC_SKIP" : 
+	[
+		"/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/bcrypt_vendor_autogen/mocs_compilation.cpp"
+	],
 	"MULTI_CONFIG" : false,
 	"PARALLEL" : 2,
 	"PARSE_CACHE_FILE" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/logistic_appro_autogen.dir/ParseCache.txt",
@@ -1588,7 +1580,10 @@
 	],
 	"UIC_OPTIONS" : [],
 	"UIC_SEARCH_PATHS" : [],
-	"UIC_SKIP" : [],
+	"UIC_SKIP" : 
+	[
+		"/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/bcrypt_vendor_autogen/mocs_compilation.cpp"
+	],
 	"UIC_UI_FILES" : [],
 	"USE_BETTER_GRAPH" : true,
 	"VERBOSITY" : 0

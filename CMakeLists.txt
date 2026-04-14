@@ -1,6 +1,6 @@
-# ============================================================================
-# SEMULIKI ERP - Configuration CMake avec libsodium auto-téléchargé (modern)
-# ============================================================================
+# ===========================================================================
+# SEMULIKI ERP - Version avec bcrypt (implémentation maison)
+# ===========================================================================
 
 cmake_minimum_required(VERSION 3.21)
 project(logistic_appro
@@ -9,9 +9,9 @@ project(logistic_appro
     LANGUAGES CXX C
 )
 
-# ============================================================================
+# ===========================================================================
 # CONFIGURATION CMAKE
-# ============================================================================
+# ===========================================================================
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,9 +19,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# ============================================================================
+# ===========================================================================
 # BUILD FLAGS
-# ============================================================================
+# ===========================================================================
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /W4 /EHsc")
@@ -31,9 +31,9 @@ else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -fPIC")
 endif()
 
-# ============================================================================
-# FIND PACKAGES
-# ============================================================================
+# ===========================================================================
+# PACKAGES
+# ===========================================================================
 
 find_package(Qt6 COMPONENTS
     Core Gui Widgets Sql PrintSupport Concurrent Pdf Network
@@ -42,33 +42,32 @@ find_package(Qt6 COMPONENTS
 
 find_package(PostgreSQL REQUIRED)
 
-# ============================================================================
+# ===========================================================================
 # PROJECT DIRECTORIES
-# ============================================================================
+# ===========================================================================
 
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(DATABASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/database)
-set(RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+set(SRC_DIR         ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(INCLUDE_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(DATABASE_DIR    ${CMAKE_CURRENT_SOURCE_DIR}/database)
+set(RESOURCES_DIR   ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+set(VENDOR_DIR      ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
-# ============================================================================
-# LIBSODIUM - Modern FetchContent approach
-# ============================================================================
+# ===========================================================================
+# BCRYPT - Implémentation maison
+# ===========================================================================
 
-include(FetchContent)
-
-FetchContent_Declare(
-    libsodium
-    URL "https://github.com/jedisct1/libsodium/releases/download/1.0.18-RELEASE/libsodium-1.0.18.tar.gz"
-    URL_HASH SHA256=06b3b52b8b714f074d44c6647be3814a230ee208b02327145257e2f258e080a6
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+add_library(bcrypt_vendor STATIC
+    ${VENDOR_DIR}/bcrypt/bcrypt.c
 )
-FetchContent_MakeAvailable(libsodium)
+target_include_directories(bcrypt_vendor PUBLIC
+    ${VENDOR_DIR}/bcrypt
+)
 
-# ============================================================================
+# ===========================================================================
 # SOURCES
-# ============================================================================
+# ===========================================================================
 
+# ... (ci-dessous, recopiez vos listes déjà présentes dans le fichier actuel)
 set(CORE_ENTITIES
     ${SRC_DIR}/core/entities/Utilisateur.cpp
     ${SRC_DIR}/core/entities/Produit.cpp
@@ -83,11 +82,9 @@ set(CORE_ENTITIES
     ${SRC_DIR}/core/entities/ReceptionCaisse.cpp
     ${SRC_DIR}/core/entities/EntreeStock.cpp
 )
-
 set(CORE_CONSTANTS
     ${SRC_DIR}/core/constants/AppConstants.cpp
 )
-
 set(CORE_SOURCES ${CORE_ENTITIES} ${CORE_CONSTANTS})
 
 set(DATA_DATABASE
@@ -95,7 +92,6 @@ set(DATA_DATABASE
     ${SRC_DIR}/data/database/MigrationBaseDonnees.cpp
     ${SRC_DIR}/data/database/PoolConnexions.cpp
 )
-
 set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryUtilisateur.cpp
     ${SRC_DIR}/data/repositories/RepositoryProduit.cpp
@@ -109,7 +105,6 @@ set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryReceptionCaisse.cpp
     ${SRC_DIR}/data/repositories/RepositoryStock.cpp
 )
-
 set(DATA_SOURCES ${DATA_DATABASE} ${DATA_REPOSITORIES})
 
 set(BUSINESS_EXCEPTIONS
@@ -118,12 +113,10 @@ set(BUSINESS_EXCEPTIONS
     ${SRC_DIR}/business/exceptions/ValidationException.cpp
     ${SRC_DIR}/business/exceptions/BusinessException.cpp
 )
-
 set(BUSINESS_SERVICES
     ${SRC_DIR}/business/services/ServiceValidation.cpp
     ${SRC_DIR}/business/services/ServiceAuthentification.cpp
 )
-
 set(BUSINESS_MANAGERS
     ${SRC_DIR}/business/managers/GestionnaireStock.cpp
     ${SRC_DIR}/business/managers/GestionnaireRepartition.cpp
@@ -133,13 +126,11 @@ set(BUSINESS_MANAGERS
     ${SRC_DIR}/business/managers/GestionnaireClient.cpp
     ${SRC_DIR}/business/managers/GestionnaireRapport.cpp
 )
-
 set(BUSINESS_SOURCES ${BUSINESS_EXCEPTIONS} ${BUSINESS_SERVICES} ${BUSINESS_MANAGERS})
 
 set(UI_MAIN_WINDOW
     ${SRC_DIR}/ui/main_window/FenetreMain.cpp
 )
-
 set(UI_DIALOGS
     ${SRC_DIR}/ui/dialogs/BoiteDialogConnexion.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogRepartition.cpp
@@ -147,7 +138,6 @@ set(UI_DIALOGS
     ${SRC_DIR}/ui/dialogs/BoiteDialogReceptionCaisse.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogAlerte.cpp
 )
-
 set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauStock.cpp
     ${SRC_DIR}/ui/widgets/TableauClient.cpp
@@ -155,7 +145,6 @@ set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauVentes.cpp
     ${SRC_DIR}/ui/widgets/TableauCredit.cpp
 )
-
 set(UI_VIEWS
     ${SRC_DIR}/ui/views/VueTableau.cpp
     ${SRC_DIR}/ui/views/VueStock.cpp
@@ -166,23 +155,19 @@ set(UI_VIEWS
     ${SRC_DIR}/ui/views/VueRapport.cpp
     ${SRC_DIR}/ui/views/VueClient.cpp
 )
-
 set(UI_SOURCES ${UI_MAIN_WINDOW} ${UI_DIALOGS} ${UI_WIDGETS} ${UI_VIEWS})
 
 set(UTIL_LOGGER
     ${SRC_DIR}/utils/logger/Enregistreur.cpp
 )
-
 set(UTIL_VALIDATORS
     ${SRC_DIR}/utils/validators/ValidateurEntrees.cpp
 )
-
 set(UTIL_HELPERS
     ${SRC_DIR}/utils/helpers/AideDateTime.cpp
     ${SRC_DIR}/utils/helpers/GenerateurRapport.cpp
     ${SRC_DIR}/utils/helpers/GenerateurPDF.cpp
 )
-
 set(UTIL_SOURCES ${UTIL_LOGGER} ${UTIL_VALIDATORS} ${UTIL_HELPERS})
 
 set(RESOURCES
@@ -203,17 +188,17 @@ set(ALL_SOURCES
     ${MAIN_SOURCE}
 )
 
-# ============================================================================
+# ===========================================================================
 # EXECUTABLE
-# ============================================================================
+# ===========================================================================
 
 add_executable(${PROJECT_NAME}
     ${ALL_SOURCES}
 )
 
-# ============================================================================
+# ===========================================================================
 # INCLUDE DIRECTORIES
-# ============================================================================
+# ===========================================================================
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${INCLUDE_DIR}
@@ -221,30 +206,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PostgreSQL_INCLUDE_DIRS}
 )
 
-# ============================================================================
-# COMPILE DEFINITIONS
-# ============================================================================
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    SODIUM_STATIC=1
-)
-
-# ============================================================================
-# COMPILER FLAGS
-# ============================================================================
-
-if(NOT MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wno-unused-function
-        -Wno-conversion
-        -Wno-sign-compare
-        -Wno-unused-parameter
-    )
-endif()
-
-# ============================================================================
-# LINK LIBRARIES
-# ============================================================================
+# ===========================================================================
+# LINK BCRYPT (remplace sodium !)
+# ===========================================================================
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core
@@ -256,7 +220,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Pdf
     Qt6::Network
     ${PostgreSQL_LIBRARIES}
-    sodium
+    bcrypt_vendor
 )
 
 # Windows specific
@@ -275,9 +239,9 @@ else()
     )
 endif()
 
-# ============================================================================
+# ===========================================================================
 # COPY DATABASE SCHEMA & CONFIG FILES
-# ============================================================================
+# ===========================================================================
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -286,9 +250,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying database schema"
 )
 
-# ============================================================================
+# ===========================================================================
 # INSTALLATION
-# ============================================================================
+# ===========================================================================
 
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
@@ -298,9 +262,9 @@ install(FILES ${DATABASE_DIR}/structure.sql
     DESTINATION share/logistic_appro
 )
 
-# ============================================================================
+# ===========================================================================
 # COMPILER OPTIONS (PRODUCTION)
-# ============================================================================
+# ===========================================================================
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /O2)
@@ -308,21 +272,21 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -O2)
 endif()
 
-# ============================================================================
+# ===========================================================================
 # SUMMARY MESSAGE
-# ============================================================================
+# ===========================================================================
 
 message(STATUS "")
-message(STATUS "╔════════════════════════════��═══════════════════════════════╗")
-message(STATUS "║ SEMULIKI ERP Configuration Summary                          ║")
-message(STATUS "╠════════════════════════════════════════════════════════════╣")
+message(STATUS "╔══════════════════════════════════════════════════════════╗")
+message(STATUS "║ SEMULIKI ERP Configuration Summary                      ║")
+message(STATUS "╠══════════════════════════════════════════════════════════╣")
 message(STATUS "║ Project Name: ${PROJECT_NAME}")
 message(STATUS "║ Version: ${PROJECT_VERSION}")
 message(STATUS "║ C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "║ Qt Version: ${Qt6_VERSION}")
 message(STATUS "║ PostgreSQL: FOUND")
-message(STATUS "║ libsodium: FetchContent (auto build)")
-message(STATUS "║ Password Hashing: Argon2")
+message(STATUS "║ bcrypt: custom vendor implementation")
+message(STATUS "║ Password Hashing: Bcrypt")
 message(STATUS "║ Build Type: ${CMAKE_BUILD_TYPE}")
 if(WIN32)
     message(STATUS "║ Platform: Windows")
@@ -331,5 +295,5 @@ elseif(APPLE)
 else()
     message(STATUS "║ Platform: Linux")
 endif()
-message(STATUS "╚═════════════════════════════════════════════════���══════════╝")
+message(STATUS "╚══════════════════════════════════════════════════════════╝")
 message(STATUS "")

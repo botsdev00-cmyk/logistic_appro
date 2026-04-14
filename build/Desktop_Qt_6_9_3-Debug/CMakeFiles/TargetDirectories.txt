@@ -1,4 +1,4 @@
-/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/libsodium_external.dir
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/bcrypt_vendor.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/logistic_appro.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/edit_cache.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/rebuild_cache.dir
@@ -6,5 +6,7 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/install.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/install/local.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/install/strip.dir
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/bcrypt_vendor_autogen_timestamp_deps.dir
+/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/bcrypt_vendor_autogen.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/logistic_appro_autogen_timestamp_deps.dir
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/logistic_appro_autogen.dir
