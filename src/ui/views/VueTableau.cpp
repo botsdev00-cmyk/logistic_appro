@@ -1,4 +1,6 @@
 #include "VueTableau.h"
+#include "../../business/managers/GestionnaireCatalogue.h"
+#include "../widgets/TableauCatalogue.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -11,8 +13,11 @@
 #include <QDebug>
 
 VueTableau::VueTableau(QWidget* parent)
-    : QWidget(parent)
+    : QWidget(parent),
+      m_gestionnaireCatalogue(std::make_unique<GestionnaireCatalogue>()),
+      m_tableauCatalogue(nullptr)
 {
+    initialiserGestionnaires();
     creerInterface();
     chargerDonnees();
     appliquerStyle();
@@ -24,15 +29,24 @@ VueTableau::~VueTableau()
 {
 }
 
+void VueTableau::initialiserGestionnaires()
+{
+    qDebug() << "[TABLEAU] Initialisation des gestionnaires...";
+    
+    if (m_gestionnaireCatalogue) {
+        qDebug() << "[TABLEAU] Gestionnaire catalogue initialisé";
+    }
+}
+
 void VueTableau::creerInterface()
 {
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
     layoutPrincipal->setContentsMargins(20, 20, 20, 20);
     layoutPrincipal->setSpacing(20);
     
-    // ═════════════════════════════════════���═════════════════════
+    // ═════════════════════════════════════════════════════════════
     // SECTION: En-tête avec bienvenue
-    // ═══════════════════════════════════════════════════════════
+    // ════���════════════════════════════════════════════════════════
     
     QHBoxLayout* layoutEntete = new QHBoxLayout();
     
@@ -49,21 +63,21 @@ void VueTableau::creerInterface()
     layoutPrincipal->addLayout(layoutEntete);
     layoutPrincipal->addSpacing(10);
     
-    // ═══════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════
     // SECTION: Cartes KPI
-    // ═══════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════
     
     creerCarteKPI();
     
-    // ═══════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════
     // SECTION: Raccourcis vers modules
-    // ═══════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════
     
     creerRaccourcis();
     
-    // ═══════════════════════════════════════════════════════════
-    // SECTION: Dernières activités (stub)
-    // ═══════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════
+    // SECTION: Dernières activités
+    // ═════════════════════════════════════════════════════════════
     
     creerDernieresActivites();
     
@@ -94,7 +108,17 @@ void VueTableau::creerCarteKPI()
     layoutKPI->setSpacing(15);
     layoutKPI->setContentsMargins(15, 20, 15, 15);
     
-    // Carte 1: Stock Total
+    // Carte 1: Produits Actifs (NOUVEAU)
+    QVBoxLayout* cardProduits = new QVBoxLayout();
+    QLabel* labelProduitsTitre = new QLabel("📚 Produits Actifs");
+    labelProduitsTitre->setStyleSheet("font-weight: bold; font-size: 12px; color: #7f8c8d;");
+    m_produitsActifs = new QLabel("0 produits");
+    m_produitsActifs->setStyleSheet("font-size: 24px; font-weight: bold; color: #9b59b6;");
+    cardProduits->addWidget(labelProduitsTitre);
+    cardProduits->addWidget(m_produitsActifs);
+    cardProduits->addStretch();
+    
+    // Carte 2: Stock Total
     QVBoxLayout* cardStock = new QVBoxLayout();
     QLabel* labelStockTitre = new QLabel("📦 Stock Total");
     labelStockTitre->setStyleSheet("font-weight: bold; font-size: 12px; color: #7f8c8d;");
@@ -104,7 +128,7 @@ void VueTableau::creerCarteKPI()
     cardStock->addWidget(m_stockTotal);
     cardStock->addStretch();
     
-    // Carte 2: Ventes du jour
+    // Carte 3: Ventes du jour
     QVBoxLayout* cardVentes = new QVBoxLayout();
     QLabel* labelVentesTitre = new QLabel("💰 Ventes du Jour");
     labelVentesTitre->setStyleSheet("font-weight: bold; font-size: 12px; color: #7f8c8d;");
@@ -114,7 +138,7 @@ void VueTableau::creerCarteKPI()
     cardVentes->addWidget(m_ventesJour);
     cardVentes->addStretch();
     
-    // Carte 3: Clients Actifs
+    // Carte 4: Clients Actifs
     QVBoxLayout* cardClients = new QVBoxLayout();
     QLabel* labelClientsTitre = new QLabel("👥 Clients Actifs");
     labelClientsTitre->setStyleSheet("font-weight: bold; font-size: 12px; color: #7f8c8d;");
@@ -124,7 +148,7 @@ void VueTableau::creerCarteKPI()
     cardClients->addWidget(m_clientsActifs);
     cardClients->addStretch();
     
-    // Carte 4: Crédits en cours
+    // Carte 5: Crédits en cours
     QVBoxLayout* cardCredits = new QVBoxLayout();
     QLabel* labelCreditsTitre = new QLabel("📊 Crédits en Cours");
     labelCreditsTitre->setStyleSheet("font-weight: bold; font-size: 12px; color: #7f8c8d;");
@@ -134,7 +158,9 @@ void VueTableau::creerCarteKPI()
     cardCredits->addWidget(m_creditsEnCours);
     cardCredits->addStretch();
     
-    // Ajouter les cartes au layout
+    // Créer les widgets pour chaque carte
+    QWidget* widgetProduits = new QWidget();
+    widgetProduits->setLayout(cardProduits);
     QWidget* widgetStock = new QWidget();
     widgetStock->setLayout(cardStock);
     QWidget* widgetVentes = new QWidget();
@@ -144,10 +170,12 @@ void VueTableau::creerCarteKPI()
     QWidget* widgetCredits = new QWidget();
     widgetCredits->setLayout(cardCredits);
     
-    layoutKPI->addWidget(widgetStock, 0, 0);
-    layoutKPI->addWidget(widgetVentes, 0, 1);
-    layoutKPI->addWidget(widgetClients, 0, 2);
-    layoutKPI->addWidget(widgetCredits, 0, 3);
+    // Ajouter les cartes au layout
+    layoutKPI->addWidget(widgetProduits, 0, 0);
+    layoutKPI->addWidget(widgetStock, 0, 1);
+    layoutKPI->addWidget(widgetVentes, 0, 2);
+    layoutKPI->addWidget(widgetClients, 0, 3);
+    layoutKPI->addWidget(widgetCredits, 0, 4);
     
     // Ajouter le groupe au layout principal
     QVBoxLayout* layoutMain = qobject_cast<QVBoxLayout*>(layout());
@@ -178,6 +206,23 @@ void VueTableau::creerRaccourcis()
     QHBoxLayout* layoutRaccourcis = new QHBoxLayout(groupRaccourcis);
     layoutRaccourcis->setSpacing(10);
     layoutRaccourcis->setContentsMargins(15, 20, 15, 15);
+    
+    // Bouton Catalogue (NOUVEAU)
+    m_btnCatalogue = new QPushButton("📚 Catalogue");
+    m_btnCatalogue->setMinimumHeight(60);
+    m_btnCatalogue->setStyleSheet(
+        "QPushButton { "
+        "    background-color: #8e44ad; "
+        "    color: white; "
+        "    border: none; "
+        "    border-radius: 5px; "
+        "    font-weight: bold; "
+        "    font-size: 12px; "
+        "} "
+        "QPushButton:hover { background-color: #7d3c98; } "
+        "QPushButton:pressed { background-color: #6c3483; }"
+    );
+    connect(m_btnCatalogue, &QPushButton::clicked, this, &VueTableau::allerVersCatalogue);
     
     // Bouton Stock
     m_btnStock = new QPushButton("📦 Gestion Stock");
@@ -281,6 +326,7 @@ void VueTableau::creerRaccourcis()
     );
     connect(m_btnClients, &QPushButton::clicked, this, &VueTableau::allerVersClients);
     
+    layoutRaccourcis->addWidget(m_btnCatalogue);
     layoutRaccourcis->addWidget(m_btnStock);
     layoutRaccourcis->addWidget(m_btnRepartition);
     layoutRaccourcis->addWidget(m_btnVentes);
@@ -319,11 +365,15 @@ void VueTableau::creerDernieresActivites()
     QLabel* labelActivite1 = new QLabel("✓ Admin s'est connecté le " + QDateTime::currentDateTime().toString("dd/MM/yyyy à hh:mm"));
     labelActivite1->setStyleSheet("color: #27ae60; padding: 5px;");
     
-    QLabel* labelActivite2 = new QLabel("ℹ️ Système prêt pour les opérations logistiques");
+    QLabel* labelActivite2 = new QLabel("ℹ️ Module Catalogue disponible - Créez vos catégories et produits");
     labelActivite2->setStyleSheet("color: #3498db; padding: 5px;");
+    
+    QLabel* labelActivite3 = new QLabel("📚 Système prêt pour les opérations logistiques");
+    labelActivite3->setStyleSheet("color: #9b59b6; padding: 5px;");
     
     layoutActivites->addWidget(labelActivite1);
     layoutActivites->addWidget(labelActivite2);
+    layoutActivites->addWidget(labelActivite3);
     layoutActivites->addStretch();
     
     // Ajouter le groupe au layout principal
@@ -336,7 +386,10 @@ void VueTableau::creerDernieresActivites()
 void VueTableau::chargerDonnees()
 {
     // Charger les données depuis la base de données
-    // Pour l'instant, afficher des valeurs par défaut
+    if (m_gestionnaireCatalogue) {
+        int nbProduits = m_gestionnaireCatalogue->obtenirTousProduits().size();
+        m_produitsActifs->setText(QString("%1 produits").arg(nbProduits));
+    }
     
     m_stockTotal->setText("0 unités");
     m_ventesJour->setText("0 XOF");
@@ -353,6 +406,11 @@ void VueTableau::appliquerStyle()
         "QGroupBox { background-color: white; }"
         "QLabel { color: #2c3e50; }"
     );
+}
+
+void VueTableau::allerVersCatalogue()
+{
+    qDebug() << "[TABLEAU] Navigation vers Catalogue";
 }
 
 void VueTableau::allerVersStock()

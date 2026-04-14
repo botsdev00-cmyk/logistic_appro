@@ -16,6 +16,8 @@ class VueCredit;
 class VueCaisse;
 class VueRapport;
 class VueClient;
+class TableauCatalogue;
+class GestionnaireCatalogue;
 
 class FenetreMain : public QMainWindow
 {
@@ -37,10 +39,12 @@ private slots:
     void afficherVueCaisse();
     void afficherVueRapport();
     void afficherVueClient();
+    void afficherVueCatalogue();
     void deconnecter();
     void afficherAPropos();
 
 private:
+    void initialiserGestionnaires();
     void creerMenus();
     void creerBarreOutils();
     void creerBarreStatut();
@@ -52,7 +56,8 @@ private:
 
     std::unique_ptr<ServiceAuthentification> m_authService;
     std::unique_ptr<QStackedWidget> m_stackedWidget;
-    
+    std::unique_ptr<GestionnaireCatalogue> m_gestionnaireCatalogue;
+
     // Vues
     std::unique_ptr<VueTableau> m_vueTableau;
     std::unique_ptr<VueStock> m_vueStock;
@@ -62,7 +67,8 @@ private:
     std::unique_ptr<VueCaisse> m_vueCaisse;
     std::unique_ptr<VueRapport> m_vueRapport;
     std::unique_ptr<VueClient> m_vueClient;
-    
+    std::unique_ptr<TableauCatalogue> m_vueCatalogue;
+
     // Actions menu
     QAction* m_actionQuitter;
     QAction* m_actionTableau;
@@ -73,9 +79,10 @@ private:
     QAction* m_actionCaisse;
     QAction* m_actionRapport;
     QAction* m_actionClient;
+    QAction* m_actionCatalogue;
     QAction* m_actionDeconnecter;
     QAction* m_actionAPropos;
-    
+
     // Labels barre de statut
     QLabel* m_labelUtilisateur;
     QLabel* m_labelHeure;

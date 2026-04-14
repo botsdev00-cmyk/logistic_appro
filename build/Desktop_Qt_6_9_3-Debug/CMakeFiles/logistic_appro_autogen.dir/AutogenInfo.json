@@ -840,6 +840,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireCatalogue.h",
+			"MU",
+			"5RRB5FJU4K/moc_GestionnaireCatalogue.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.h",
 			"MU",
 			"5RRB5FJU4K/moc_GestionnaireClient.cpp",
@@ -1056,9 +1062,21 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogCategorie.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogCategorie.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.h",
 			"MU",
 			"IYECXEJARV/moc_BoiteDialogConnexion.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogProduit.cpp",
 			null
 		],
 		[
@@ -1131,6 +1149,12 @@
 			"/home/bots/semuliki_logistic/src/ui/views/VueVentes.h",
 			"MU",
 			"J3CC273FWE/moc_VueVentes.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.h",
+			"MU",
+			"JCA2YNWUYB/moc_TableauCatalogue.cpp",
 			null
 		],
 		[
@@ -1298,6 +1322,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireCaisse.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireCatalogue.cpp",
 			"MU",
 			null
 		],
@@ -1483,7 +1512,17 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogCategorie.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.cpp",
 			"MU",
 			null
 		],
@@ -1527,6 +1566,11 @@
 			null
 		],
 		[ "/home/bots/semuliki_logistic/src/ui/views/VueVentes.cpp", "MU", null ],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.cpp",
+			"MU",
+			null
+		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauClient.cpp",
 			"MU",

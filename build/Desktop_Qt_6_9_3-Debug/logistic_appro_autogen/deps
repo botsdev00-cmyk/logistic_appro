@@ -1,4 +1,8 @@
 logistic_appro_autogen/timestamp: \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QSortFilterProxyModel \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
@@ -8,6 +12,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20utility.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q23utility.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qabstractitemmodel.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qabstractproxymodel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qalgorithms.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qanystringview.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qarraydata.h \
@@ -22,6 +27,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayalgorithms.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearraylist.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayview.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcalendar.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qchar.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare_impl.h \
@@ -35,6 +41,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcontiguouscache.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdarwinhelpers.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatastream.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatetime.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdebug.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qendian.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qexceptionhandling.h \
@@ -86,6 +93,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qsharedpointer.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qsharedpointer_impl.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qsize.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qsortfilterproxymodel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qspan.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qstdlibdetection.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qstring.h \
@@ -132,6 +140,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qversiontagging.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qxptype_traits.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qyieldcpu.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/QStandardItemModel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qaction.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qbitmap.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qbrush.h \
@@ -146,6 +155,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qkeysequence.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpaintdevice.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpalette.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpen.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpicture.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixelformat.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixmap.h \
@@ -153,7 +163,11 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qregion.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qrgb.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qrgba64.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qstandarditemmodel.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextcursor.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextdocument.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextformat.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextoption.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtgui-config.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiexports.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiglobal.h \
@@ -162,8 +176,10 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLabel \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QMainWindow \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QStackedWidget \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableView \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableWidget \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QWidget \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemdelegate.h \
@@ -174,6 +190,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlabel.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlineedit.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qmainwindow.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
@@ -623,6 +640,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/business/exceptions/ValidationException.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCaisse.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCaisse.h \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCatalogue.cpp \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCatalogue.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCredit.cpp \
@@ -696,8 +715,12 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/main.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogAlerte.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogAlerte.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogCategorie.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogCategorie.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.cpp \
@@ -722,6 +745,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/views/VueTableau.h \
 	/home/bots/semuliki_logistic/src/ui/views/VueVentes.cpp \
 	/home/bots/semuliki_logistic/src/ui/views/VueVentes.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauClient.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauClient.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.cpp \

@@ -90,6 +90,7 @@ set(BUSINESS_SERVICES
     ${SRC_DIR}/business/services/ServiceAuthentification.cpp
 )
 set(BUSINESS_MANAGERS
+    ${SRC_DIR}/business/managers/GestionnaireCatalogue.cpp
     ${SRC_DIR}/business/managers/GestionnaireStock.cpp
     ${SRC_DIR}/business/managers/GestionnaireRepartition.cpp
     ${SRC_DIR}/business/managers/GestionnaireSales.cpp
@@ -109,6 +110,8 @@ set(UI_DIALOGS
     ${SRC_DIR}/ui/dialogs/BoiteDialogVente.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogReceptionCaisse.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogAlerte.cpp
+    ${SRC_DIR}/ui/dialogs/BoiteDialogCategorie.cpp
+    ${SRC_DIR}/ui/dialogs/BoiteDialogProduit.cpp
 )
 set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauStock.cpp
@@ -116,6 +119,7 @@ set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauRepartition.cpp
     ${SRC_DIR}/ui/widgets/TableauVentes.cpp
     ${SRC_DIR}/ui/widgets/TableauCredit.cpp
+    ${SRC_DIR}/ui/widgets/TableauCatalogue.cpp
 )
 set(UI_VIEWS
     ${SRC_DIR}/ui/views/VueTableau.cpp
