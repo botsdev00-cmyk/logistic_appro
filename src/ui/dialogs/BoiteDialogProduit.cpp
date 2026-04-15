@@ -1,9 +1,11 @@
 #include "BoiteDialogProduit.h"
 #include "../../business/managers/GestionnaireCatalogue.h"
+#include "../../data/repositories/RepositoryTypeProduit.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QInputDialog>
 #include <QTextEdit>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
@@ -165,11 +167,11 @@ void BoiteDialogProduit::onValiderClicked()
     } else {
         ok = m_gestionnaire->creerProduit(produit);
     }
-    if (!ok) {
+    if (ok) {
+        this->accept(); // Ferme la fenêtre et renvoie QDialog::Accepted
+    } else {
         QMessageBox::critical(this, "Erreur", m_gestionnaire->obtenirDernierErreur());
-        return;
     }
-    accept();
 }
 
 void BoiteDialogProduit::chargerTypes() {

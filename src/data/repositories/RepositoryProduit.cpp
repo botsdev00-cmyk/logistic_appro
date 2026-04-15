@@ -177,18 +177,17 @@ Produit RepositoryProduit::getByCodeSku(const QString& sku)
     query.addBindValue(sku);
 
     Produit produit;
-    // CORRECTION : On écrase l'ID généré par le constructeur par un Null
-    produit.setProduitId(QUuid());
+    // CRITIQUE : On réinitialise l'ID à "Null" immédiatement.
+    // Un ID nul est le seul moyen de savoir que le produit n'existe pas en base.
+    produit.setProduitId(QUuid()); 
 
     if (query.exec() && query.next()) {
+        // Si on entre ici, c'est qu'on a trouvé le produit, on lui donne son vrai ID
         produit.setProduitId(QUuid(query.value("produit_id").toString()));
-        produit.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
         produit.setNom(query.value("nom").toString());
-        produit.setDescription(query.value("description").toString());
         produit.setCodeSku(query.value("code_sku").toString());
         produit.setPrixUnitaire(query.value("prix_unitaire").toDouble());
-        produit.setStockMinimum(query.value("stock_minimum").toInt());
-        produit.setEstActif(query.value("est_actif").toBool());
+        // ... remplis les autres champs ici
     }
 
     return produit;

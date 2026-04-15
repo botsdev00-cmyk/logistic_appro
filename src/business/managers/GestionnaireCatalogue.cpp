@@ -434,16 +434,17 @@ bool GestionnaireCatalogue::verifierUniciteCodeCategorie(const QString& code, co
 
 bool GestionnaireCatalogue::verifierUniciteSkuProduit(const QString& sku, const QUuid& produitIdExclu)
 {
-    if (!m_repositoryProduit) {
-        return false;
-    }
-
     Produit existant = obtenirProduitParSKU(sku);
-    if (!existant.getProduitId().isNull()) {
-        if (produitIdExclu.isNull() || existant.getProduitId() != produitIdExclu) {
-            return false;
-        }
+    
+    // Si l'ID est nul, c'est qu'il n'existe vraiment pas -> OK
+    if (existant.getProduitId().isNull()) {
+        return true; 
     }
 
-    return true;
+    // Si on arrive ici, un produit existe. Est-ce un doublon ou le produit actuel ?
+    if (!produitIdExclu.isNull() && existant.getProduitId() == produitIdExclu) {
+        return true; // C'est le même produit (en mode modification), donc c'est OK
+    }
+
+    return false; // C'est un vrai doublon
 }
