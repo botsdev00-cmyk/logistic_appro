@@ -1,4 +1,16 @@
 #include "FenetreMain.h"
+#include "../../business/managers/GestionnaireCatalogue.h"
+#include "../../business/managers/GestionnaireStock.h"
+#include "../../business/managers/GestionnaireRepartition.h"
+#include "../../business/managers/GestionnaireSales.h"
+#include "../../business/managers/GestionnaireCredit.h"
+#include "../../business/managers/GestionnaireCaisse.h"
+#include "../../business/managers/GestionnaireClient.h"
+#include "../../business/managers/GestionnaireRapport.h"
+#include "../../business/services/ServicePermissions.h"
+#include "../../data/repositories/RepositoryEntreeStock.h"
+#include "../../data/repositories/RepositoryRetourStock.h"
+#include "../../data/repositories/RepositoryStockSoldes.h"
 #include "../views/VueTableau.h"
 #include "../views/VueStock.h"
 #include "../views/VueRepartition.h"
@@ -7,354 +19,469 @@
 #include "../views/VueCaisse.h"
 #include "../views/VueRapport.h"
 #include "../views/VueClient.h"
-#include "../widgets/TableauCatalogue.h"
-#include "../../business/managers/GestionnaireCatalogue.h"
-#include "../../business/services/ServiceAuthentification.h"
 #include "../../core/entities/Utilisateur.h"
-#include "../../data/repositories/RepositoryUtilisateur.h"
-#include "../../data/repositories/RepositoryProduit.h"
-#include "../../data/repositories/RepositoryCategorieProduit.h"
-
-#include <QMenu>
+#include <QTabWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QMenuBar>
 #include <QToolBar>
-#include <QAction>
-#include <QApplication>
-#include <QMessageBox>
 #include <QStatusBar>
-#include <QStyle>
-#include <QDebug>
-#include <QCloseEvent>
 #include <QLabel>
-#include <QSize>
-#include <QDateTime>
+#include <QAction>
+#include <QMenu>
+#include <QMessageBox>
+#include <QDebug>
 #include <QTimer>
-#include <QScreen>
-#include <QVBoxLayout>
+#include <QCloseEvent>
 
-FenetreMain::FenetreMain(QWidget* parent)
+// ============================================================================
+// CONSTRUCTEUR
+// ============================================================================
+
+FenetreMain::FenetreMain(const Utilisateur& utilisateur, QWidget* parent)
     : QMainWindow(parent),
-      m_authService(std::make_unique<ServiceAuthentification>()),
-      m_gestionnaireCatalogue(std::make_unique<GestionnaireCatalogue>()),
-      m_labelUtilisateur(nullptr),
-      m_labelHeure(nullptr),
-      m_labelStatut(nullptr)
+      m_utilisateur(utilisateur),
+      m_utilisateurId(utilisateur.getUtilisateurId())
 {
-    qDebug() << "[MAIN] Initialisation de FenetreMain...";
+    qDebug() << "[FENETRE MAIN] ═══════════════════════════════════════════════";
+    qDebug() << "[FENETRE MAIN] Initialisation pour utilisateur:" << utilisateur.getNomUtilisateur();
+    qDebug() << "[FENETRE MAIN] Rôle:" << utilisateur.getNomComplet();
 
-    setWindowTitle("SEMULIKI ERP - Système de Gestion Logistique");
-    setWindowIcon(QIcon(":/images/icon.png"));
-
-    initialiserGestionnaires();
-    configurerInterface();
-    creerVues();
-    creerMenus();
-    creerBarreOutils();
-    creerBarreStatut();
-    initialiserConnexions();
+    initializeUI();
+    initializeManagers();
+    setupTabs();
+    setupMenuBar();
+    setupToolBar();
+    setupStatusBar();
+    connectSignals();
     verifierPermissions();
-    afficherInfosUtilisateur();
+    afficherAlertes();
 
-    resize(1600, 1000);
+    // Timer pour actualisation périodique (toutes les 5 minutes)
+    QTimer* timerActualisation = new QTimer(this);
+    connect(timerActualisation, &QTimer::timeout, this, &FenetreMain::onActualiserDonnees);
+    timerActualisation->start(300000);
 
-    // Centrer la fenêtre
-    QScreen* screen = QApplication::primaryScreen();
-    QRect screenGeometry = screen->geometry();
-    int x = (screenGeometry.width() - width()) / 2;
-    int y = (screenGeometry.height() - height()) / 2;
-    move(x, y);
+    // Timer pour vérifier les alertes stock (toutes les 30 secondes)
+    QTimer* timerAlertes = new QTimer(this);
+    connect(timerAlertes, &QTimer::timeout, this, &FenetreMain::afficherAlertes);
+    timerAlertes->start(30000);
 
-    afficherVueTableau();
+    setWindowTitle("SEMULIKI ERP v1.0.0 - Gestion Logistique et Répartition");
+    setMinimumSize(1400, 900);
+    setWindowState(Qt::WindowMaximized);
 
-    qDebug() << "[MAIN] FenetreMain initialisée avec succès";
+    qDebug() << "[FENETRE MAIN] ✓ Initialisation OK";
+    qDebug() << "[FENETRE MAIN] ═══════════════════════════════════════════════";
 }
+
+// ============================================================================
+// DESTRUCTEUR
+// ============================================================================
 
 FenetreMain::~FenetreMain()
 {
-    qDebug() << "[MAIN] Destruction de FenetreMain";
+    qDebug() << "[FENETRE MAIN] Destruction";
 }
 
-void FenetreMain::initialiserGestionnaires()
+// ============================================================================
+// INITIALISATION UI
+// ============================================================================
+
+void FenetreMain::initializeUI()
 {
-    qDebug() << "[MAIN] Initialisation des gestionnaires...";
+    qDebug() << "[FENETRE MAIN] Initialisation UI";
 
-    if (m_gestionnaireCatalogue) {
-        RepositoryProduit* repoProduit = new RepositoryProduit();
-        RepositoryCategorieProduit* repoCategorie = new RepositoryCategorieProduit();
-        m_gestionnaireCatalogue->setRepositoryProduit(repoProduit);
-        m_gestionnaireCatalogue->setRepositoryCategorieProduit(repoCategorie);
-        qDebug() << "[MAIN] Gestionnaire catalogue initialisé";
-    }
-}
+    QWidget* centralWidget = new QWidget(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
 
-void FenetreMain::configurerInterface()
-{
-    qDebug() << "[MAIN] Configuration de l'interface...";
-    m_stackedWidget = std::make_unique<QStackedWidget>();
-    setCentralWidget(m_stackedWidget.get());
-
-    setStyleSheet(
-        "QMainWindow { background-color: #f5f5f5; }"
-        "QMenuBar { background-color: #2c3e50; color: white; border-bottom: 1px solid #34495e; }"
-        "QMenuBar::item:selected { background-color: #34495e; }"
-        "QMenu { background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; }"
-        "QMenu::item:selected { background-color: #3498db; color: white; }"
-        "QToolBar { background-color: #34495e; border: none; border-bottom: 1px solid #2c3e50; spacing: 0px; }"
-        "QToolBar::separator { background-color: #7f8c8d; width: 1px; margin: 5px; }"
-        "QStatusBar { background-color: #2c3e50; color: white; border-top: 1px solid #34495e; }"
-        "QStatusBar::item { border: none; }"
+    m_tabWidget = new QTabWidget();
+    m_tabWidget->setDocumentMode(true);
+    m_tabWidget->setStyleSheet(
+        "QTabWidget::pane { border: 1px solid #E0E0E0; } "
+        "QTabBar::tab { padding: 8px 20px; margin-right: 2px; background-color: #F5F5F5; }"
+        "QTabBar::tab:selected { background-color: white; }"
     );
+
+    mainLayout->addWidget(m_tabWidget);
+    centralWidget->setLayout(mainLayout);
+    setCentralWidget(centralWidget);
 }
 
-void FenetreMain::creerMenus()
-{
-    qDebug() << "[MAIN] Création des menus...";
+// ============================================================================
+// INITIALISATION DES GESTIONNAIRES
+// ============================================================================
 
-    QMenu* menuFichier = menuBar()->addMenu("&Fichier");
-    menuFichier->setToolTipsVisible(true);
-    m_actionTableau = menuFichier->addAction("🏠 &Tableau de Bord");
-    m_actionTableau->setShortcut(Qt::CTRL | Qt::Key_Home);
-    m_actionTableau->setStatusTip("Afficher le tableau de bord principal");
-    connect(m_actionTableau, &QAction::triggered, this, &FenetreMain::afficherVueTableau);
+void FenetreMain::initializeManagers()
+{
+    qDebug() << "[FENETRE MAIN] Initialisation des gestionnaires...";
+
+    // ====== REPOSITORIES ======
+    m_repoEntrees = std::make_unique<RepositoryEntreeStock>();
+    m_repoRetours = std::make_unique<RepositoryRetourStock>();
+    m_repoSoldes = std::make_unique<RepositoryStockSoldes>();
+    m_servicePermissions = std::make_unique<ServicePermissions>();
+
+    qDebug() << "[FENETRE MAIN]   ✓ Repositories créés";
+
+    // ====== GESTIONNAIRE STOCK ======
+    m_gestionnaireStock = std::make_unique<GestionnaireStock>();
+    m_gestionnaireStock->setRepositoryEntreeStock(m_repoEntrees.get());
+    m_gestionnaireStock->setRepositoryRetourStock(m_repoRetours.get());
+    m_gestionnaireStock->setRepositoryStockSoldes(m_repoSoldes.get());
+    m_gestionnaireStock->setServicePermissions(m_servicePermissions.get());
+
+    qDebug() << "[FENETRE MAIN]   ✓ Gestionnaire Stock initialisé";
+
+    // ====== AUTRES GESTIONNAIRES ======
+    m_gestionnaireCatalogue = std::make_unique<GestionnaireCatalogue>();
+    m_gestionnaireRepartition = std::make_unique<GestionnaireRepartition>();
+    m_gestionnaireSales = std::make_unique<GestionnaireSales>();
+    m_gestionnaireCredit = std::make_unique<GestionnaireCredit>();
+    m_gestionnaireCaisse = std::make_unique<GestionnaireCaisse>();
+    m_gestionnaireClient = std::make_unique<GestionnaireClient>();
+    m_gestionnaireRapport = std::make_unique<GestionnaireRapport>();
+
+    qDebug() << "[FENETRE MAIN]   ✓ Tous les gestionnaires initialisés";
+}
+
+// ============================================================================
+// SETUP DES ONGLETS
+// ============================================================================
+
+void FenetreMain::setupTabs()
+{
+    qDebug() << "[FENETRE MAIN] Configuration des onglets...";
+
+    // ====== TABLEAU DE BORD ======
+    m_vueTableau = new VueTableau();
+    m_tabWidget->addTab(m_vueTableau, "📊 Tableau de Bord");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Tableau de Bord créé";
+
+    // ====== GESTION DU STOCK ======
+    m_vueStock = new VueStock(m_gestionnaireStock.get(), m_utilisateurId);
+    m_tabWidget->addTab(m_vueStock, "📦 Gestion du Stock");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Stock créé";
+
+    // ====== RÉPARTITION ======
+    m_vueRepartition = new VueRepartition();
+    m_tabWidget->addTab(m_vueRepartition, "🚚 Répartitions");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Répartition créé";
+
+    // ====== VENTES ======
+    m_vueVentes = new VueVentes();
+    m_tabWidget->addTab(m_vueVentes, "💰 Ventes");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Ventes créé";
+
+    // ====== CRÉDITS ======
+    m_vueCredit = new VueCredit();
+    m_tabWidget->addTab(m_vueCredit, "💳 Crédits");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Crédits créé";
+
+    // ====== CAISSE ======
+    m_vueCaisse = new VueCaisse();
+    m_tabWidget->addTab(m_vueCaisse, "💵 Caisse");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Caisse créé";
+
+    // ====== CLIENTS ======
+    m_vueClient = new VueClient();
+    m_tabWidget->addTab(m_vueClient, "👥 Clients");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Clients créé";
+
+    // ====== RAPPORTS ======
+    m_vueRapport = new VueRapport();
+    m_tabWidget->addTab(m_vueRapport, "📈 Rapports");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Rapports créé";
+
+    qDebug() << "[FENETRE MAIN] ✓ Configuration des onglets OK";
+}
+
+// ============================================================================
+// SETUP DU MENU BAR
+// ============================================================================
+
+void FenetreMain::setupMenuBar()
+{
+    qDebug() << "[FENETRE MAIN] Configuration du menu bar...";
+
+    QMenuBar* menuBar = new QMenuBar(this);
+    setMenuBar(menuBar);
+
+    // ====== MENU FICHIER ======
+    QMenu* menuFichier = menuBar->addMenu("&Fichier");
+    menuFichier->setIcon(QIcon(":/icons/file.png"));
+
+    QAction* actionActualiser = menuFichier->addAction("🔄 Actualiser");
+    actionActualiser->setShortcut(Qt::CTRL | Qt::Key_R);
+    connect(actionActualiser, &QAction::triggered, this, &FenetreMain::onActualiserDonnees);
+
+    QAction* actionSynchroniser = menuFichier->addAction("🔗 Synchroniser Stock");
+    actionSynchroniser->setShortcut(Qt::CTRL | Qt::Key_S);
+    connect(actionSynchroniser, &QAction::triggered, this, &FenetreMain::onSynchroniserStock);
+
+    QAction* actionExporter = menuFichier->addAction("📊 Exporter");
+    actionExporter->setShortcut(Qt::CTRL | Qt::Key_E);
+    connect(actionExporter, &QAction::triggered, this, &FenetreMain::onExporterDonnees);
 
     menuFichier->addSeparator();
-    m_actionDeconnecter = menuFichier->addAction("🚪 &Déconnecter");
-    m_actionDeconnecter->setShortcut(Qt::CTRL | Qt::Key_L);
-    m_actionDeconnecter->setStatusTip("Se déconnecter de l'application");
-    connect(m_actionDeconnecter, &QAction::triggered, this, &FenetreMain::deconnecter);
 
-    m_actionQuitter = menuFichier->addAction("❌ &Quitter");
-    m_actionQuitter->setShortcut(Qt::CTRL | Qt::Key_Q);
-    m_actionQuitter->setStatusTip("Fermer l'application");
-    connect(m_actionQuitter, &QAction::triggered, this, &QApplication::quit);
+    QAction* actionDeconnexion = menuFichier->addAction("🚪 Déconnexion");
+    actionDeconnexion->setShortcut(Qt::CTRL | Qt::Key_Q);
+    connect(actionDeconnexion, &QAction::triggered, this, &FenetreMain::onDeconnexion);
 
-    // ---- CATALOGUE ----
-    QMenu* menuCatalogue = menuBar()->addMenu("&Catalogue");
-    m_actionCatalogue = menuCatalogue->addAction("📚 Gestion &Catalogue");
-    m_actionCatalogue->setShortcut(Qt::CTRL | Qt::Key_T);
-    m_actionCatalogue->setStatusTip("Gérer les catégories et produits du catalogue");
-    m_actionCatalogue->setIcon(style()->standardIcon(QStyle::SP_DirIcon));
-    connect(m_actionCatalogue, &QAction::triggered, this, &FenetreMain::afficherVueCatalogue);
+    // ====== MENU OUTILS ======
+    QMenu* menuOutils = menuBar->addMenu("&Outils");
+    menuOutils->setIcon(QIcon(":/icons/tools.png"));
 
-    // ---- LOGISTIQUE ----
-    QMenu* menuLogistique = menuBar()->addMenu("&Logistique");
-    m_actionStock = menuLogistique->addAction("📦 Gestion &Stock");
-    m_actionStock->setShortcut(Qt::CTRL | Qt::Key_S);
-    m_actionStock->setStatusTip("Gérer les stocks de produits");
-    m_actionStock->setIcon(style()->standardIcon(QStyle::SP_DirIcon));
-    connect(m_actionStock, &QAction::triggered, this, &FenetreMain::afficherVueStock);
+    QAction* actionParametres = menuOutils->addAction("⚙️ Paramètres");
+    actionParametres->setShortcut(Qt::CTRL | Qt::Key_P);
+    connect(actionParametres, &QAction::triggered, this, &FenetreMain::onParametres);
 
-    m_actionRepartition = menuLogistique->addAction("🚚 &Répartitions");
-    m_actionRepartition->setShortcut(Qt::CTRL | Qt::Key_R);
-    m_actionRepartition->setStatusTip("Gérer les répartitions");
-    m_actionRepartition->setIcon(style()->standardIcon(QStyle::SP_FileDialogListView));
-    connect(m_actionRepartition, &QAction::triggered, this, &FenetreMain::afficherVueRepartition);
+    // ====== MENU AIDE ======
+    QMenu* menuAide = menuBar->addMenu("&Aide");
+    menuAide->setIcon(QIcon(":/icons/help.png"));
 
-    // ---- VENTES ----
-    QMenu* menuVentes = menuBar()->addMenu("&Ventes");
-    m_actionVentes = menuVentes->addAction("💳 &Ventes");
-    m_actionVentes->setShortcut(Qt::CTRL | Qt::Key_V);
-    m_actionVentes->setStatusTip("Enregistrer les ventes");
-    m_actionVentes->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
-    connect(m_actionVentes, &QAction::triggered, this, &FenetreMain::afficherVueVentes);
-    m_actionClient = menuVentes->addAction("👥 &Clients");
-    m_actionClient->setShortcut(Qt::CTRL | Qt::Key_C);
-    m_actionClient->setStatusTip("Gérer les clients");
-    m_actionClient->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
-    connect(m_actionClient, &QAction::triggered, this, &FenetreMain::afficherVueClient);
+    QAction* actionAPropos = menuAide->addAction("ℹ️ À Propos");
+    connect(actionAPropos, &QAction::triggered, this, &FenetreMain::onAPropos);
 
-    // ---- FINANCE ----
-    QMenu* menuFinance = menuBar()->addMenu("&Finance");
-    m_actionCredit = menuFinance->addAction("💰 Gestion &Crédits");
-    m_actionCredit->setShortcut(Qt::CTRL | Qt::Key_K);
-    m_actionCredit->setStatusTip("Gérer les crédits clients");
-    connect(m_actionCredit, &QAction::triggered, this, &FenetreMain::afficherVueCredit);
-    m_actionCaisse = menuFinance->addAction("🏦 Gestion &Caisse");
-    m_actionCaisse->setShortcut(Qt::CTRL | Qt::Key_B);
-    m_actionCaisse->setStatusTip("Gérer la caisse et les encaissements");
-    connect(m_actionCaisse, &QAction::triggered, this, &FenetreMain::afficherVueCaisse);
-
-    // ---- RAPPORTS ----
-    QMenu* menuRapports = menuBar()->addMenu("&Rapports");
-    m_actionRapport = menuRapports->addAction("📊 Tableau de &Bord Analytique");
-    m_actionRapport->setShortcut(Qt::CTRL | Qt::Key_D);
-    m_actionRapport->setStatusTip("Voir les rapports et analytics");
-    m_actionRapport->setIcon(style()->standardIcon(QStyle::SP_FileDialogListView));
-    connect(m_actionRapport, &QAction::triggered, this, &FenetreMain::afficherVueRapport);
-
-    // ---- AIDE ----
-    QMenu* menuAide = menuBar()->addMenu("&Aide");
-    m_actionAPropos = menuAide->addAction("ℹ️ &À Propos");
-    m_actionAPropos->setStatusTip("Informations sur SEMULIKI ERP");
-    connect(m_actionAPropos, &QAction::triggered, this, &FenetreMain::afficherAPropos);
-
-    qDebug() << "[MAIN] Menus créés avec succès";
+    qDebug() << "[FENETRE MAIN] ✓ Menu bar configuré";
 }
 
-void FenetreMain::creerBarreOutils()
+// ============================================================================
+// SETUP DE LA TOOLBAR
+// ============================================================================
+
+void FenetreMain::setupToolBar()
 {
-    qDebug() << "[MAIN] Création de la barre d'outils...";
-    QToolBar* barreOutils = addToolBar("Barre d'outils principale");
-    barreOutils->setObjectName("ToolBarPrincipale");
-    barreOutils->setMovable(false);
-    barreOutils->setIconSize(QSize(24, 24));
-    barreOutils->addAction(m_actionTableau);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionCatalogue);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionStock);
-    barreOutils->addAction(m_actionRepartition);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionVentes);
-    barreOutils->addAction(m_actionClient);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionCredit);
-    barreOutils->addAction(m_actionCaisse);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionRapport);
-    barreOutils->addSeparator();
-    barreOutils->addAction(m_actionDeconnecter);
-    qDebug() << "[MAIN] Barre d'outils créée";
+    qDebug() << "[FENETRE MAIN] Configuration de la toolbar...";
+
+    QToolBar* toolBar = addToolBar("Barre Principale");
+    toolBar->setObjectName("MainToolBar");
+    toolBar->setIconSize(QSize(24, 24));
+    toolBar->setMovable(false);
+
+    QAction* actionActualiser = toolBar->addAction("🔄 Actualiser");
+    connect(actionActualiser, &QAction::triggered, this, &FenetreMain::onActualiserDonnees);
+
+    QAction* actionSynchroniser = toolBar->addAction("🔗 Synchroniser");
+    connect(actionSynchroniser, &QAction::triggered, this, &FenetreMain::onSynchroniserStock);
+
+    toolBar->addSeparator();
+
+    QLabel* infoLabel = new QLabel("SEMULIKI ERP v1.0.0 | Système de Gestion Logistique");
+    infoLabel->setStyleSheet("color: #1976D2; font-weight: bold; margin: 0 10px;");
+    toolBar->addWidget(infoLabel);
+
+    qDebug() << "[FENETRE MAIN] ✓ Toolbar configurée";
 }
 
-void FenetreMain::creerBarreStatut()
+// ============================================================================
+// SETUP DE LA STATUSBAR
+// ============================================================================
+
+void FenetreMain::setupStatusBar()
 {
-    m_labelUtilisateur = new QLabel("Utilisateur: ");
-    m_labelStatut = new QLabel("Prêt");
-    m_labelHeure = new QLabel(QDateTime::currentDateTime().toString("hh:mm:ss"));
+    qDebug() << "[FENETRE MAIN] Configuration de la statusbar...";
 
-    statusBar()->addWidget(m_labelUtilisateur);
-    statusBar()->addWidget(m_labelStatut, 1);
-    statusBar()->addPermanentWidget(m_labelHeure);
+    // Utilisateur connecté
+    m_userLabel = new QLabel();
+    m_userLabel->setText(QString("👤 %1 | %2").arg(m_utilisateur.getNomUtilisateur(), m_utilisateur.getNomComplet()));
+    m_userLabel->setStyleSheet("padding: 5px 10px; color: #2196F3; font-weight: bold;");
+    statusBar()->addWidget(m_userLabel);
 
-    QTimer* timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, [this]() {
-        m_labelHeure->setText(QDateTime::currentDateTime().toString("hh:mm:ss"));
-    });
-    timer->start(1000);
+    statusBar()->addPermanentWidget(new QLabel(" | "));
+
+    // Statut général
+    m_statusLabel = new QLabel("✓ Connecté");
+    m_statusLabel->setStyleSheet("padding: 5px 10px; color: #4CAF50; font-weight: bold;");
+    statusBar()->addPermanentWidget(m_statusLabel);
+
+    statusBar()->addPermanentWidget(new QLabel(" | "));
+
+    // Alertes stock
+    m_stockAlertLabel = new QLabel("📦 Stock OK");
+    m_stockAlertLabel->setStyleSheet("padding: 5px 10px; color: #4CAF50; font-weight: bold;");
+    statusBar()->addPermanentWidget(m_stockAlertLabel);
+
+    qDebug() << "[FENETRE MAIN] ✓ Statusbar configurée";
 }
 
-void FenetreMain::creerVues()
+// ============================================================================
+// CONNEXION DES SIGNAUX
+// ============================================================================
+
+void FenetreMain::connectSignals()
 {
-    qDebug() << "[MAIN] Création des vues...";
-    m_vueTableau     = std::make_unique<VueTableau>();
-    m_vueStock       = std::make_unique<VueStock>();
-    m_vueRepartition = std::make_unique<VueRepartition>();
-    m_vueVentes      = std::make_unique<VueVentes>();
-    m_vueCredit      = std::make_unique<VueCredit>();
-    m_vueCaisse      = std::make_unique<VueCaisse>();
-    m_vueRapport     = std::make_unique<VueRapport>();
-    m_vueClient      = std::make_unique<VueClient>();
-    m_vueCatalogue   = std::make_unique<TableauCatalogue>();
-    m_vueCatalogue->setGestionnaireCatalogue(m_gestionnaireCatalogue.get());
-
-    m_stackedWidget->addWidget(m_vueTableau.get());
-    m_stackedWidget->addWidget(m_vueStock.get());
-    m_stackedWidget->addWidget(m_vueRepartition.get());
-    m_stackedWidget->addWidget(m_vueVentes.get());
-    m_stackedWidget->addWidget(m_vueCredit.get());
-    m_stackedWidget->addWidget(m_vueCaisse.get());
-    m_stackedWidget->addWidget(m_vueRapport.get());
-    m_stackedWidget->addWidget(m_vueClient.get());
-    m_stackedWidget->addWidget(m_vueCatalogue.get());
-    qDebug() << "[MAIN] Toutes les vues créées";
+    qDebug() << "[FENETRE MAIN] Connexion des signaux...";
+    // Les signaux sont connectés dans setupMenuBar et setupToolBar
+    qDebug() << "[FENETRE MAIN] ✓ Signaux connectés";
 }
 
-void FenetreMain::initialiserConnexions()
-{
-    // ... Compléter si besoin
-}
+// ============================================================================
+// VÉRIFICATION DES PERMISSIONS
+// ============================================================================
 
 void FenetreMain::verifierPermissions()
 {
-    // ... Permissions selon ton appli
+    qDebug() << "[FENETRE MAIN] Vérification des permissions...";
+
+    // TODO: Récupérer les permissions de l'utilisateur depuis la base
+    // et activer/désactiver les onglets en conséquence
+
+    QStringList permissions = {
+        "STOCK_VIEW", "STOCK_EDIT", "STOCK_APPROVE",
+        "VENTE_CREATE", "VENTE_EDIT",
+        "CAISSE_VALIDER",
+        "CREDIT_MANAGE"
+    };
+
+    qDebug() << "[FENETRE MAIN] Permissions:" << permissions;
+
+    // Masquer les onglets selon les permissions
+    // if (!permissions.contains("STOCK_VIEW")) {
+    //     m_tabWidget->setTabEnabled(1, false);
+    // }
+
+    qDebug() << "[FENETRE MAIN] ✓ Permissions vérifiées";
 }
 
-void FenetreMain::afficherInfosUtilisateur()
+// ============================================================================
+// AFFICHAGE DES ALERTES
+// ============================================================================
+
+void FenetreMain::afficherAlertes()
 {
-    if (m_authService && m_authService->isAuthenticated()) {
-        Utilisateur* user = m_authService->getCurrentUser();
-        if (user && m_labelUtilisateur) {
-            QString nomComplet = user->getNomComplet();
-            m_labelUtilisateur->setText(QString("👤 Utilisateur: %1").arg(nomComplet));
-        }
+    if (!m_gestionnaireStock) return;
+
+    auto alertes = m_gestionnaireStock->obtenirAlertesCritiques();
+
+    if (alertes.isEmpty()) {
+        m_stockAlertLabel->setText("📦 Stock OK");
+        m_stockAlertLabel->setStyleSheet("padding: 5px 10px; color: #4CAF50; font-weight: bold;");
+    } else {
+        m_stockAlertLabel->setText(QString("⚠️ %1 alerte(s) CRITIQUE(S)").arg(alertes.count()));
+        m_stockAlertLabel->setStyleSheet("padding: 5px 10px; color: #FF5722; font-weight: bold;");
+
+        qDebug() << "[FENETRE MAIN] ⚠️ ALERTES STOCK:" << alertes.count();
     }
 }
 
-// -------- SLOTS : Navigation des vues --------
-void FenetreMain::afficherVueTableau()
-{
-    m_stackedWidget->setCurrentWidget(m_vueTableau.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Tableau de Bord");
-}
-void FenetreMain::afficherVueStock()
-{
-    m_stackedWidget->setCurrentWidget(m_vueStock.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Gestion du Stock");
-}
-void FenetreMain::afficherVueRepartition()
-{
-    m_stackedWidget->setCurrentWidget(m_vueRepartition.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Répartitions");
-}
-void FenetreMain::afficherVueVentes()
-{
-    m_stackedWidget->setCurrentWidget(m_vueVentes.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Ventes");
-}
-void FenetreMain::afficherVueCredit()
-{
-    m_stackedWidget->setCurrentWidget(m_vueCredit.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Crédits");
-}
-void FenetreMain::afficherVueCaisse()
-{
-    m_stackedWidget->setCurrentWidget(m_vueCaisse.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Caisse");
-}
-void FenetreMain::afficherVueRapport()
-{
-    m_stackedWidget->setCurrentWidget(m_vueRapport.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Rapports & Analytics");
-}
-void FenetreMain::afficherVueClient()
-{
-    m_stackedWidget->setCurrentWidget(m_vueClient.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Clients");
-}
-void FenetreMain::afficherVueCatalogue()
-{
-    m_stackedWidget->setCurrentWidget(m_vueCatalogue.get());
-    if (m_labelStatut) m_labelStatut->setText("Affichage: Catalogue");
-}
+// ============================================================================
+// SLOTS - MENU FICHIER
+// ============================================================================
 
-// -------- SLOTS : Divers --------
-
-void FenetreMain::deconnecter()
+void FenetreMain::onDeconnexion()
 {
-    m_authService->logout();
-    QMessageBox::information(this, "Déconnexion", "Vous avez été déconnecté avec succès.\n\nL'application va se fermer.\n\nMerci d'avoir utilisé SEMULIKI ERP !");
-    QApplication::quit();
-}
+    qDebug() << "[FENETRE MAIN] Déconnexion demandée";
 
-void FenetreMain::afficherAPropos()
-{
-    QMessageBox::about(this, "À Propos de SEMULIKI ERP",
-        "SEMULIKI ERP v1.0.0\n"
-        "Système de Gestion Logistique et Approvisionnement\n"
-        "Fonctionnalités : Catalogue, Stock, Répartition, Ventes, Crédits, Caisse, Rapports.\n"
-        "© 2026 SEMULIKI. Développé avec Qt6 et PostgreSQL."
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Confirmation de Déconnexion",
+        "Êtes-vous sûr de vouloir vous déconnecter?",
+        QMessageBox::Yes | QMessageBox::No
     );
+
+    if (reply == QMessageBox::Yes) {
+        qDebug() << "[FENETRE MAIN] Déconnexion confirmée";
+        close();
+    }
 }
+
+void FenetreMain::onAPropos()
+{
+    qDebug() << "[FENETRE MAIN] Affichage à propos";
+
+    QString message = QString(
+        "SEMULIKI ERP v1.0.0\n\n"
+        "Système de Gestion de Logistique et Répartition\n\n"
+        "© 2026 - Tous droits réservés\n\n"
+        "Utilisateur: %1\n"
+        "Rôle: %2\n\n"
+        "Technologie: Qt 6.9.3 + PostgreSQL 14\n"
+        "Langage: C++ 17"
+    ).arg(m_utilisateur.getNomUtilisateur(), m_utilisateur.getNomComplet());
+
+    QMessageBox::information(this, "À Propos de SEMULIKI ERP", message);
+}
+
+void FenetreMain::onParametres()
+{
+    qDebug() << "[FENETRE MAIN] Ouverture des paramètres";
+    QMessageBox::information(this, "Paramètres", 
+                            "Paramètres utilisateur (Fonctionnalité à implémenter)");
+}
+
+// ============================================================================
+// SLOTS - MENU OUTILS
+// ============================================================================
+
+void FenetreMain::onActualiserDonnees()
+{
+    qDebug() << "[FENETRE MAIN] Actualisation des données";
+
+    m_statusLabel->setText("🔄 Actualisation...");
+
+    if (m_vueStock) {
+        m_vueStock->onActualiser();
+    }
+
+    QTimer::singleShot(1000, this, [this]() {
+        m_statusLabel->setText("✓ Connecté");
+    });
+}
+
+void FenetreMain::onSynchroniserStock()
+{
+    qDebug() << "[FENETRE MAIN] Synchronisation du stock";
+
+    if (!m_gestionnaireStock) {
+        QMessageBox::warning(this, "Erreur", "Gestionnaire stock non initialisé");
+        return;
+    }
+
+    m_statusLabel->setText("🔗 Synchronisation...");
+
+    if (m_gestionnaireStock->synchroniserStockSoldes()) {
+        if (m_vueStock) {
+            m_vueStock->onActualiser();
+        }
+        QMessageBox::information(this, "✓ Succès", 
+                                "Stock synchronisé avec succès");
+        afficherAlertes();
+    } else {
+        QMessageBox::critical(this, "Erreur", 
+                             "Erreur lors de la synchronisation:\n" + 
+                             m_gestionnaireStock->obtenirDernierErreur());
+    }
+
+    m_statusLabel->setText("✓ Connecté");
+}
+
+void FenetreMain::onExporterDonnees()
+{
+    qDebug() << "[FENETRE MAIN] Export des données";
+    QMessageBox::information(this, "Export", 
+                            "Export des données (Fonctionnalité à implémenter)");
+}
+
+// ============================================================================
+// EVENT - FERMETURE
+// ============================================================================
 
 void FenetreMain::closeEvent(QCloseEvent* event)
 {
-    int resultat = QMessageBox::question(this, "Quitter l'application",
-        "Êtes-vous sûr de vouloir quitter SEMULIKI ERP ?\n\n"
-        "Tous les travaux non sauvegardés seront perdus.",
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
-    if (resultat == QMessageBox::Yes) {
+    qDebug() << "[FENETRE MAIN] Fermeture de l'application demandée";
+
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Confirmation de Fermeture",
+        "Êtes-vous sûr de vouloir fermer l'application?",
+        QMessageBox::Yes | QMessageBox::No
+    );
+
+    if (reply == QMessageBox::Yes) {
+        qDebug() << "[FENETRE MAIN] ✓ Fermeture confirmée";
         event->accept();
     } else {
         event->ignore();

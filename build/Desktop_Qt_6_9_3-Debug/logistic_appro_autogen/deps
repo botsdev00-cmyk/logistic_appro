@@ -1,6 +1,8 @@
 logistic_appro_autogen/timestamp: \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDate \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QMap \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QSortFilterProxyModel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
@@ -55,7 +57,6 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qglobalstatic.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhash.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhashfunctions.h \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevice.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevicebase.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qitemselectionmodel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterable.h \
@@ -156,7 +157,6 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpaintdevice.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpalette.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpen.h \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpicture.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixelformat.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixmap.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpolygon.h \
@@ -176,11 +176,9 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLabel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QMainWindow \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QStackedWidget \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableView \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableWidget \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QWidget \
@@ -193,14 +191,12 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qcombobox.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlabel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlineedit.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qmainwindow.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qpushbutton.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qslider.h \
-	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstackedwidget.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyle.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyleoption.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabbar.h \
@@ -661,6 +657,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireStock.h \
 	/home/bots/semuliki_logistic/src/business/services/ServiceAuthentification.cpp \
 	/home/bots/semuliki_logistic/src/business/services/ServiceAuthentification.h \
+	/home/bots/semuliki_logistic/src/business/services/ServicePermissions.cpp \
+	/home/bots/semuliki_logistic/src/business/services/ServicePermissions.h \
 	/home/bots/semuliki_logistic/src/business/services/ServiceValidation.cpp \
 	/home/bots/semuliki_logistic/src/business/services/ServiceValidation.h \
 	/home/bots/semuliki_logistic/src/core/constants/AppConstants.cpp \
@@ -683,8 +681,12 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/core/entities/ReceptionCaisse.h \
 	/home/bots/semuliki_logistic/src/core/entities/Repartition.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Repartition.h \
+	/home/bots/semuliki_logistic/src/core/entities/RetourStock.cpp \
+	/home/bots/semuliki_logistic/src/core/entities/RetourStock.h \
 	/home/bots/semuliki_logistic/src/core/entities/Route.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Route.h \
+	/home/bots/semuliki_logistic/src/core/entities/StockSolde.cpp \
+	/home/bots/semuliki_logistic/src/core/entities/StockSolde.h \
 	/home/bots/semuliki_logistic/src/core/entities/Utilisateur.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Utilisateur.h \
 	/home/bots/semuliki_logistic/src/core/entities/Vente.cpp \
@@ -701,6 +703,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryClient.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCredit.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCredit.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryProduit.cpp \
@@ -709,12 +713,16 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryReceptionCaisse.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRepartition.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRepartition.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRetourStock.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRetourStock.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRoute.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryRoute.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositorySales.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositorySales.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryTypeProduit.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryTypeProduit.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryUtilisateur.cpp \
@@ -726,12 +734,16 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogCategorie.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogVente.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogVente.h \
 	/home/bots/semuliki_logistic/src/ui/main_window/FenetreMain.cpp \
@@ -752,12 +764,16 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/views/VueTableau.h \
 	/home/bots/semuliki_logistic/src/ui/views/VueVentes.cpp \
 	/home/bots/semuliki_logistic/src/ui/views/VueVentes.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/PanelAlertes.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/PanelAlertes.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauClient.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauClient.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.cpp \

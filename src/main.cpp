@@ -9,6 +9,7 @@
 #include "ui/dialogs/BoiteDialogConnexion.h"
 #include "business/services/ServiceAuthentification.h"
 #include "data/database/ConnexionBaseDonnees.h"
+#include "core/entities/Utilisateur.h"
 
 class SplashScreen
 {
@@ -70,7 +71,8 @@ int main(int argc, char* argv[])
         
         // 3. Créer et afficher la fenêtre principale
         qDebug() << "\n[INFO] Création de la fenêtre principale...";
-        FenetreMain window;
+        Utilisateur utilisateurConnecte;
+        FenetreMain window(utilisateurConnecte);
         window.show();
         
         qDebug() << "[OK] Application démarrée avec succès\n";

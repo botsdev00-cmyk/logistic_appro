@@ -17,13 +17,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 214,
+				"line" : 329,
 				"parent" : 0
 			},
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 218,
+				"line" : 333,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 337,
 				"parent" : 0
 			}
 		]
@@ -48,7 +54,17 @@
 			"destination" : "share/logistic_appro",
 			"paths" : 
 			[
-				"database/structure.sql"
+				"scripts/structure.sql"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "share/logistic_appro",
+			"paths" : 
+			[
+				"scripts/init_data.sql"
 			],
 			"type" : "file"
 		}

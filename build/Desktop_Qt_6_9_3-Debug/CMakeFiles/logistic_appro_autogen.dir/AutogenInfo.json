@@ -888,6 +888,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/services/ServicePermissions.h",
+			"MU",
+			"ATI67FUFFU/moc_ServicePermissions.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/services/ServiceValidation.h",
 			"MU",
 			"ATI67FUFFU/moc_ServiceValidation.cpp",
@@ -954,9 +960,21 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/core/entities/RetourStock.h",
+			"MU",
+			"AWUCPG6CAX/moc_RetourStock.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/core/entities/Route.h",
 			"MU",
 			"AWUCPG6CAX/moc_Route.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/core/entities/StockSolde.h",
+			"MU",
+			"AWUCPG6CAX/moc_StockSolde.cpp",
 			null
 		],
 		[
@@ -1008,6 +1026,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryEntreeStock.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryEquipe.cpp",
@@ -1032,6 +1056,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryRetourStock.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryRetourStock.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryRoute.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryRoute.cpp",
@@ -1047,6 +1077,12 @@
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryStock.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryStockSoldes.cpp",
 			null
 		],
 		[
@@ -1080,6 +1116,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogEntreeStock.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.h",
 			"MU",
 			"IYECXEJARV/moc_BoiteDialogProduit.cpp",
@@ -1095,6 +1137,12 @@
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.h",
 			"MU",
 			"IYECXEJARV/moc_BoiteDialogRepartition.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogRetourStock.cpp",
 			null
 		],
 		[
@@ -1158,6 +1206,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/PanelAlertes.h",
+			"MU",
+			"JCA2YNWUYB/moc_PanelAlertes.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.h",
 			"MU",
 			"JCA2YNWUYB/moc_TableauCatalogue.cpp",
@@ -1173,6 +1227,12 @@
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.h",
 			"MU",
 			"JCA2YNWUYB/moc_TableauCredit.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.h",
+			"MU",
+			"JCA2YNWUYB/moc_TableauHistoriqueStock.cpp",
 			null
 		],
 		[
@@ -1372,6 +1432,11 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/services/ServicePermissions.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/services/ServiceValidation.cpp",
 			"MU",
 			null
@@ -1427,7 +1492,17 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/core/entities/RetourStock.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/core/entities/Route.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/core/entities/StockSolde.cpp",
 			"MU",
 			null
 		],
@@ -1472,6 +1547,11 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.cpp",
 			"MU",
 			null
@@ -1492,6 +1572,11 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryRetourStock.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryRoute.cpp",
 			"MU",
 			null
@@ -1503,6 +1588,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.cpp",
 			"MU",
 			null
 		],
@@ -1533,6 +1623,11 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.cpp",
 			"MU",
 			null
@@ -1544,6 +1639,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.cpp",
 			"MU",
 			null
 		],
@@ -1578,6 +1678,11 @@
 		],
 		[ "/home/bots/semuliki_logistic/src/ui/views/VueVentes.cpp", "MU", null ],
 		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/PanelAlertes.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCatalogue.cpp",
 			"MU",
 			null
@@ -1589,6 +1694,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.cpp",
 			"MU",
 			null
 		],

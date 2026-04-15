@@ -1,19 +1,13 @@
 #ifndef ENTREESTOCK_H
 #define ENTREESTOCK_H
 
+#include <QUuid>
 #include <QString>
 #include <QDateTime>
-#include <QUuid>
 
 class EntreeStock
 {
 public:
-    enum class Source {
-        Production,
-        Retour,
-        Ajustement
-    };
-
     EntreeStock();
     ~EntreeStock();
 
@@ -21,36 +15,47 @@ public:
     QUuid getEntreeStockId() const { return m_entreeStockId; }
     QUuid getProduitId() const { return m_produitId; }
     int getQuantite() const { return m_quantite; }
-    Source getSource() const { return m_source; }
-    QUuid getIdentifiantReference() const { return m_identifiantReference; }
-    QDateTime getDate() const { return m_date; }
+    QUuid getSourceEntreeId() const { return m_sourceEntreeId; }
+    QString getNumeroFacture() const { return m_numeroFacture; }
+    double getPrixUnitaire() const { return m_prixUnitaire; }
+    QString getNumeroLot() const { return m_numeroLot; }
+    QDate getDateExpiration() const { return m_dateExpiration; }
     QUuid getCreePar() const { return m_creePar; }
-    QString getNotes() const { return m_notes; }
+    QUuid getApprouvePar() const { return m_approuvePar; }
+    QString getStatutValidation() const { return m_statutValidation; }
+    QDateTime getDate() const { return m_date; }
+    QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
 
     // Setters
     void setEntreeStockId(const QUuid& id) { m_entreeStockId = id; }
     void setProduitId(const QUuid& id) { m_produitId = id; }
-    void setQuantite(int qty) { m_quantite = qty; }
-    void setSource(Source source) { m_source = source; }
-    void setIdentifiantReference(const QUuid& id) { m_identifiantReference = id; }
-    void setDate(const QDateTime& date) { m_date = date; }
+    void setQuantite(int q) { m_quantite = q; }
+    void setSourceEntreeId(const QUuid& id) { m_sourceEntreeId = id; }
+    void setNumeroFacture(const QString& num) { m_numeroFacture = num; }
+    void setPrixUnitaire(double prix) { m_prixUnitaire = prix; }
+    void setNumeroLot(const QString& lot) { m_numeroLot = lot; }
+    void setDateExpiration(const QDate& date) { m_dateExpiration = date; }
     void setCreePar(const QUuid& id) { m_creePar = id; }
-    void setNotes(const QString& notes) { m_notes = notes; }
+    void setApprouvePar(const QUuid& id) { m_approuvePar = id; }
+    void setStatutValidation(const QString& statut) { m_statutValidation = statut; }
 
-    // Utility methods
-    static QString sourceToString(Source source);
-    static Source stringToSource(const QString& str);
-    QString getSourceLabel() const;
+    // Validation
+    bool estValide() const;
 
 private:
     QUuid m_entreeStockId;
     QUuid m_produitId;
     int m_quantite;
-    Source m_source;
-    QUuid m_identifiantReference;
-    QDateTime m_date;
+    QUuid m_sourceEntreeId;
+    QString m_numeroFacture;
+    double m_prixUnitaire;
+    QString m_numeroLot;
+    QDate m_dateExpiration;
     QUuid m_creePar;
-    QString m_notes;
+    QUuid m_approuvePar;
+    QString m_statutValidation; // EN_ATTENTE, APPROUVE, REJETE
+    QDateTime m_date;
+    QDateTime m_dateMiseAJour;
 };
 
 #endif // ENTREESTOCK_H

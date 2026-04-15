@@ -1,42 +1,186 @@
-#ifndef GESTIONNAIRESTOCK_H
-#define GESTIONNAIRESTOCK_H
+#ifndef GESTIONNAIRE_STOCK_H
+#define GESTIONNAIRE_STOCK_H
 
-#include <QString>
 #include <QList>
 #include <QUuid>
+#include <QString>
+#include <QMap>
+#include <QDate>
+#include <memory>
 
 class EntreeStock;
-class Produit;
+class RetourStock;
+class StockSolde;
+class RepositoryEntreeStock;
+class RepositoryRetourStock;
+class RepositoryStockSoldes;
+class ServicePermissions;
+
+// ============================================================================
+// STRUCTURES DE DONNÉES
+// ============================================================================
+
+struct StockInfo {
+    QUuid produitId;
+    QString produitNom;
+    QString codeSKU;
+    QString categorie;
+    QString type;
+    int quantiteTotal;
+    int quantiteReservee;
+    int quantiteDisponible;
+    double valeurStock;
+    double prixMoyen;
+    int stockMinimum;
+    QString statut; // OK, FAIBLE, CRITIQUE, RUPTURE
+    QDateTime dernierMouvement;
+};
+
+struct Mouvement {
+    QString type;               // ENTREE, SORTIE, RETOUR
+    QString raison;
+    QString nomProduit;
+    QString codeSKU;
+    int quantiteDelta;
+    int quantiteApres;
+    QString nomUtilisateur;
+    QString dateCreation;
+    QString source;
+};
+
+struct Alerte {
+    QUuid produitId;
+    QString produitNom;
+    QString codeSKU;
+    int quantiteDisponible;
+    int stockMinimum;
+    QString severite;           // LOW, CRITICAL, RUPTURE
+    double valeurStock;
+    QString action;             // Recommandation
+};
+
+struct StatistiquesStock {
+    int nombreProduitsTotal;
+    int nombreProduitsEnStock;
+    int nombreProduitsEnRupture;
+    int nombreProduitsBasStock;
+    double valeurTotalStock;
+    double valeurMoyenneProduit;
+    int quantiteTotalUnites;
+    int quantiteReserveeUnites;
+    int quantiteDisponibleUnites;
+};
+
+// ============================================================================
+// GESTIONNAIRE PRINCIPAL
+// ============================================================================
 
 class GestionnaireStock
 {
 public:
     GestionnaireStock();
+    ~GestionnaireStock();
 
-    // Stock operations
-    bool ajouterStock(const QUuid& produitId, int quantite, const QString& source);
-    bool retirerStock(const QUuid& produitId, int quantite);
-    bool retournerStock(const QUuid& produitId, int quantite, const QString& raison);
-    
-    // Stock queries
-    int obtenirStockActuel(const QUuid& produitId);
-    QList<Produit> obtenirProduitsEnRupture();
-    QList<Produit> obtenirProduitsBasStock();
-    
-    // Stock adjustments
-    bool ajusterStock(const QUuid& produitId, int nouvelleQuantite, const QString& raison);
-    
-    // Validation
-    bool validerQuantiteDisponible(const QUuid& produitId, int quantiteRequise);
-    
-    // Error handling
-    QString getDernierErreur() const { return m_dernierErreur; }
+    // ====== SETTERS REPOSITORIES ======
+    void setRepositoryEntreeStock(RepositoryEntreeStock* repo);
+    void setRepositoryRetourStock(RepositoryRetourStock* repo);
+    void setRepositoryStockSoldes(RepositoryStockSoldes* repo);
+    void setServicePermissions(ServicePermissions* service);
+
+    // ====== GESTION DES ENTRÉES ======
+    bool creerEntreeStock(const EntreeStock& entree);
+    bool creerEntreeStockAvecPermission(const EntreeStock& entree, const QUuid& utilisateurId);
+    bool approuverEntree(const QUuid& entreeId, const QUuid& utilisateurId);
+    bool approuverEntreeAvecPermission(const QUuid& entreeId, const QUuid& utilisateurId);
+    bool rejeterEntree(const QUuid& entreeId);
+    QList<EntreeStock> obtenirEntreesEnAttente();
+    QList<EntreeStock> obtenirHistoriqueEntrees(const QUuid& produitId = QUuid(), int joursArriere = 30);
+    EntreeStock obtenirEntree(const QUuid& entreeId);
+    bool supprimerEntree(const QUuid& entreeId);
+
+    // ====== GESTION DES RETOURS ======
+    bool creerRetourStock(const RetourStock& retour);
+    bool creerRetourStockAvecPermission(const RetourStock& retour, const QUuid& utilisateurId);
+    bool approuverRetour(const QUuid& retourId, const QUuid& utilisateurId);
+    bool approuverRetourAvecPermission(const QUuid& retourId, const QUuid& utilisateurId);
+    bool rejeterRetour(const QUuid& retourId);
+    QList<RetourStock> obtenirRetoursEnAttente();
+    QList<RetourStock> obtenirHistoriqueRetours(const QUuid& produitId = QUuid(), int joursArriere = 30);
+    RetourStock obtenirRetour(const QUuid& retourId);
+    bool supprimerRetour(const QUuid& retourId);
+
+    // ====== CONSULTATION STOCK ======
+    int obtenirQuantiteDisponible(const QUuid& produitId);
+    int obtenirQuantiteReservee(const QUuid& produitId);
+    int obtenirQuantiteTotal(const QUuid& produitId);
+    StockInfo obtenirStockDetail(const QUuid& produitId);
+    QList<StockInfo> obtenirTousLesStocks();
+    QList<StockInfo> obtenirStocksPaginee(int page = 1, int parPage = 50);
+    QList<StockInfo> rechercherStocks(const QString& critere);
+    QList<StockInfo> filtrerStocksParStatut(const QString& statut);
+    QList<StockInfo> filtrerStocksParCategorie(const QUuid& categorieId);
+
+    // ====== MOUVEMENTS ======
+    QList<Mouvement> obtenirMouvementsRecents(const QUuid& produitId = QUuid(), int jours = 30);
+    QList<Mouvement> obtenirHistoriqueProduit(const QUuid& produitId);
+    QList<Mouvement> obtenirMouvementsParType(const QString& type);
+    QList<Mouvement> obtenirMouvementsParDateRange(const QDate& dateDebut, const QDate& dateFin);
+    int obtenirNombreMouvements(const QUuid& produitId = QUuid());
+
+    // ====== ALERTES ======
+    QList<Alerte> obtenirAlertes();
+    QList<Alerte> obtenirAlertesCritiques();
+    QList<Alerte> obtenirAlertesBasStock();
+    QList<Alerte> obtenirAlerteRupture();
+    bool genererAlertes();
+    int obtenirNombreAlertes();
+    int obtenirNombreAlertesComme(const QString& severite);
+
+    // ====== VALIDATION ======
+    bool validerDisponibilite(const QUuid& produitId, int quantiteRequise);
+    bool validerEntree(const EntreeStock& entree);
+    bool validerRetour(const RetourStock& retour);
+    QString obtenirErreurValidation();
+
+    // ====== TRANSACTIONS ======
+    bool reserverStock(const QUuid& repartitionId, const QUuid& produitId, int quantite);
+    bool confirmerConsommation(const QUuid& repartitionId, const QUuid& produitId, int quantite);
+    bool annulerReservation(const QUuid& repartitionId, const QUuid& produitId);
+    bool synchroniserStockSoldes();
+
+    // ====== STATISTIQUES ======
+    StatistiquesStock obtenirStatistiques();
+    QMap<QString, int> obtenirStatutistiquesParCategorie();
+    QMap<QString, double> obtenirValeurParCategorie();
+    double obtenirValeurTotalStock();
+    double obtenirValeurMoyenneProduit();
+    int obtenirRotationStock(const QUuid& produitId, int jours = 30);
+
+    // ====== RAPPORTS ======
+    QString genererRapportStock();
+    QString genererRapportAlertes();
+    QString genererRapportMouvements(const QDate& dateDebut, const QDate& dateFin);
+
+    // ====== GESTION DES ERREURS ======
+    QString obtenirDernierErreur() const { return m_dernierErreur; }
+    void effacerDernierErreur() { m_dernierErreur.clear(); }
 
 private:
+    // Repositories
+    RepositoryEntreeStock* m_repoEntrees;
+    RepositoryRetourStock* m_repoRetours;
+    RepositoryStockSoldes* m_repoSoldes;
+    ServicePermissions* m_servicePermissions;
+
+    // Cache des erreurs
     QString m_dernierErreur;
-    
-    bool verifierDisponibilite(const QUuid& produitId, int quantite);
-    void enregistrerMouvement(const QUuid& produitId, int quantite, const QString& type);
+
+    // ====== MÉTHODES INTERNES ======
+    bool validerQuantite(int quantite);
+    bool validerProduit(const QUuid& produitId);
+    QString determinerStatutStock(int quantiteDisponible, int stockMinimum);
+    double calculerValeurStock(int quantite, double prixMoyen);
+    QString genererRecommandation(const Alerte& alerte);
 };
 
-#endif // GESTIONNAIRESTOCK_H
+#endif // GESTIONNAIRE_STOCK_H

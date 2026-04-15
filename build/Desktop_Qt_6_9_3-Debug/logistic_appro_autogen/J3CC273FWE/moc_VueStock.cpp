@@ -39,25 +39,37 @@ template <> constexpr inline auto VueStock::qt_create_metaobjectdata<qt_meta_tag
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "VueStock",
-        "rechercher",
+        "onAjouterEntree",
         "",
-        "filtrer",
-        "creerEntree",
-        "enregistrerRetour",
-        "ajustement"
+        "onAjouterRetour",
+        "onEntreesEnAttente",
+        "onRetoursEnAttente",
+        "onRechercherStock",
+        "onFiltrerParStatut",
+        "index",
+        "onExporterStock",
+        "onSynchroniser"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'rechercher'
+        // Slot 'onAjouterEntree'
         QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'filtrer'
+        // Slot 'onAjouterRetour'
         QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'creerEntree'
+        // Slot 'onEntreesEnAttente'
         QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'enregistrerRetour'
+        // Slot 'onRetoursEnAttente'
         QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'ajustement'
+        // Slot 'onRechercherStock'
         QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onFiltrerParStatut'
+        QtMocHelpers::SlotData<void(int)>(7, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 8 },
+        }}),
+        // Slot 'onExporterStock'
+        QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onSynchroniser'
+        QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -81,15 +93,17 @@ void VueStock::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, vo
     auto *_t = static_cast<VueStock *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->rechercher(); break;
-        case 1: _t->filtrer(); break;
-        case 2: _t->creerEntree(); break;
-        case 3: _t->enregistrerRetour(); break;
-        case 4: _t->ajustement(); break;
+        case 0: _t->onAjouterEntree(); break;
+        case 1: _t->onAjouterRetour(); break;
+        case 2: _t->onEntreesEnAttente(); break;
+        case 3: _t->onRetoursEnAttente(); break;
+        case 4: _t->onRechercherStock(); break;
+        case 5: _t->onFiltrerParStatut((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 6: _t->onExporterStock(); break;
+        case 7: _t->onSynchroniser(); break;
         default: ;
         }
     }
-    (void)_a;
 }
 
 const QMetaObject *VueStock::metaObject() const
@@ -111,14 +125,14 @@ int VueStock::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 5)
+        if (_id < 8)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 5;
+        _id -= 8;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 5)
+        if (_id < 8)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 5;
+        _id -= 8;
     }
     return _id;
 }

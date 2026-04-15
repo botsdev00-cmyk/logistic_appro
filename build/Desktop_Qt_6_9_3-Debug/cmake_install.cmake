@@ -63,7 +63,11 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/logistic_appro" TYPE FILE FILES "/home/bots/semuliki_logistic/database/structure.sql")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/logistic_appro" TYPE FILE FILES "/home/bots/semuliki_logistic/scripts/structure.sql")
+endif()
+
+if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/logistic_appro" TYPE FILE FILES "/home/bots/semuliki_logistic/scripts/init_data.sql")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)

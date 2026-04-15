@@ -1,33 +1,40 @@
 #ifndef TABLEAUSTOCK_H
 #define TABLEAUSTOCK_H
 
-#include <QTableWidget>
-#include <memory>
+#include <QWidget>
+#include <QUuid>
+#include <QList>
+#include "../../business/managers/GestionnaireStock.h"  // ✅ AJOUT: Pour StockInfo
 
-class GestionnaireStock;
+class QTableWidget;
+class QTableWidgetItem;
+class QPushButton;
 
-class TableauStock : public QTableWidget
+class TableauStock : public QWidget
 {
     Q_OBJECT
 
 public:
-    TableauStock(QWidget* parent = nullptr);
+    explicit TableauStock(GestionnaireStock* gestionnaire, QWidget* parent = nullptr);
     ~TableauStock();
 
     void chargerDonnees();
-    void rafraichir();
+    void filtrer(const QString& critere);
+    void filtrerParStatut(const QString& statut);
 
 private slots:
-    void afficherDetailsStock();
-    void exporterEnCSV();
+    void onAfficherDetail(int row);
+    void onModifierStockMinimum(int row);
+    void onAfficherHistorique(int row);
 
 private:
-    void creerContextMenu();
-    void initialiserColonnes();
-    void remplirTableau();
-    void mettreEnEvidence();
+    void initializeUI();
+    void remplirTableau(const QList<StockInfo>& stocks);
+    QColor obtenirCouleurStatut(const QString& statut);
 
-    std::unique_ptr<GestionnaireStock> m_gestionnaire;
+    GestionnaireStock* m_gestionnaire;
+    QTableWidget* m_table;
+    QList<StockInfo> m_donneesCourantes;
 };
 
 #endif // TABLEAUSTOCK_H

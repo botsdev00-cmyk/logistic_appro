@@ -39,16 +39,26 @@ template <> constexpr inline auto TableauStock::qt_create_metaobjectdata<qt_meta
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "TableauStock",
-        "afficherDetailsStock",
+        "onAfficherDetail",
         "",
-        "exporterEnCSV"
+        "row",
+        "onModifierStockMinimum",
+        "onAfficherHistorique"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'afficherDetailsStock'
-        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'exporterEnCSV'
-        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onAfficherDetail'
+        QtMocHelpers::SlotData<void(int)>(1, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
+        // Slot 'onModifierStockMinimum'
+        QtMocHelpers::SlotData<void(int)>(4, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
+        // Slot 'onAfficherHistorique'
+        QtMocHelpers::SlotData<void(int)>(5, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -58,7 +68,7 @@ template <> constexpr inline auto TableauStock::qt_create_metaobjectdata<qt_meta
             qt_methods, qt_properties, qt_enums);
 }
 Q_CONSTINIT const QMetaObject TableauStock::staticMetaObject = { {
-    QMetaObject::SuperData::link<QTableWidget::staticMetaObject>(),
+    QMetaObject::SuperData::link<QWidget::staticMetaObject>(),
     qt_staticMetaObjectStaticContent<qt_meta_tag_ZN12TableauStockE_t>.stringdata,
     qt_staticMetaObjectStaticContent<qt_meta_tag_ZN12TableauStockE_t>.data,
     qt_static_metacall,
@@ -72,12 +82,12 @@ void TableauStock::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
     auto *_t = static_cast<TableauStock *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->afficherDetailsStock(); break;
-        case 1: _t->exporterEnCSV(); break;
+        case 0: _t->onAfficherDetail((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 1: _t->onModifierStockMinimum((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 2: _t->onAfficherHistorique((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
         default: ;
         }
     }
-    (void)_a;
 }
 
 const QMetaObject *TableauStock::metaObject() const
@@ -90,23 +100,23 @@ void *TableauStock::qt_metacast(const char *_clname)
     if (!_clname) return nullptr;
     if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN12TableauStockE_t>.strings))
         return static_cast<void*>(this);
-    return QTableWidget::qt_metacast(_clname);
+    return QWidget::qt_metacast(_clname);
 }
 
 int TableauStock::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QTableWidget::qt_metacall(_c, _id, _a);
+    _id = QWidget::qt_metacall(_c, _id, _a);
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 3;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 3)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 2;
+        _id -= 3;
     }
     return _id;
 }

@@ -44,31 +44,31 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 169,
+				"line" : 262,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 214,
+				"line" : 329,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 181,
+				"line" : 280,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 197,
+				"line" : 299,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 22,
+				"line" : 30,
 				"parent" : 0
 			},
 			{
@@ -150,7 +150,7 @@
 			{
 				"command" : 9,
 				"file" : 0,
-				"line" : 225,
+				"line" : 315,
 				"parent" : 0
 			},
 			{
@@ -172,7 +172,7 @@
 			{
 				"command" : 12,
 				"file" : 0,
-				"line" : 174,
+				"line" : 270,
 				"parent" : 0
 			}
 		]
@@ -396,8 +396,17 @@
 				67,
 				68,
 				69,
+				70,
 				71,
-				73
+				72,
+				73,
+				74,
+				75,
+				76,
+				77,
+				78,
+				80,
+				82
 			]
 		}
 	],
@@ -606,30 +615,39 @@
 				67,
 				68,
 				69,
+				70,
 				71,
-				73
+				72,
+				73,
+				74,
+				75,
+				76,
+				77,
+				78,
+				80,
+				82
 			]
 		},
 		{
 			"name" : "Resources",
 			"sourceIndexes" : 
 			[
-				70
+				79
 			]
 		},
 		{
 			"name" : "",
 			"sourceIndexes" : 
 			[
-				72
+				81
 			]
 		},
 		{
 			"name" : "CMake Rules",
 			"sourceIndexes" : 
 			[
-				74,
-				75
+				83,
+				84
 			]
 		}
 	],
@@ -717,6 +735,18 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
+			"path" : "src/core/entities/RetourStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/core/entities/StockSolde.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
 			"path" : "src/core/constants/AppConstants.cpp",
 			"sourceGroupIndex" : 0
 		},
@@ -748,12 +778,6 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/data/repositories/RepositoryProduit.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "src/data/repositories/RepositoryTypeProduit.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
@@ -813,6 +837,24 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
+			"path" : "src/data/repositories/RepositoryEntreeStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/data/repositories/RepositoryRetourStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/data/repositories/RepositoryStockSoldes.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
 			"path" : "src/business/exceptions/AppException.cpp",
 			"sourceGroupIndex" : 0
 		},
@@ -844,6 +886,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/business/services/ServiceAuthentification.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/business/services/ServicePermissions.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
@@ -909,6 +957,18 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
+			"path" : "src/ui/dialogs/BoiteDialogEntreeStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/ui/dialogs/BoiteDialogRetourStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
 			"path" : "src/ui/dialogs/BoiteDialogRepartition.cpp",
 			"sourceGroupIndex" : 0
 		},
@@ -946,6 +1006,18 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/ui/widgets/TableauStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/ui/widgets/TableauHistoriqueStock.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/ui/widgets/PanelAlertes.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{

@@ -1,117 +1,211 @@
 #include "TableauStock.h"
 #include "../../business/managers/GestionnaireStock.h"
-#include <QHeaderView>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QContextMenuEvent>
-#include <QMenu>
-#include <QAction>
-#include <QFile>
+#include <QPushButton>
+#include <QHeaderView>
+#include <QMessageBox>
 #include <QDebug>
 
-TableauStock::TableauStock(QWidget* parent)
-    : QTableWidget(parent),
-      m_gestionnaire(std::make_unique<GestionnaireStock>())
+TableauStock::TableauStock(GestionnaireStock* gestionnaire, QWidget* parent)
+    : QWidget(parent),
+      m_gestionnaire(gestionnaire)
 {
-    initialiserColonnes();
-    creerContextMenu();
-    setStyleSheet(
-        "QTableWidget { background-color: white; }"
-        "QHeaderView::section { background-color: #34495e; color: white; padding: 5px; }"
-    );
+    qDebug() << "[TABLEAU STOCK] Initialisation";
+    initializeUI();
 }
 
 TableauStock::~TableauStock()
 {
 }
 
-void TableauStock::initialiserColonnes()
+void TableauStock::initializeUI()
 {
-    setColumnCount(6);
-    setHorizontalHeaderLabels({"Produit", "Catégorie", "Stock actuel", "Stock minimum", "État", "Statut"});
-    
-    horizontalHeader()->setStretchLastSection(false);
-    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    
-    setSelectionBehavior(QAbstractItemView::SelectRows);
-    setSelectionMode(QAbstractItemView::SingleSelection);
-    setAlternatingRowColors(true);
+    QVBoxLayout* layout = new QVBoxLayout(this);
+
+    m_table = new QTableWidget();
+    m_table->setColumnCount(9);
+    m_table->setHorizontalHeaderLabels({
+        "Produit", "SKU", "Catégorie", "Quantité", "Réservée", 
+        "Disponible", "Prix Moyen", "Statut", "Actions"
+    });
+
+    m_table->horizontalHeader()->setStretchLastSection(false);
+    m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_table->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_table->setAlternatingRowColors(true);
+
+    layout->addWidget(m_table);
+    setLayout(layout);
 }
 
 void TableauStock::chargerDonnees()
 {
-    remplirTableau();
+    qDebug() << "[TABLEAU STOCK] Chargement des données";
+
+    m_donneesCourantes = m_gestionnaire->obtenirTousLesStocks();
+    remplirTableau(m_donneesCourantes);
 }
 
-void TableauStock::rafraichir()
+void TableauStock::remplirTableau(const QList<StockInfo>& stocks)
 {
-    clearContents();
-    setRowCount(0);
-    remplirTableau();
+    m_table->setRowCount(0);
+
+    for (int i = 0; i < stocks.count(); ++i) {
+        const auto& stock = stocks[i];
+
+        m_table->insertRow(i);
+
+        // Colonne: Produit
+        QTableWidgetItem* itemProduit = new QTableWidgetItem(stock.produitNom);
+        m_table->setItem(i, 0, itemProduit);
+
+        // Colonne: SKU
+        QTableWidgetItem* itemSKU = new QTableWidgetItem(stock.codeSKU);
+        m_table->setItem(i, 1, itemSKU);
+
+        // Colonne: Catégorie
+        QTableWidgetItem* itemCategorie = new QTableWidgetItem(stock.categorie);
+        m_table->setItem(i, 2, itemCategorie);
+
+        // Colonne: Quantité totale
+        QTableWidgetItem* itemTotal = new QTableWidgetItem(QString::number(stock.quantiteTotal));
+        itemTotal->setTextAlignment(Qt::AlignCenter);
+        m_table->setItem(i, 3, itemTotal);
+
+        // Colonne: Quantité réservée
+        QTableWidgetItem* itemReservee = new QTableWidgetItem(QString::number(stock.quantiteReservee));
+        itemReservee->setTextAlignment(Qt::AlignCenter);
+        m_table->setItem(i, 4, itemReservee);
+
+        // Colonne: Quantité disponible
+        QTableWidgetItem* itemDisponible = new QTableWidgetItem(QString::number(stock.quantiteDisponible));
+        itemDisponible->setTextAlignment(Qt::AlignCenter);
+        itemDisponible->setFont(QFont("Arial", 10, QFont::Bold));
+        m_table->setItem(i, 5, itemDisponible);
+
+        // Colonne: Prix moyen
+        QTableWidgetItem* itemPrix = new QTableWidgetItem(QString::number(stock.prixMoyen, 'f', 2) + " €");
+        itemPrix->setTextAlignment(Qt::AlignRight);
+        m_table->setItem(i, 6, itemPrix);
+
+        // Colonne: Statut
+        QTableWidgetItem* itemStatut = new QTableWidgetItem(stock.statut);
+        itemStatut->setTextAlignment(Qt::AlignCenter);
+        itemStatut->setBackground(obtenirCouleurStatut(stock.statut));
+        m_table->setItem(i, 7, itemStatut);
+
+        // Colonne: Actions
+        QWidget* widgetActions = new QWidget();
+        QHBoxLayout* layoutActions = new QHBoxLayout(widgetActions);
+        layoutActions->setContentsMargins(2, 2, 2, 2);
+
+        QPushButton* btnDetail = new QPushButton("📄 Détail");
+        btnDetail->setMaximumWidth(80);
+        connect(btnDetail, &QPushButton::clicked, this, [this, i]() { onAfficherDetail(i); });
+
+        QPushButton* btnHistorique = new QPushButton("📊 Historique");
+        btnHistorique->setMaximumWidth(100);
+        connect(btnHistorique, &QPushButton::clicked, this, [this, i]() { onAfficherHistorique(i); });
+
+        layoutActions->addWidget(btnDetail);
+        layoutActions->addWidget(btnHistorique);
+        layoutActions->addStretch();
+
+        m_table->setCellWidget(i, 8, widgetActions);
+    }
+
+    // Redimensionner les colonnes
+    m_table->resizeColumnsToContents();
+    m_table->horizontalHeader()->setStretchLastSection(true);
+
+    qDebug() << "[TABLEAU STOCK] Affichage de" << stocks.count() << "produits";
 }
 
-void TableauStock::remplirTableau()
+void TableauStock::filtrer(const QString& critere)
 {
-    // À implémenter avec les données de GestionnaireStock
-    
-    // Exemple de données fictives
-    insertRow(0);
-    setItem(0, 0, new QTableWidgetItem("Vin Rouge Shiraz"));
-    setItem(0, 1, new QTableWidgetItem("Vin Rouge"));
-    setItem(0, 2, new QTableWidgetItem("150"));
-    setItem(0, 3, new QTableWidgetItem("50"));
-    setItem(0, 4, new QTableWidgetItem("OK"));
-    setItem(0, 5, new QTableWidgetItem("Actif"));
-    
-    insertRow(1);
-    setItem(1, 0, new QTableWidgetItem("Bière Blonde"));
-    setItem(1, 1, new QTableWidgetItem("Bière"));
-    setItem(1, 2, new QTableWidgetItem("15"));
-    setItem(1, 3, new QTableWidgetItem("30"));
-    setItem(1, 4, new QTableWidgetItem("⚠ Bas"));
-    setItem(1, 5, new QTableWidgetItem("Alerte"));
-    
-    mettreEnEvidence();
+    qDebug() << "[TABLEAU STOCK] Filtrage par critère:" << critere;
+
+    auto filtered = m_gestionnaire->rechercherStocks(critere);
+    remplirTableau(filtered);
 }
 
-void TableauStock::mettreEnEvidence()
+void TableauStock::filtrerParStatut(const QString& statut)
 {
-    for (int row = 0; row < rowCount(); ++row) {
-        QString statut = item(row, 4)->text();
-        
-        if (statut.contains("Bas")) {
-            for (int col = 0; col < columnCount(); ++col) {
-                item(row, col)->setBackground(QColor("#fff3cd"));
-            }
-        } else if (statut.contains("Rupture")) {
-            for (int col = 0; col < columnCount(); ++col) {
-                item(row, col)->setBackground(QColor("#f8d7da"));
+    qDebug() << "[TABLEAU STOCK] Filtrage par statut:" << statut;
+
+    QList<StockInfo> filtered;
+
+    if (statut == "Tous les statuts") {
+        filtered = m_donneesCourantes;
+    } else {
+        for (const auto& stock : m_donneesCourantes) {
+            if (stock.statut == statut) {
+                filtered.append(stock);
             }
         }
     }
+
+    remplirTableau(filtered);
 }
 
-void TableauStock::creerContextMenu()
+void TableauStock::onAfficherDetail(int row)
 {
-    setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
-        QMenu menu;
-        menu.addAction("Afficher détails", this, &TableauStock::afficherDetailsStock);
-        menu.addAction("Exporter CSV", this, &TableauStock::exporterEnCSV);
-        menu.exec(mapToGlobal(pos));
-    });
+    const auto& stock = m_donneesCourantes[row];
+
+    QString detail = QString(
+        "DÉTAIL PRODUIT\n\n"
+        "Nom: %1\n"
+        "SKU: %2\n"
+        "Catégorie: %3\n"
+        "Type: %4\n\n"
+        "STOCK\n"
+        "Quantité totale: %5\n"
+        "Quantité réservée: %6\n"
+        "Quantité disponible: %7\n"
+        "Stock minimum: %8\n\n"
+        "VALEUR\n"
+        "Prix moyen: %9 €\n"
+        "Valeur stock: %10 €\n\n"
+        "STATUT: %11"
+    ).arg(stock.produitNom, stock.codeSKU, stock.categorie, stock.type)
+     .arg(stock.quantiteTotal).arg(stock.quantiteReservee).arg(stock.quantiteDisponible)
+     .arg(stock.stockMinimum).arg(stock.prixMoyen, 0, 'f', 2).arg(stock.valeurStock, 0, 'f', 2)
+     .arg(stock.statut);
+
+    QMessageBox::information(this, "Détail Stock", detail);
 }
 
-void TableauStock::afficherDetailsStock()
+void TableauStock::onModifierStockMinimum(int row)
 {
-    if (currentRow() >= 0) {
-        QString produit = item(currentRow(), 0)->text();
-        qDebug() << "Affichage détails pour:" << produit;
+    // TODO: Implémenter modification du stock minimum
+    QMessageBox::information(this, "Modification", "Modification du stock minimum");
+}
+
+void TableauStock::onAfficherHistorique(int row)
+{
+    const auto& stock = m_donneesCourantes[row];
+    qDebug() << "[TABLEAU STOCK] Historique du produit:" << stock.produitNom;
+
+    auto mouvements = m_gestionnaire->obtenirHistoriqueProduit(stock.produitId);
+
+    QString historique = QString("HISTORIQUE - %1 (%2 mouvements)\n\n").arg(stock.produitNom).arg(mouvements.count());
+
+    for (const auto& mvt : mouvements) {
+        historique += QString("• %1 | Type: %2 | Raison: %3 | Qté: %4 | Par: %5\n")
+            .arg(mvt.dateCreation, mvt.type, mvt.raison)
+            .arg(mvt.quantiteDelta).arg(mvt.nomUtilisateur);
     }
+
+    QMessageBox::information(this, "Historique", historique);
 }
 
-void TableauStock::exporterEnCSV()
+QColor TableauStock::obtenirCouleurStatut(const QString& statut)
 {
-    // À implémenter
-    qDebug() << "Export CSV";
+    if (statut == "RUPTURE") return QColor(255, 100, 100); // Rouge
+    if (statut == "CRITIQUE") return QColor(255, 193, 7);  // Orange
+    if (statut == "FAIBLE") return QColor(255, 235, 59);   // Jaune
+    return QColor(76, 175, 80);                            // Vert
 }

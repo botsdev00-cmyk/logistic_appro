@@ -1,5 +1,10 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/JCA2YNWUYB/moc_TableauStock.cpp: /home/bots/semuliki_logistic/src/ui/widgets/TableauStock.h \
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDate \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QMap \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20iterator.h \
@@ -7,7 +12,6 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20type_traits.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20utility.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q23utility.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qabstractitemmodel.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qalgorithms.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qanystringview.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qarraydata.h \
@@ -22,6 +26,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayalgorithms.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearraylist.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayview.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcalendar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qchar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare_impl.h \
@@ -35,6 +40,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcontiguouscache.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdarwinhelpers.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatastream.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatetime.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdebug.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qendian.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qexceptionhandling.h \
@@ -49,7 +55,6 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhash.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhashfunctions.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevicebase.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qitemselectionmodel.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterable.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterator.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlatin1stringview.h \
@@ -76,7 +81,6 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qprocessordetection.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qrect.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qrefcount.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qregularexpression.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qscopedpointer.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qscopeguard.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qset.h \
@@ -124,6 +128,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtypeinfo.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtypes.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qutf8stringview.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/quuid.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvariant.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvarlengtharray.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qversiontagging.h \
@@ -153,28 +158,14 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtransform.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qvalidator.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableWidget \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemdelegate.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractitemview.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractscrollarea.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractslider.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractspinbox.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QWidget \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qslider.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyle.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyleoption.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabbar.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtableview.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtablewidget.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabwidget.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgets-config.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qwidget.h \
+  /home/bots/semuliki_logistic/src/business/managers/GestionnaireStock.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
