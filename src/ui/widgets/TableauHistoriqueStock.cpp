@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QHeaderView>
 #include <QDebug>
+#include <QFont>
 
 TableauHistoriqueStock::TableauHistoriqueStock(GestionnaireStock* gestionnaire, QWidget* parent)
     : QWidget(parent),
@@ -17,6 +18,7 @@ TableauHistoriqueStock::TableauHistoriqueStock(GestionnaireStock* gestionnaire, 
 {
     qDebug() << "[TABLEAU HISTORIQUE] Initialisation";
     initializeUI();
+    chargerDonnees();  // ✅ Charger les données au démarrage
 }
 
 TableauHistoriqueStock::~TableauHistoriqueStock()
@@ -35,6 +37,8 @@ void TableauHistoriqueStock::initializeUI()
     m_filterType->addItem("ENTREE");
     m_filterType->addItem("SORTIE");
     m_filterType->addItem("RETOUR");
+    connect(m_filterType, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+            this, &TableauHistoriqueStock::onFiltrerParType);
 
     m_dateFrom = new QDateEdit();
     m_dateFrom->setDate(QDate::currentDate().addDays(-30));
@@ -44,7 +48,7 @@ void TableauHistoriqueStock::initializeUI()
     m_dateTo->setDate(QDate::currentDate());
     m_dateTo->setCalendarPopup(true);
 
-    QPushButton* btnFiltrer = new QPushButton("🔍 Filtrer");
+    QPushButton* btnFiltrer = new QPushButton("🔍 Filtrer par date");
     connect(btnFiltrer, &QPushButton::clicked, this, &TableauHistoriqueStock::onFiltrerParDate);
 
     filterLayout->addWidget(new QLabel("Type:"));
@@ -60,9 +64,9 @@ void TableauHistoriqueStock::initializeUI()
 
     // ====== TABLE ======
     m_table = new QTableWidget();
-    m_table->setColumnCount(7);
+    m_table->setColumnCount(8);
     m_table->setHorizontalHeaderLabels({
-        "Type", "Produit", "Raison", "Quantité", "Avant", "Après", "Utilisateur", "Date"
+        "Type", "Produit", "SKU", "Raison", "Quantité", "Utilisateur", "Date", "Source"
     });
 
     m_table->horizontalHeader()->setStretchLastSection(false);
@@ -78,7 +82,14 @@ void TableauHistoriqueStock::chargerDonnees()
 {
     qDebug() << "[TABLEAU HISTORIQUE] Chargement des données";
 
+    if (!m_gestionnaire) {
+        qWarning() << "[TABLEAU HISTORIQUE] ❌ Gestionnaire non initialisé!";
+        return;
+    }
+
     m_donneesCourantes = m_gestionnaire->obtenirMouvementsRecents();
+    qDebug() << "[TABLEAU HISTORIQUE] Mouvements chargés:" << m_donneesCourantes.count();
+    
     remplirTableau(m_donneesCourantes);
 }
 
@@ -86,51 +97,71 @@ void TableauHistoriqueStock::remplirTableau(const QList<Mouvement>& mouvements)
 {
     m_table->setRowCount(0);
 
+    qDebug() << "[TABLEAU HISTORIQUE] Remplissage du tableau avec" << mouvements.count() << "mouvements";
+
     for (int i = 0; i < mouvements.count(); ++i) {
         const auto& mvt = mouvements[i];
 
         m_table->insertRow(i);
 
-        // Type
+        // ✅ Type avec couleur
         QTableWidgetItem* itemType = new QTableWidgetItem(mvt.type);
         itemType->setTextAlignment(Qt::AlignCenter);
+        itemType->setFont(QFont("Arial", 10, QFont::Bold));
+        
         QColor couleur = (mvt.type == "ENTREE") ? QColor(76, 175, 80) :
                         (mvt.type == "SORTIE") ? QColor(33, 150, 243) :
-                        QColor(255, 152, 0);
+                        QColor(255, 152, 0);  // RETOUR
         itemType->setBackground(couleur);
         itemType->setForeground(Qt::white);
         m_table->setItem(i, 0, itemType);
 
-        // Produit
-        m_table->setItem(i, 1, new QTableWidgetItem(mvt.nomUtilisateur)); // TODO: Récupérer nomProduit
+        // ✅ CORRECTION: Produit (pas Utilisateur!)
+        QTableWidgetItem* itemProduit = new QTableWidgetItem(mvt.nomProduit);
+        itemProduit->setFlags(itemProduit->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 1, itemProduit);
 
-        // Raison
-        m_table->setItem(i, 2, new QTableWidgetItem(mvt.raison));
+        // ✅ SKU
+        QTableWidgetItem* itemSKU = new QTableWidgetItem(mvt.codeSKU);
+        itemSKU->setFlags(itemSKU->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 2, itemSKU);
 
-        // Quantité
+        // ✅ Raison
+        QTableWidgetItem* itemRaison = new QTableWidgetItem(mvt.raison);
+        itemRaison->setFlags(itemRaison->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 3, itemRaison);
+
+        // ✅ Quantité
         QTableWidgetItem* itemQte = new QTableWidgetItem(QString::number(mvt.quantiteDelta));
         itemQte->setTextAlignment(Qt::AlignCenter);
-        m_table->setItem(i, 3, itemQte);
+        itemQte->setFont(QFont("Arial", 10, QFont::Bold));
+        itemQte->setFlags(itemQte->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 4, itemQte);
 
-        // Avant
-        // TODO: Implémenter quantitéAvant
+        // ✅ Utilisateur
+        QTableWidgetItem* itemUtilisateur = new QTableWidgetItem(mvt.nomUtilisateur);
+        itemUtilisateur->setFlags(itemUtilisateur->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 5, itemUtilisateur);
 
-        // Après
-        QTableWidgetItem* itemApres = new QTableWidgetItem(QString::number(mvt.quantiteApres));
-        itemApres->setTextAlignment(Qt::AlignCenter);
-        m_table->setItem(i, 5, itemApres);
+        // ✅ Date
+        QTableWidgetItem* itemDate = new QTableWidgetItem(mvt.dateCreation);
+        itemDate->setTextAlignment(Qt::AlignCenter);
+        itemDate->setFlags(itemDate->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 6, itemDate);
 
-        // Utilisateur
-        m_table->setItem(i, 6, new QTableWidgetItem(mvt.nomUtilisateur));
-
-        // Date
-        m_table->setItem(i, 7, new QTableWidgetItem(mvt.dateCreation));
+        // ✅ Source
+        QTableWidgetItem* itemSource = new QTableWidgetItem(mvt.source);
+        itemSource->setFlags(itemSource->flags() & ~Qt::ItemIsEditable);
+        m_table->setItem(i, 7, itemSource);
+        
+        qDebug() << "[MOUVEMENT]" << mvt.type << "-" << mvt.nomProduit 
+                 << "Qté:" << mvt.quantiteDelta << "par" << mvt.nomUtilisateur;
     }
 
     m_table->resizeColumnsToContents();
     m_table->horizontalHeader()->setStretchLastSection(true);
 
-    qDebug() << "[TABLEAU HISTORIQUE] Affichage de" << mouvements.count() << "mouvements";
+    qDebug() << "[TABLEAU HISTORIQUE] ✓ Tableau rempli avec" << mouvements.count() << "mouvements";
 }
 
 void TableauHistoriqueStock::onFiltrerParType(int index)
@@ -155,7 +186,12 @@ void TableauHistoriqueStock::onFiltrerParType(int index)
 
 void TableauHistoriqueStock::onFiltrerParDate()
 {
-    qDebug() << "[TABLEAU HISTORIQUE] Filtrage par date";
-    // TODO: Implémenter filtrage par date
-    chargerDonnees();
+    qDebug() << "[TABLEAU HISTORIQUE] Filtrage par date:" 
+             << m_dateFrom->date() << "à" << m_dateTo->date();
+    
+    QDate dateDebut = m_dateFrom->date();
+    QDate dateFin = m_dateTo->date();
+    
+    auto mouvements = m_gestionnaire->obtenirMouvementsParDateRange(dateDebut, dateFin);
+    remplirTableau(mouvements);
 }

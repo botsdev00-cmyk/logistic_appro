@@ -57,6 +57,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qglobalstatic.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhash.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhashfunctions.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevice.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevicebase.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qitemselectionmodel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterable.h \
@@ -157,6 +158,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpaintdevice.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpalette.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpen.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpicture.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixelformat.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixmap.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpolygon.h \
@@ -176,6 +178,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLabel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QMainWindow \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
@@ -191,6 +194,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qcombobox.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlabel.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlineedit.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qmainwindow.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qpushbutton.h \

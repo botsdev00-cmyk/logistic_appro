@@ -1,5 +1,8 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/IYECXEJARV/moc_BoiteDialogConnexion.cpp: /home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.h \
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20iterator.h \
@@ -21,6 +24,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayalgorithms.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearraylist.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayview.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcalendar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qchar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare_impl.h \
@@ -34,6 +38,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcontiguouscache.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdarwinhelpers.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatastream.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatetime.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdebug.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qendian.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qexceptionhandling.h \
@@ -47,12 +52,14 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qglobalstatic.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhash.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qhashfunctions.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevice.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiodevicebase.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterable.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qiterator.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlatin1stringview.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qline.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlist.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlocale.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlogging.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmalloc.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmap.h \
@@ -119,7 +126,9 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtversionchecks.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtypeinfo.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtypes.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qurl.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qutf8stringview.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/quuid.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvariant.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvarlengtharray.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qversiontagging.h \
@@ -139,24 +148,39 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qkeysequence.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpaintdevice.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpalette.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpen.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpicture.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixelformat.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpixmap.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qpolygon.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qregion.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qrgb.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qrgba64.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextcursor.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextdocument.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextformat.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtextoption.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtgui-config.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtguiglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtransform.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLabel \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractbutton.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlabel.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlineedit.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qpushbutton.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgets-config.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qwidget.h \
+  /home/bots/semuliki_logistic/src/core/entities/Utilisateur.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \

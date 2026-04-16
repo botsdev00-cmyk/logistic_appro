@@ -22,6 +22,16 @@ public:
     // Session management
     QUuid getCurrentUserId() const { return m_currentUserId; }
     Utilisateur* getCurrentUser() const { return m_currentUser.get(); }
+    
+    // Getter pour retourner une copie de l'utilisateur connecté
+    Utilisateur getUtilisateurConnecte() const 
+    { 
+        if (m_currentUser) {
+            return *m_currentUser;
+        }
+        return Utilisateur();
+    }
+    
     bool isAuthenticated() const { return !m_currentUserId.isNull(); }
 
     // Authorization

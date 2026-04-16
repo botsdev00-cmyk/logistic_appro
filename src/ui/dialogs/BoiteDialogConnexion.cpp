@@ -138,6 +138,13 @@ void BoiteDialogConnexion::seConnecter()
     
     if (m_authService->authenticate(utilisateur, motDePasse)) {
         m_labelErreur->setVisible(false);
+        
+        m_utilisateurConnecte = m_authService->getUtilisateurConnecte();
+        
+        qDebug() << "[CONNEXION] Utilisateur connecté:" << m_utilisateurConnecte.getNomUtilisateur();
+        qDebug() << "[CONNEXION] UUID:" << m_utilisateurConnecte.getUtilisateurId().toString();
+        qDebug() << "[CONNEXION] Email:" << m_utilisateurConnecte.getEmail();
+        
         accept();
     } else {
         m_labelErreur->setText("Erreur: " + m_authService->getLastError());

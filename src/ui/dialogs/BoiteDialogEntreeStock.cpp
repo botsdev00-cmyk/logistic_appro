@@ -15,6 +15,7 @@
 #include <QSpinBox>
 #include <QDoubleSpinBox>
 #include <QDateEdit>
+#include <QDateTime>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QFileDialog>
@@ -181,9 +182,6 @@ void BoiteDialogEntreeStock::initializeUI()
     mainLayout->addLayout(buttonLayout);
     setLayout(mainLayout);
 
-    // Ajouter une première ligne vide
-    ajouterLigneVide();
-
     qDebug() << "[ENTREE STOCK] ✓ UI initialisée";
 }
 
@@ -288,6 +286,13 @@ void BoiteDialogEntreeStock::ajouterLigneVide()
         "QComboBox { border: 1px solid #BDBDBD; padding: 4px; border-radius: 3px; } "
         "QComboBox::drop-down { border: none; }"
     );
+    // Connecter le signal pour charger les détails du produit
+    connect(comboProduit, QOverload<const QString &>::of(&QComboBox::currentTextChanged),
+            this, [this, row](const QString &text) {
+        if (text != "-- Sélectionner --") {
+            onSelectionnerProduit(row, 0);
+        }
+    });
     m_tableWidget->setCellWidget(row, 0, comboProduit);
 
     // SKU (lecture seule)
@@ -310,6 +315,9 @@ void BoiteDialogEntreeStock::ajouterLigneVide()
     spinQte->setStyleSheet(
         "QSpinBox { border: 1px solid #BDBDBD; padding: 4px; border-radius: 3px; } "
     );
+    // Connecter pour recalculer montant
+    connect(spinQte, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [this, row](int) { onCellChanged(row, 3); });
     m_tableWidget->setCellWidget(row, 3, spinQte);
 
     // Prix unitaire
@@ -321,6 +329,9 @@ void BoiteDialogEntreeStock::ajouterLigneVide()
     spinPrix->setStyleSheet(
         "QDoubleSpinBox { border: 1px solid #BDBDBD; padding: 4px; border-radius: 3px; } "
     );
+    // Connecter pour recalculer montant
+    connect(spinPrix, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, [this, row](double) { onCellChanged(row, 4); });
     m_tableWidget->setCellWidget(row, 4, spinPrix);
 
     // Montant (lecture seule)
@@ -349,10 +360,10 @@ void BoiteDialogEntreeStock::ajouterLigneVide()
 
     // Source
     QComboBox* comboSource = new QComboBox();
-    comboSource->addItem("PRODUCTION");
-    comboSource->addItem("ACHAT");
-    comboSource->addItem("RETOUR");
-    comboSource->addItem("AJUSTEMENT");
+    comboSource->addItem("-- Sélectionner --");
+    for (const auto& code : m_sourcesMap.keys()) {
+        comboSource->addItem(code);
+    }
     comboSource->setStyleSheet(
         "QComboBox { border: 1px solid #BDBDBD; padding: 4px; border-radius: 3px; } "
     );
@@ -501,35 +512,59 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
 {
     qDebug() << "[ENTREE STOCK] Sauvegarde des entrées...";
     
+    // Vérifier que l'utilisateur est valide
+    if (m_utilisateurId.isNull()) {
+        m_labelStatut->setText("❌ Erreur: Utilisateur non défini");
+        m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
+        QMessageBox::critical(this, "❌ Erreur", "L'ID utilisateur n'est pas valide");
+        return false;
+    }
+
+    qDebug() << "[ENTREE STOCK] Utilisateur créateur ID:" << m_utilisateurId.toString();
+
     int count = 0;
     for (int row = 0; row < m_tableWidget->rowCount(); ++row) {
+        // Récupérer les widgets de la ligne
         QComboBox* comboProduit = qobject_cast<QComboBox*>(m_tableWidget->cellWidget(row, 0));
-        if (!comboProduit || comboProduit->currentText() == "-- Sélectionner --") continue;
-        
         QSpinBox* spinQte = qobject_cast<QSpinBox*>(m_tableWidget->cellWidget(row, 3));
         QDoubleSpinBox* spinPrix = qobject_cast<QDoubleSpinBox*>(m_tableWidget->cellWidget(row, 4));
         QTableWidgetItem* factureItem = m_tableWidget->item(row, 6);
         QTableWidgetItem* lotItem = m_tableWidget->item(row, 7);
         QDateEdit* dateExp = qobject_cast<QDateEdit*>(m_tableWidget->cellWidget(row, 8));
         QComboBox* comboSource = qobject_cast<QComboBox*>(m_tableWidget->cellWidget(row, 9));
-        
-        if (!spinQte || !spinPrix || !factureItem || !lotItem || !dateExp || !comboSource) {
-            qWarning() << "[ENTREE STOCK] ❌ Contrôles manquants ligne" << row;
+
+        // Vérifier que le produit est sélectionné
+        if (!comboProduit || comboProduit->currentText() == "-- Sélectionner --") {
             continue;
+        }
+
+        // Vérifier que la source est sélectionnée
+        if (!comboSource || comboSource->currentText() == "-- Sélectionner --") {
+            m_labelStatut->setText(QString("❌ Erreur ligne %1: Source manquante").arg(row + 1));
+            m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
+            QMessageBox::critical(this, "❌ Erreur",
+                QString("Ligne %1: Vous devez sélectionner une source").arg(row + 1));
+            return false;
         }
 
         // Créer l'entrée
         EntreeStock entree;
         entree.setEntreeStockId(QUuid::createUuid());
         entree.setProduitId(m_produitsMap[comboProduit->currentText()]);
-        entree.setQuantite(spinQte->value());
-        entree.setPrixUnitaire(spinPrix->value());
-        entree.setNumeroFacture(factureItem->text());
-        entree.setNumeroLot(lotItem->text());
-        entree.setDateExpiration(dateExp->date());
-        entree.setCreePar(m_utilisateurId);
+        entree.setQuantite(spinQte ? spinQte->value() : 0);
+        entree.setPrixUnitaire(spinPrix ? spinPrix->value() : 0.0);
+        entree.setNumeroFacture(factureItem ? factureItem->text() : "");
+        entree.setNumeroLot(lotItem ? lotItem->text() : "");
+        entree.setDateExpiration(dateExp ? dateExp->date() : QDate::currentDate());
+        entree.setCreePar(m_utilisateurId);  // ✅ Utiliser l'UUID de l'utilisateur courant
         entree.setSourceEntreeId(m_sourcesMap[comboSource->currentText()]);
         entree.setStatutValidation("EN_ATTENTE");
+        entree.setDate(QDateTime::currentDateTime());
+
+        qDebug() << "[ENTREE STOCK] Ligne" << row + 1 
+                 << "- Produit:" << comboProduit->currentText()
+                 << "- Quantité:" << entree.getQuantite()
+                 << "- CreePar:" << m_utilisateurId.toString();
 
         // Sauvegarder
         if (m_gestionnaire->creerEntreeStock(entree)) {
@@ -539,12 +574,22 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
             QString erreur = m_gestionnaire->obtenirDernierErreur();
             qWarning() << "[ENTREE STOCK] ❌ Erreur:" << erreur;
             
+            m_labelStatut->setText(QString("❌ Erreur création ligne %1").arg(row + 1));
+            m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
+
             QMessageBox::critical(this, "❌ Erreur",
                 QString("Erreur création entrée ligne %1:\n%2")
                 .arg(row + 1)
                 .arg(erreur));
             return false;
         }
+    }
+
+    if (count == 0) {
+        m_labelStatut->setText("❌ Aucune ligne complète n'a pu être sauvegardée");
+        m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
+        QMessageBox::warning(this, "⚠️ Attention", "Aucune ligne n'a été complètement remplie");
+        return false;
     }
 
     qDebug() << "[ENTREE STOCK] ✓ Sauvegarde OK:" << count << "entrées";

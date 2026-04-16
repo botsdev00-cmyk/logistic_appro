@@ -1,12 +1,13 @@
-#ifndef BOITEDIALOGENEXION_H
-#define BOITEDIALOGENEXION_H
+#ifndef BOITEDIALOGCONNEXION_H
+#define BOITEDIALOGCONNEXION_H
 
 #include <QDialog>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QLabel>
 #include <memory>
+#include "../../core/entities/Utilisateur.h"
 
-class QLineEdit;
-class QPushButton;
-class QLabel;
 class ServiceAuthentification;
 
 class BoiteDialogConnexion : public QDialog
@@ -14,19 +15,22 @@ class BoiteDialogConnexion : public QDialog
     Q_OBJECT
 
 public:
-    BoiteDialogConnexion(QWidget* parent = nullptr);
+    explicit BoiteDialogConnexion(QWidget* parent = nullptr);
     ~BoiteDialogConnexion();
+    
+    Utilisateur getUtilisateurConnecte() const { return m_utilisateurConnecte; }
 
 private slots:
     void seConnecter();
     void afficherMotDePasse();
-    void reinitialiser();
 
 private:
     void creerWidgets();
     void initialiserConnexions();
     void configurerStyleSheet();
-
+    void reinitialiser();
+    
+    std::unique_ptr<ServiceAuthentification> m_authService;
     std::unique_ptr<QLineEdit> m_champUtilisateur;
     std::unique_ptr<QLineEdit> m_champMotDePasse;
     std::unique_ptr<QPushButton> m_boutonConnecter;
@@ -34,7 +38,7 @@ private:
     std::unique_ptr<QPushButton> m_boutonAfficherMotDePasse;
     std::unique_ptr<QLabel> m_labelErreur;
     
-    std::unique_ptr<ServiceAuthentification> m_authService;
+    Utilisateur m_utilisateurConnecte;
 };
 
-#endif // BOITEDIALOGENEXION_H
+#endif // BOITEDIALOGCONNEXION_H

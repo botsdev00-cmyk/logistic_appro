@@ -69,15 +69,29 @@ int main(int argc, char* argv[])
         
         qDebug() << "[OK] Utilisateur connecté";
         
-        // 3. Créer et afficher la fenêtre principale
+        // 3. Récupérer l'utilisateur connecté
+        qDebug() << "\n[INFO] Récupération des données utilisateur...";
+        Utilisateur utilisateurConnecte = dlgConnexion.getUtilisateurConnecte();
+        
+        if (utilisateurConnecte.getUtilisateurId().isNull()) {
+            qCritical() << "[ERREUR] L'ID utilisateur n'a pas pu être récupéré";
+            QMessageBox::critical(nullptr, "Erreur authentification",
+                "Impossible de récupérer les données utilisateur.\n"
+                "Veuillez vous reconnecter.");
+            return 1;
+        }
+        
+        qDebug() << "[OK] Utilisateur:" << utilisateurConnecte.getNomUtilisateur();
+        qDebug() << "[OK] UUID:" << utilisateurConnecte.getUtilisateurId().toString();
+        
+        // 4. Créer et afficher la fenêtre principale
         qDebug() << "\n[INFO] Création de la fenêtre principale...";
-        Utilisateur utilisateurConnecte;
         FenetreMain window(utilisateurConnecte);
         window.show();
         
         qDebug() << "[OK] Application démarrée avec succès\n";
         
-        // 4. Lancer la boucle d'événements
+        // 5. Lancer la boucle d'événements
         return app.exec();
         
     } catch (const std::exception& e) {

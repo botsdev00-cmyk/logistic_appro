@@ -35,6 +35,7 @@ public:
     void setPrixUnitaire(double prix) { m_prixUnitaire = prix; }
     void setNumeroLot(const QString& lot) { m_numeroLot = lot; }
     void setDateExpiration(const QDate& date) { m_dateExpiration = date; }
+    void setDate(const QDateTime& date) { m_date = date; }
     void setCreePar(const QUuid& id) { m_creePar = id; }
     void setApprouvePar(const QUuid& id) { m_approuvePar = id; }
     void setStatutValidation(const QString& statut) { m_statutValidation = statut; }

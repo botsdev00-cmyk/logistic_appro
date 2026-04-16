@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict NfsrEUxE6JZEyZF3BF4B80aDbpEeFXCTIu4VTko2WrJr3lE5nechzuaNLNSxm57
+\restrict JXNuRZl6hVOLqCCCr4u99A6dfpFh0BbeIdfA97qsoFGBpwhRXCvN9O0sh82gHQp
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -34,13 +34,426 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
+-- Name: fn_audit_stock_movements(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_audit_stock_movements() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO public.journaux_audit (
+        utilisateur_id,
+        action,
+        type_entite,
+        identifiant_entite,
+        nouvelles_valeurs,
+        date_heure
+    ) VALUES (
+        NEW.utilisateur_id,
+        'MOUVEMENT_STOCK_' || NEW.type_mouvement,
+        'STOCK_MOUVEMENT',
+        NEW.mouvement_id,
+        jsonb_build_object(
+            'produit_id', NEW.produit_id,
+            'type', NEW.type_mouvement,
+            'quantite_delta', NEW.quantite_delta,
+            'reference_id', NEW.reference_id,
+            'location', NEW.location_id,
+            'raison', NEW.raison
+        ),
+        CURRENT_TIMESTAMP
+    );
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_audit_stock_movements() OWNER TO postgres;
+
+--
+-- Name: fn_audit_stock_movements_update(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_audit_stock_movements_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO public.journaux_audit (
+        utilisateur_id,
+        action,
+        type_entite,
+        identifiant_entite,
+        anciennes_valeurs,
+        nouvelles_valeurs,
+        date_heure
+    ) VALUES (
+        CURRENT_USER::UUID,
+        'MOUVEMENT_STOCK_UPDATE',
+        'STOCK_MOUVEMENT',
+        NEW.mouvement_id,
+        jsonb_build_object(
+            'quantite_delta', OLD.quantite_delta,
+            'location_id', OLD.location_id,
+            'raison', OLD.raison
+        ),
+        jsonb_build_object(
+            'quantite_delta', NEW.quantite_delta,
+            'location_id', NEW.location_id,
+            'raison', NEW.raison
+        ),
+        CURRENT_TIMESTAMP
+    );
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_audit_stock_movements_update() OWNER TO postgres;
+
+--
+-- Name: fn_check_stock_availability(uuid, integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_check_stock_availability(p_produit_id uuid, p_quantite_requise integer) RETURNS TABLE(disponible boolean, quantite_actuelle integer, message text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_quantite_disponible INTEGER;
+BEGIN
+    SELECT COALESCE(SUM(sm.quantite_delta), 0)::INTEGER
+    INTO v_quantite_disponible
+    FROM public.stock_mouvements sm
+    WHERE sm.produit_id = p_produit_id
+        AND sm.location_id IN ('WAREHOUSE', 'IN_TRANSIT');
+    
+    RETURN QUERY SELECT
+        (v_quantite_disponible >= p_quantite_requise),
+        v_quantite_disponible,
+        CASE 
+            WHEN v_quantite_disponible >= p_quantite_requise 
+                THEN 'OK - Stock suffisant'::TEXT
+            ELSE ('ERREUR - Stock insuffisant: ' || v_quantite_disponible || '/' || p_quantite_requise)::TEXT
+        END;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_check_stock_availability(p_produit_id uuid, p_quantite_requise integer) OWNER TO postgres;
+
+--
+-- Name: fn_create_stock_movement(uuid, character varying, integer, uuid, character varying, uuid, character varying, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_mouvement character varying, p_quantite_delta integer, p_reference_id uuid, p_reference_type character varying, p_utilisateur_id uuid, p_location_id character varying DEFAULT 'WAREHOUSE'::character varying, p_raison character varying DEFAULT NULL::character varying, p_observations text DEFAULT NULL::text) RETURNS TABLE(success boolean, mouvement_id uuid, message text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_mouvement_id UUID;
+    v_verification RECORD;
+    v_product_exists BOOLEAN;
+BEGIN
+    -- Vérifier que le produit existe
+    SELECT EXISTS(SELECT 1 FROM public.produits WHERE produit_id = p_produit_id)
+    INTO v_product_exists;
+    
+    IF NOT v_product_exists THEN
+        RETURN QUERY SELECT 
+            false, 
+            NULL::UUID,
+            'ERREUR: Produit introuvable';
+        RETURN;
+    END IF;
+    
+    -- Vérifier l'opération
+    SELECT * INTO v_verification
+    FROM public.fn_verify_stock_operation(p_produit_id, p_quantite_delta, p_type_mouvement)
+    LIMIT 1;
+    
+    IF NOT v_verification.can_proceed THEN
+        RETURN QUERY SELECT 
+            false,
+            NULL::UUID,
+            v_verification.message;
+        RETURN;
+    END IF;
+    
+    -- Créer le mouvement
+    INSERT INTO public.stock_mouvements (
+        produit_id,
+        type_mouvement,
+        quantite_delta,
+        reference_id,
+        reference_type,
+        utilisateur_id,
+        location_id,
+        raison,
+        observations
+    ) VALUES (
+        p_produit_id,
+        p_type_mouvement,
+        p_quantite_delta,
+        p_reference_id,
+        p_reference_type,
+        p_utilisateur_id,
+        p_location_id,
+        p_raison,
+        p_observations
+    ) RETURNING mouvement_id INTO v_mouvement_id;
+    
+    RETURN QUERY SELECT 
+        true,
+        v_mouvement_id,
+        'Mouvement créé avec succès';
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_mouvement character varying, p_quantite_delta integer, p_reference_id uuid, p_reference_type character varying, p_utilisateur_id uuid, p_location_id character varying, p_raison character varying, p_observations text) OWNER TO postgres;
+
+--
+-- Name: fn_get_current_stock(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_get_current_stock(p_produit_id uuid) RETURNS TABLE(produit_id uuid, quantite_total integer, quantite_warehouse integer, quantite_in_transit integer, quantite_returned integer)
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        $1,
+        COALESCE(SUM(sm.quantite_delta), 0)::INTEGER,
+        COALESCE(SUM(CASE WHEN sm.location_id = 'WAREHOUSE' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER,
+        COALESCE(SUM(CASE WHEN sm.location_id = 'IN_TRANSIT' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER,
+        COALESCE(SUM(CASE WHEN sm.location_id = 'RETURNED' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER
+    FROM public.stock_mouvements sm
+    WHERE sm.produit_id = $1;
+END;
+$_$;
+
+
+ALTER FUNCTION public.fn_get_current_stock(p_produit_id uuid) OWNER TO postgres;
+
+--
+-- Name: fn_log_entree_stock_movement(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_log_entree_stock_movement() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Insérer mouvement seulement si l'entrée est approuvée
+    IF NEW.statut_validation IN ('APPROUVE', 'EN_ATTENTE') THEN
+        INSERT INTO public.stock_mouvements (
+            produit_id,
+            type_mouvement,
+            quantite_delta,
+            reference_id,
+            reference_type,
+            utilisateur_id,
+            location_id,
+            raison,
+            observations
+        ) VALUES (
+            NEW.produit_id,
+            'ENTREE',
+            NEW.quantite,
+            NEW.entree_stock_id,
+            'ENTREE_STOCK',
+            COALESCE(NEW.cree_par, NEW.approuve_par),
+            'WAREHOUSE',
+            'Production/Achat',
+            'Facture: ' || COALESCE(NEW.numero_facture, 'N/A')
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_log_entree_stock_movement() OWNER TO postgres;
+
+--
+-- Name: fn_prevent_direct_stock_modification(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_prevent_direct_stock_modification() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'Modification directe de stock_soldes interdite. Utiliser les mouvements.';
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_prevent_direct_stock_modification() OWNER TO postgres;
+
+--
+-- Name: fn_prevent_stock_movements_deletion(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_prevent_stock_movements_deletion() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'Suppression de mouvements de stock interdite. Les mouvements doivent rester pour l''audit.';
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_prevent_stock_movements_deletion() OWNER TO postgres;
+
+--
+-- Name: fn_refresh_stock_cache(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_refresh_stock_cache() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_stock_cache;
+    RAISE NOTICE 'Cache stock rafraîchi à %', CURRENT_TIMESTAMP;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_refresh_stock_cache() OWNER TO postgres;
+
+--
+-- Name: fn_repair_stock_integrity(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_repair_stock_integrity() RETURNS TABLE(produit_id uuid, ancien_total integer, nouveau_total integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    UPDATE public.stock_soldes ss
+    SET quantite_total = movements_sum.total
+    FROM (
+        SELECT 
+            produit_id,
+            COALESCE(SUM(quantite_delta), 0)::INTEGER as total
+        FROM public.stock_mouvements
+        GROUP BY produit_id
+    ) movements_sum
+    WHERE ss.produit_id = movements_sum.produit_id
+        AND ss.quantite_total != movements_sum.total
+    RETURNING ss.produit_id, ss.quantite_total, movements_sum.total;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_repair_stock_integrity() OWNER TO postgres;
+
+--
+-- Name: fn_sync_stock_soldes_from_movements(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_sync_stock_soldes_from_movements() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Vider les soldes existants
+    TRUNCATE TABLE public.stock_soldes;
+    
+    -- Insérer depuis les mouvements
+    INSERT INTO public.stock_soldes (
+        solde_id,
+        produit_id,
+        quantite_total,
+        quantite_reserve,
+        prix_moyen,
+        location_id,
+        dernier_mouvement_date,
+        updated_at
+    )
+    SELECT
+        gen_random_uuid(),
+        p.produit_id,
+        COALESCE(SUM(sm.quantite_delta), 0),
+        0, -- À remplir par logique métier
+        p.prix_unitaire,
+        'WAREHOUSE',
+        MAX(sm.created_at),
+        CURRENT_TIMESTAMP
+    FROM public.produits p
+    LEFT JOIN public.stock_mouvements sm ON p.produit_id = sm.produit_id
+    GROUP BY p.produit_id, p.prix_unitaire;
+    
+    RAISE NOTICE 'Synchronisation stock_soldes terminée';
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_sync_stock_soldes_from_movements() OWNER TO postgres;
+
+--
+-- Name: fn_verify_stock_operation(uuid, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_verify_stock_operation(p_produit_id uuid, p_quantite_delta integer, p_type_mouvement character varying) RETURNS TABLE(can_proceed boolean, current_stock integer, resulting_stock integer, message text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_current_stock INTEGER;
+    v_resulting_stock INTEGER;
+BEGIN
+    -- Obtenir le stock actuel
+    SELECT COALESCE(quantite_total, 0)
+    INTO v_current_stock
+    FROM public.stock_soldes
+    WHERE produit_id = p_produit_id;
+    
+    -- Calculer le stock résultant
+    v_resulting_stock := v_current_stock + p_quantite_delta;
+    
+    -- Vérifier les règles selon le type de mouvement
+    IF p_type_mouvement = 'SORTIE' OR p_type_mouvement = 'RETOUR' THEN
+        -- Les sorties/retours ne doivent pas créer de stock négatif
+        IF v_resulting_stock < 0 THEN
+            RETURN QUERY SELECT 
+                false,
+                v_current_stock,
+                v_resulting_stock,
+                'ERREUR: Stock insuffisant. Disponible: ' || v_current_stock || 
+                ', Demandé: ' || ABS(p_quantite_delta);
+        ELSE
+            RETURN QUERY SELECT 
+                true,
+                v_current_stock,
+                v_resulting_stock,
+                'OK: Opération autorisée';
+        END IF;
+    ELSE
+        -- Les entrées/ajustements sont autorisés
+        RETURN QUERY SELECT 
+            true,
+            v_current_stock,
+            v_resulting_stock,
+            'OK: Entrée autorisée';
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_verify_stock_operation(p_produit_id uuid, p_quantite_delta integer, p_type_mouvement character varying) OWNER TO postgres;
+
+--
 -- Name: trg_maj_date(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION public.trg_maj_date() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN NEW.date_mise_a_jour = CURRENT_TIMESTAMP; RETURN NEW; END;
+BEGIN 
+    IF TG_TABLE_NAME = 'stock_soldes' THEN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+    ELSE
+        NEW.date_mise_a_jour = CURRENT_TIMESTAMP;
+    END IF;
+    RETURN NEW; 
+END;
 $$;
 
 
@@ -235,20 +648,6 @@ CREATE TABLE public.journaux_audit (
 ALTER TABLE public.journaux_audit OWNER TO postgres;
 
 --
--- Name: permissions; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.permissions (
-    permission_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    code character varying(50) NOT NULL,
-    nom character varying(100) NOT NULL,
-    module character varying(50) NOT NULL
-);
-
-
-ALTER TABLE public.permissions OWNER TO postgres;
-
---
 -- Name: produits; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -267,6 +666,98 @@ CREATE TABLE public.produits (
 
 
 ALTER TABLE public.produits OWNER TO postgres;
+
+--
+-- Name: stock_mouvements; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.stock_mouvements (
+    mouvement_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    produit_id uuid NOT NULL,
+    type_mouvement character varying(20) NOT NULL,
+    quantite_delta integer NOT NULL,
+    reference_id uuid,
+    reference_type character varying(50),
+    utilisateur_id uuid NOT NULL,
+    location_id character varying(50) DEFAULT 'WAREHOUSE'::character varying,
+    raison character varying(255),
+    observations text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT check_location CHECK (((location_id)::text = ANY ((ARRAY['WAREHOUSE'::character varying, 'IN_TRANSIT'::character varying, 'RETURNED'::character varying])::text[]))),
+    CONSTRAINT check_quantite_not_zero CHECK ((quantite_delta <> 0)),
+    CONSTRAINT check_type_mouvement CHECK (((type_mouvement)::text = ANY ((ARRAY['ENTREE'::character varying, 'SORTIE'::character varying, 'RETOUR'::character varying, 'AJUSTEMENT'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.stock_mouvements OWNER TO postgres;
+
+--
+-- Name: types_produits; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.types_produits (
+    type_produit_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code character varying(20) NOT NULL,
+    nom character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.types_produits OWNER TO postgres;
+
+--
+-- Name: mv_stock_cache; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres
+--
+
+CREATE MATERIALIZED VIEW public.mv_stock_cache AS
+ SELECT p.produit_id,
+    p.nom,
+    p.code_sku,
+    cp.nom AS categorie,
+    tp.nom AS type,
+    p.stock_minimum,
+    COALESCE(sum(sm.quantite_delta), (0)::bigint) AS quantite_total,
+    COALESCE(sum(
+        CASE
+            WHEN ((sm.location_id)::text = 'WAREHOUSE'::text) THEN sm.quantite_delta
+            ELSE 0
+        END), (0)::bigint) AS quantite_warehouse,
+    COALESCE(sum(
+        CASE
+            WHEN ((sm.location_id)::text = 'IN_TRANSIT'::text) THEN sm.quantite_delta
+            ELSE 0
+        END), (0)::bigint) AS quantite_in_transit,
+    COALESCE(sum(
+        CASE
+            WHEN ((sm.location_id)::text = 'RETURNED'::text) THEN sm.quantite_delta
+            ELSE 0
+        END), (0)::bigint) AS quantite_returned,
+    max(sm.created_at) AS derniere_modification,
+    CURRENT_TIMESTAMP AS cache_updated_at
+   FROM (((public.produits p
+     LEFT JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
+     LEFT JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
+     LEFT JOIN public.stock_mouvements sm ON ((p.produit_id = sm.produit_id)))
+  WHERE (p.est_actif = true)
+  GROUP BY p.produit_id, p.nom, p.code_sku, cp.nom, tp.nom, p.stock_minimum
+  WITH NO DATA;
+
+
+ALTER MATERIALIZED VIEW public.mv_stock_cache OWNER TO postgres;
+
+--
+-- Name: permissions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.permissions (
+    permission_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code character varying(50) NOT NULL,
+    nom character varying(100) NOT NULL,
+    module character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.permissions OWNER TO postgres;
 
 --
 -- Name: raisons_retour; Type: TABLE; Schema: public; Owner: postgres
@@ -427,6 +918,20 @@ CREATE TABLE public.statuts_repartition (
 ALTER TABLE public.statuts_repartition OWNER TO postgres;
 
 --
+-- Name: stock_locations; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.stock_locations (
+    location_id character varying(50) NOT NULL,
+    nom character varying(100) NOT NULL,
+    description text,
+    est_actif boolean DEFAULT true
+);
+
+
+ALTER TABLE public.stock_locations OWNER TO postgres;
+
+--
 -- Name: stock_soldes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -439,24 +944,17 @@ CREATE TABLE public.stock_soldes (
     valeur_stock numeric(15,2) DEFAULT 0.00,
     prix_moyen numeric(12,2),
     dernier_mouvement_date timestamp without time zone,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    location_id character varying(50) DEFAULT 'WAREHOUSE'::character varying,
+    location_historique jsonb DEFAULT '{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}'::jsonb,
+    derniere_location_id character varying(50) DEFAULT 'WAREHOUSE'::character varying,
+    CONSTRAINT check_quantite_reserve_not_negative CHECK ((quantite_reserve >= 0)),
+    CONSTRAINT check_quantite_reserve_positive CHECK ((quantite_reserve >= 0)),
+    CONSTRAINT check_quantite_total_not_negative CHECK ((quantite_total >= 0))
 );
 
 
 ALTER TABLE public.stock_soldes OWNER TO postgres;
-
---
--- Name: types_produits; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.types_produits (
-    type_produit_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    code character varying(20) NOT NULL,
-    nom character varying(50) NOT NULL
-);
-
-
-ALTER TABLE public.types_produits OWNER TO postgres;
 
 --
 -- Name: types_vente; Type: TABLE; Schema: public; Owner: postgres
@@ -491,6 +989,27 @@ CREATE TABLE public.utilisateurs (
 ALTER TABLE public.utilisateurs OWNER TO postgres;
 
 --
+-- Name: v_audit_stock_trail; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.v_audit_stock_trail AS
+ SELECT ja.journal_audit_id,
+    ja.date_heure,
+    u.nom_complet AS utilisateur,
+    ja.action,
+    ja.type_entite,
+    ja.identifiant_entite,
+    ja.anciennes_valeurs,
+    ja.nouvelles_valeurs
+   FROM (public.journaux_audit ja
+     LEFT JOIN public.utilisateurs u ON ((ja.utilisateur_id = u.utilisateur_id)))
+  WHERE ((ja.type_entite)::text = ANY ((ARRAY['STOCK_MOUVEMENT'::character varying, 'ENTREE_STOCK'::character varying, 'RETOUR_STOCK'::character varying])::text[]))
+  ORDER BY ja.date_heure DESC;
+
+
+ALTER VIEW public.v_audit_stock_trail OWNER TO postgres;
+
+--
 -- Name: v_statut_stock; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -501,10 +1020,10 @@ CREATE VIEW public.v_statut_stock AS
     tp.nom AS type,
     COALESCE(sum(es.quantite), (0)::bigint) AS stock_total
    FROM (((public.produits p
-     JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
-     JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
+     LEFT JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
+     LEFT JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
      LEFT JOIN public.entrees_stock es ON ((p.produit_id = es.produit_id)))
-  GROUP BY p.nom, p.code_sku, cp.nom, tp.nom;
+  GROUP BY p.produit_id, p.nom, p.code_sku, cp.nom, tp.nom;
 
 
 ALTER VIEW public.v_statut_stock OWNER TO postgres;
@@ -533,8 +1052,8 @@ CREATE VIEW public.v_stock_detail AS
         END AS statut_stock,
     ss.dernier_mouvement_date
    FROM (((public.produits p
-     JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
-     JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
+     LEFT JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
+     LEFT JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
      LEFT JOIN public.stock_soldes ss ON ((p.produit_id = ss.produit_id)))
   WHERE (p.est_actif = true);
 
@@ -542,57 +1061,88 @@ CREATE VIEW public.v_stock_detail AS
 ALTER VIEW public.v_stock_detail OWNER TO postgres;
 
 --
+-- Name: v_stock_integrity_check; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.v_stock_integrity_check AS
+ SELECT p.produit_id,
+    p.nom,
+    p.code_sku,
+    ( SELECT COALESCE(sum(stock_mouvements.quantite_delta), (0)::bigint) AS "coalesce"
+           FROM public.stock_mouvements
+          WHERE (stock_mouvements.produit_id = p.produit_id)) AS stock_from_movements,
+    COALESCE(ss.quantite_total, 0) AS stock_from_soldes,
+    (( SELECT COALESCE(sum(stock_mouvements.quantite_delta), (0)::bigint) AS "coalesce"
+           FROM public.stock_mouvements
+          WHERE (stock_mouvements.produit_id = p.produit_id)) - COALESCE(ss.quantite_total, 0)) AS difference,
+        CASE
+            WHEN (( SELECT COALESCE(sum(stock_mouvements.quantite_delta), (0)::bigint) AS "coalesce"
+               FROM public.stock_mouvements
+              WHERE (stock_mouvements.produit_id = p.produit_id)) = COALESCE(ss.quantite_total, 0)) THEN '✓ OK'::text
+            ELSE '❌ ERREUR'::text
+        END AS status
+   FROM (public.produits p
+     LEFT JOIN public.stock_soldes ss ON ((p.produit_id = ss.produit_id)))
+  WHERE (p.est_actif = true)
+  ORDER BY p.nom;
+
+
+ALTER VIEW public.v_stock_integrity_check OWNER TO postgres;
+
+--
 -- Name: v_stock_mouvements; Type: VIEW; Schema: public; Owner: postgres
 --
 
 CREATE VIEW public.v_stock_mouvements AS
- SELECT 'ENTREE'::character varying AS type_mouvement,
-    (es.entree_stock_id)::character varying AS mouvement_id,
-    es.produit_id,
+ SELECT sm.mouvement_id,
+    sm.type_mouvement,
+    sm.produit_id,
     p.nom AS produit_nom,
-    es.quantite AS quantite_delta,
-    'PRODUCTION'::character varying AS raison,
-    es.cree_par AS utilisateur_id,
-    es.date AS created_at,
-    NULL::uuid AS repartition_id,
+    p.code_sku,
+    sm.quantite_delta,
+    sm.reference_id,
+    sm.reference_type,
+    sm.utilisateur_id,
+    u.nom_complet AS utilisateur_nom,
+    sm.location_id,
+    sm.raison,
+    sm.observations,
+    sm.created_at,
     se.nom AS source
-   FROM ((public.entrees_stock es
-     JOIN public.produits p ON ((es.produit_id = p.produit_id)))
-     JOIN public.sources_entree se ON ((es.source_entree_id = se.source_entree_id)))
-  WHERE ((es.statut_validation)::text = ANY ((ARRAY['APPROUVE'::character varying, 'EN_ATTENTE'::character varying])::text[]))
-UNION ALL
- SELECT 'SORTIE'::character varying AS type_mouvement,
-    (ar.article_repartition_id)::character varying AS mouvement_id,
-    ar.produit_id,
-    p.nom AS produit_nom,
-    (- (ar.quantite_vente + ar.quantite_cadeau)) AS quantite_delta,
-    'REPARTITION'::character varying AS raison,
-    NULL::uuid AS utilisateur_id,
-    r.date_repartition AS created_at,
-    r.repartition_id,
-    'Repartition'::character varying AS source
-   FROM ((public.articles_repartition ar
-     JOIN public.repartitions r ON ((ar.repartition_id = r.repartition_id)))
-     JOIN public.produits p ON ((ar.produit_id = p.produit_id)))
-UNION ALL
- SELECT 'RETOUR'::character varying AS type_mouvement,
-    (rs.retour_stock_id)::character varying AS mouvement_id,
-    rs.produit_id,
-    p.nom AS produit_nom,
-    rs.quantite AS quantite_delta,
-    COALESCE(rr.code, 'INCONNU'::character varying) AS raison,
-    rs.cree_par AS utilisateur_id,
-    rs.date AS created_at,
-    rs.repartition_id,
-    'Retour'::character varying AS source
-   FROM ((public.retours_stock rs
-     JOIN public.produits p ON ((rs.produit_id = p.produit_id)))
-     LEFT JOIN public.raisons_retour rr ON ((rs.raison_retour_id = rr.raison_retour_id)))
-  WHERE ((rs.statut_validation)::text = ANY ((ARRAY['APPROUVE'::character varying, 'EN_ATTENTE'::character varying])::text[]))
-  ORDER BY 8 DESC;
+   FROM (((public.stock_mouvements sm
+     JOIN public.produits p ON ((sm.produit_id = p.produit_id)))
+     JOIN public.utilisateurs u ON ((sm.utilisateur_id = u.utilisateur_id)))
+     LEFT JOIN public.sources_entree se ON (((sm.reference_type)::text = 'ENTREE_STOCK'::text)))
+  ORDER BY sm.created_at DESC;
 
 
 ALTER VIEW public.v_stock_mouvements OWNER TO postgres;
+
+--
+-- Name: v_stock_movements_audit; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.v_stock_movements_audit AS
+ SELECT sm.mouvement_id,
+    sm.created_at,
+    p.nom AS produit,
+    p.code_sku,
+    sm.type_mouvement,
+    sm.quantite_delta,
+    sm.location_id,
+    u.nom_complet AS utilisateur,
+    sm.raison,
+    sm.reference_type,
+    sm.observations,
+    ja.action AS audit_action
+   FROM (((public.stock_mouvements sm
+     JOIN public.produits p ON ((sm.produit_id = p.produit_id)))
+     JOIN public.utilisateurs u ON ((sm.utilisateur_id = u.utilisateur_id)))
+     LEFT JOIN public.journaux_audit ja ON ((ja.identifiant_entite = sm.mouvement_id)))
+  ORDER BY sm.created_at DESC;
+
+
+ALTER VIEW public.v_stock_movements_audit OWNER TO postgres;
 
 --
 -- Name: ventes; Type: TABLE; Schema: public; Owner: postgres
@@ -668,6 +1218,8 @@ COPY public.credits (credit_id, vente_id, client_id, montant, date_echeance, sta
 --
 
 COPY public.entrees_stock (entree_stock_id, produit_id, quantite, source_entree_id, date, cree_par, numero_facture, prix_unitaire, numero_lot, date_expiration, approuve_par, statut_validation, date_mise_a_jour, cree_par_updated) FROM stdin;
+e9ebe02c-d9ad-4f89-b029-02897b4f651b	857f7c59-4ff6-45af-81fc-81d534af18de	100	c656b280-7660-4ebf-b20c-28880d7cd5f7	2026-04-16 07:49:59.537	78a24f11-9714-4014-ae40-f38318fef119	\N	1200.00	\N	2027-04-16	\N	EN_ATTENTE	2026-04-16 07:49:59.537509	\N
+45f2d7cc-dd91-4e0f-b65b-1a20d796c584	03dc330a-6da1-41ca-86ba-60945244182a	100	c656b280-7660-4ebf-b20c-28880d7cd5f7	2026-04-16 07:51:39.589	78a24f11-9714-4014-ae40-f38318fef119	\N	1000.00	\N	2027-04-16	\N	EN_ATTENTE	2026-04-16 07:51:39.589764	\N
 \.
 
 
@@ -684,6 +1236,8 @@ COPY public.equipes (equipe_id, nom, nom_chef) FROM stdin;
 --
 
 COPY public.journaux_audit (journal_audit_id, utilisateur_id, action, type_entite, identifiant_entite, anciennes_valeurs, nouvelles_valeurs, date_heure) FROM stdin;
+7f93a79e-d6df-4df8-8754-3dc9b7244bb1	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "e9ebe02c-d9ad-4f89-b029-02897b4f651b", "quantite_delta": 100}	2026-04-16 13:38:58.619548
+55174608-3dbe-441e-b709-2bbb50ca7a9d	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	04267c8b-e20f-4e93-9117-066e7039277b	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "45f2d7cc-dd91-4e0f-b65b-1a20d796c584", "quantite_delta": 100}	2026-04-16 13:38:58.619548
 \.
 
 
@@ -707,9 +1261,9 @@ ab845788-0800-489a-9129-9be7e29d7c55	CAISSE_VALIDER	Valider la caisse	Caisse
 --
 
 COPY public.produits (produit_id, categorie_produit_id, type_produit_id, nom, code_sku, prix_unitaire, stock_minimum, est_actif, date_mise_a_jour, description) FROM stdin;
-6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	10	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque
-03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	10	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
-857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	10	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
+6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	50	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque
+03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	50	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
+857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	50	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
 \.
 
 
@@ -826,13 +1380,34 @@ d8a91671-fd79-4af7-a75e-ea7e39b8be24	ANNULEE	Annulée
 
 
 --
+-- Data for Name: stock_locations; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.stock_locations (location_id, nom, description, est_actif) FROM stdin;
+WAREHOUSE	Entrepôt principal	Stock principal en entrepôt	t
+IN_TRANSIT	En transit	Stock envoyé aux équipes	t
+RETURNED	Retourné	Stock retourné des équipes	t
+\.
+
+
+--
+-- Data for Name: stock_mouvements; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.stock_mouvements (mouvement_id, produit_id, type_mouvement, quantite_delta, reference_id, reference_type, utilisateur_id, location_id, raison, observations, created_at, updated_at) FROM stdin;
+bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	100	e9ebe02c-d9ad-4f89-b029-02897b4f651b	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:49:59.537	2026-04-16 13:38:58.619548
+04267c8b-e20f-4e93-9117-066e7039277b	03dc330a-6da1-41ca-86ba-60945244182a	ENTREE	100	45f2d7cc-dd91-4e0f-b65b-1a20d796c584	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:51:39.589	2026-04-16 13:38:58.619548
+\.
+
+
+--
 -- Data for Name: stock_soldes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at) FROM stdin;
-95e5b0ef-3d7d-43aa-b3fc-115dd1277d61	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
-a91470a5-5b7a-43e0-8bcf-7d9ce1a9056d	03dc330a-6da1-41ca-86ba-60945244182a	0	0	0.00	1000.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
-6910576a-2deb-4c42-80f2-9ee7b3ea4937	857f7c59-4ff6-45af-81fc-81d534af18de	0	0	0.00	1200.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
+COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at, location_id, location_historique, derniere_location_id) FROM stdin;
+3ff64cbc-a09a-4e5a-969b-8d19e3f02d78	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	\N	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+5db1f7d3-6ed1-4878-9a64-d74cccb370c2	03dc330a-6da1-41ca-86ba-60945244182a	100	0	0.00	1000.00	2026-04-16 07:51:39.589	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+1478a37b-4099-40ff-9664-115fe09d1bda	857f7c59-4ff6-45af-81fc-81d534af18de	100	0	0.00	1200.00	2026-04-16 07:49:59.537	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
 \.
 
 
@@ -1131,6 +1706,22 @@ ALTER TABLE ONLY public.statuts_repartition
 
 
 --
+-- Name: stock_locations stock_locations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.stock_locations
+    ADD CONSTRAINT stock_locations_pkey PRIMARY KEY (location_id);
+
+
+--
+-- Name: stock_mouvements stock_mouvements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.stock_mouvements
+    ADD CONSTRAINT stock_mouvements_pkey PRIMARY KEY (mouvement_id);
+
+
+--
 -- Name: stock_soldes stock_soldes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1239,10 +1830,45 @@ CREATE INDEX idx_entrees_stock_produit ON public.entrees_stock USING btree (prod
 
 
 --
+-- Name: idx_entrees_stock_produit_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_entrees_stock_produit_date ON public.entrees_stock USING btree (produit_id, date);
+
+
+--
 -- Name: idx_entrees_stock_statut; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_entrees_stock_statut ON public.entrees_stock USING btree (statut_validation);
+
+
+--
+-- Name: idx_journaux_audit_entite; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_journaux_audit_entite ON public.journaux_audit USING btree (type_entite, identifiant_entite, date_heure);
+
+
+--
+-- Name: idx_journaux_audit_type_entite_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_journaux_audit_type_entite_date ON public.journaux_audit USING btree (type_entite, identifiant_entite DESC, date_heure DESC);
+
+
+--
+-- Name: idx_journaux_audit_utilisateur_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_journaux_audit_utilisateur_date ON public.journaux_audit USING btree (utilisateur_id, date_heure DESC);
+
+
+--
+-- Name: idx_mv_stock_cache_produit; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_mv_stock_cache_produit ON public.mv_stock_cache USING btree (produit_id);
 
 
 --
@@ -1260,10 +1886,59 @@ CREATE INDEX idx_retours_stock_produit ON public.retours_stock USING btree (prod
 
 
 --
+-- Name: idx_retours_stock_produit_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_retours_stock_produit_date ON public.retours_stock USING btree (produit_id, date);
+
+
+--
 -- Name: idx_retours_stock_statut; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_retours_stock_statut ON public.retours_stock USING btree (statut_validation);
+
+
+--
+-- Name: idx_stock_mouvements_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_date ON public.stock_mouvements USING btree (created_at);
+
+
+--
+-- Name: idx_stock_mouvements_location; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_location ON public.stock_mouvements USING btree (location_id);
+
+
+--
+-- Name: idx_stock_mouvements_location_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_location_date ON public.stock_mouvements USING btree (location_id, created_at DESC);
+
+
+--
+-- Name: idx_stock_mouvements_produit; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_produit ON public.stock_mouvements USING btree (produit_id);
+
+
+--
+-- Name: idx_stock_mouvements_produit_date_desc; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_produit_date_desc ON public.stock_mouvements USING btree (produit_id, created_at DESC) WHERE ((type_mouvement)::text = ANY ((ARRAY['ENTREE'::character varying, 'SORTIE'::character varying, 'RETOUR'::character varying])::text[]));
+
+
+--
+-- Name: idx_stock_mouvements_reference; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stock_mouvements_reference ON public.stock_mouvements USING btree (reference_id);
 
 
 --
@@ -1302,24 +1977,10 @@ CREATE TRIGGER trg_articles_repartition_sync AFTER INSERT OR DELETE OR UPDATE ON
 
 
 --
--- Name: categories_produits trg_cat_maj; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: stock_mouvements trg_audit_stock_movements_insert; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER trg_cat_maj BEFORE UPDATE ON public.categories_produits FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
--- Name: clients trg_cli_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_cli_maj BEFORE UPDATE ON public.clients FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
--- Name: entrees_stock trg_entrees_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_entrees_maj BEFORE UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+CREATE TRIGGER trg_audit_stock_movements_insert AFTER INSERT ON public.stock_mouvements FOR EACH ROW EXECUTE FUNCTION public.fn_audit_stock_movements();
 
 
 --
@@ -1330,17 +1991,17 @@ CREATE TRIGGER trg_entrees_stock_sync AFTER INSERT OR UPDATE ON public.entrees_s
 
 
 --
--- Name: produits trg_prod_maj; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: stock_soldes trg_prevent_direct_stock_soldes_modification; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER trg_prod_maj BEFORE UPDATE ON public.produits FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+CREATE TRIGGER trg_prevent_direct_stock_soldes_modification BEFORE UPDATE ON public.stock_soldes FOR EACH ROW EXECUTE FUNCTION public.fn_prevent_direct_stock_modification();
 
 
 --
--- Name: retours_stock trg_retours_maj; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: stock_mouvements trg_prevent_stock_movements_delete; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER trg_retours_maj BEFORE UPDATE ON public.retours_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+CREATE TRIGGER trg_prevent_stock_movements_delete BEFORE DELETE ON public.stock_mouvements FOR EACH ROW EXECUTE FUNCTION public.fn_prevent_stock_movements_deletion();
 
 
 --
@@ -1351,10 +2012,24 @@ CREATE TRIGGER trg_retours_stock_sync AFTER INSERT OR UPDATE ON public.retours_s
 
 
 --
--- Name: stock_soldes trg_solde_maj; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: entrees_stock trg_sync_stock; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER trg_solde_maj BEFORE UPDATE ON public.stock_soldes FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+CREATE TRIGGER trg_sync_stock AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
+
+
+--
+-- Name: entrees_stock trg_update_date_entrees_stock; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_update_date_entrees_stock BEFORE INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+
+
+--
+-- Name: stock_soldes trg_update_date_stock_soldes; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_update_date_stock_soldes BEFORE INSERT OR UPDATE ON public.stock_soldes FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
 
 
 --
@@ -1451,6 +2126,22 @@ ALTER TABLE ONLY public.entrees_stock
 
 ALTER TABLE ONLY public.entrees_stock
     ADD CONSTRAINT entrees_stock_source_entree_id_fkey FOREIGN KEY (source_entree_id) REFERENCES public.sources_entree(source_entree_id);
+
+
+--
+-- Name: stock_mouvements fk_stock_mouvements_produit; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.stock_mouvements
+    ADD CONSTRAINT fk_stock_mouvements_produit FOREIGN KEY (produit_id) REFERENCES public.produits(produit_id);
+
+
+--
+-- Name: stock_mouvements fk_stock_mouvements_utilisateur; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.stock_mouvements
+    ADD CONSTRAINT fk_stock_mouvements_utilisateur FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(utilisateur_id);
 
 
 --
@@ -1630,8 +2321,237 @@ ALTER TABLE ONLY public.ventes
 
 
 --
+-- Name: TABLE articles_repartition; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.articles_repartition TO stock_viewer;
+
+
+--
+-- Name: TABLE categories_produits; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.categories_produits TO stock_viewer;
+
+
+--
+-- Name: TABLE clients; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.clients TO stock_viewer;
+
+
+--
+-- Name: TABLE conditions_paiement; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.conditions_paiement TO stock_viewer;
+
+
+--
+-- Name: TABLE credits; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.credits TO stock_viewer;
+
+
+--
+-- Name: TABLE entrees_stock; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.entrees_stock TO stock_viewer;
+GRANT SELECT,INSERT ON TABLE public.entrees_stock TO stock_editor;
+GRANT SELECT,UPDATE ON TABLE public.entrees_stock TO stock_approver;
+
+
+--
+-- Name: TABLE equipes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.equipes TO stock_viewer;
+
+
+--
+-- Name: TABLE journaux_audit; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.journaux_audit TO stock_viewer;
+
+
+--
+-- Name: TABLE produits; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.produits TO stock_viewer;
+
+
+--
+-- Name: TABLE stock_mouvements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.stock_mouvements TO stock_viewer;
+GRANT SELECT,INSERT ON TABLE public.stock_mouvements TO stock_editor;
+
+
+--
+-- Name: TABLE types_produits; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.types_produits TO stock_viewer;
+
+
+--
+-- Name: TABLE mv_stock_cache; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.mv_stock_cache TO stock_viewer;
+
+
+--
+-- Name: TABLE permissions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.permissions TO stock_viewer;
+
+
+--
+-- Name: TABLE raisons_retour; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.raisons_retour TO stock_viewer;
+
+
+--
+-- Name: TABLE receptions_caisse; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.receptions_caisse TO stock_viewer;
+
+
+--
+-- Name: TABLE repartitions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.repartitions TO stock_viewer;
+
+
+--
+-- Name: TABLE retours_stock; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.retours_stock TO stock_viewer;
+GRANT SELECT,INSERT ON TABLE public.retours_stock TO stock_editor;
+GRANT SELECT,UPDATE ON TABLE public.retours_stock TO stock_approver;
+
+
+--
+-- Name: TABLE role_permissions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.role_permissions TO stock_viewer;
+
+
+--
+-- Name: TABLE roles; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.roles TO stock_viewer;
+
+
+--
+-- Name: TABLE routes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.routes TO stock_viewer;
+
+
+--
+-- Name: TABLE sources_entree; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.sources_entree TO stock_viewer;
+
+
+--
+-- Name: TABLE statuts_caisse; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.statuts_caisse TO stock_viewer;
+
+
+--
+-- Name: TABLE statuts_credit; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.statuts_credit TO stock_viewer;
+
+
+--
+-- Name: TABLE statuts_repartition; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.statuts_repartition TO stock_viewer;
+
+
+--
+-- Name: TABLE stock_locations; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.stock_locations TO stock_viewer;
+
+
+--
+-- Name: TABLE stock_soldes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.stock_soldes TO stock_viewer;
+
+
+--
+-- Name: TABLE types_vente; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.types_vente TO stock_viewer;
+
+
+--
+-- Name: TABLE utilisateurs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.utilisateurs TO stock_viewer;
+
+
+--
+-- Name: TABLE v_statut_stock; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.v_statut_stock TO stock_viewer;
+
+
+--
+-- Name: TABLE v_stock_detail; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.v_stock_detail TO stock_viewer;
+
+
+--
+-- Name: TABLE ventes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.ventes TO stock_viewer;
+
+
+--
+-- Name: mv_stock_cache; Type: MATERIALIZED VIEW DATA; Schema: public; Owner: postgres
+--
+
+REFRESH MATERIALIZED VIEW public.mv_stock_cache;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict NfsrEUxE6JZEyZF3BF4B80aDbpEeFXCTIu4VTko2WrJr3lE5nechzuaNLNSxm57
+\unrestrict JXNuRZl6hVOLqCCCr4u99A6dfpFh0BbeIdfA97qsoFGBpwhRXCvN9O0sh82gHQp
 

@@ -1,0 +1,145 @@
+Analyson ce qui est fait et ce qui manque :
+
+## ✅ DÉJÀ IMPLÉMENTÉ
+
+1. **Stock Movements Tracking** - ✅ PARTIELLEMENT
+   - Vue `v_stock_mouvements` qui enregistre les mouvements
+   - Types: ENTREE, SORTIE, RETOUR
+   - Champs: type, quantité, utilisateur, timestamp
+
+2. **Stock Calculation** - ✅ OUI
+   - Table `stock_soldes` avec totaux
+   - `obtenirQuantiteDisponible()`, `obtenirQuantiteTotal()`
+   - Vue `v_stock_detail` avec calculs
+
+3. **Stock Validation** - ✅ PARTIELLEMENT
+   - `validerDisponibilite()` existe
+   - Mais pas bloqué au niveau BDD
+
+4. **Integration** - ✅ PARTIELLEMENT
+   - Mouvements créés via triggers (partiellement)
+
+5. **Stock Dashboard** - ✅ OUI
+   - `TableauStock` affiche les produits
+   - Statuts (OK, FAIBLE, CRITIQUE, RUPTURE)
+   - Recherche/filtre
+
+6. **Stock Alerts** - ✅ OUI
+   - `obtenirAlertes()` existe
+   - Tableau d'alertes
+
+7. **Stock History** - ✅ OUI
+   - `TableauHistoriqueStock` affiche les mouvements
+   - Filtre par type, date
+
+## ❌ MANQUANT OU À AMÉLIORER
+
+### 1. **Mouvements manquants en colonne**
+```
+v_stock_mouvements ne capture PAS:
+- UUID id (movement_id)
+- reference_id (lien vers entrees_stock, etc.)
+- reference_type
+```
+
+### 2. **Prévention des stock négatifs**
+```sql
+-- MANQUANT: Contrainte BDD
+ALTER TABLE stock_soldes
+ADD CONSTRAINT check_quantite_positive 
+CHECK (quantite_total >= 0);
+```
+
+### 3. **Prévention de modification directe**
+```
+-- MANQUANT: Impossible de modifier stock_soldes directement
+-- Il faut TOUJOURS passer par les mouvements
+```
+
+### 4. **Audit complet**
+```
+-- MANQUANT: Tous les mouvements ne sont pas loggés dans journaux_audit
+```
+
+### 5. **Multi-location Stock**
+```
+-- MANQUANT: Pas de colonne location_id dans stock_soldes
+-- Les stocks en transit (équipes) ne sont pas différenciés
+```
+
+### 6. **Sécurité**
+```
+-- MANQUANT: Permissions strictes au niveau BDD
+-- Audit des suppressions (stock_mouvements ne doit jamais être supprimé)
+```
+
+### 7. **Performance**
+```sql
+-- MANQUANT: Index sur les colonnes critiques
+CREATE INDEX idx_stock_movements_product_date 
+ON v_stock_mouvements(produit_id, created_at);
+```
+
+---
+
+## 📋 LISTE DES CORRECTIONS À FAIRE
+
+Voici ce qu'il faut ajouter/corriger :
+
+### **Niveau BDD (SQL)**
+```sql
+-- 1. Ajouter colonne reference_id et reference_type à v_stock_mouvements
+-- 2. Ajouter contrainte quantité positive
+-- 3. Ajouter triggers pour audit automatique
+-- 4. Ajouter index de performance
+```
+
+### **Niveau C++ (Code)**
+```cpp
+// 1. Améliorer onCellChanged() pour prévenir modifications directes
+// 2. Ajouter validations strictes avant toute opération
+// 3. Implémenter audit complet
+// 4. Bloquer les suppressions de mouvements
+// 5. Gérer les locations (warehouse vs teams)
+```
+
+### **Niveau UI**
+```cpp
+// 1. Afficher reference et reference_type dans l'historique
+// 2. Afficher les locations de stock
+// 3. Afficher audit trail
+// 4. Ajouter contrôle d'accès UI
+```
+
+---
+
+## 🎯 PRIORITÉS (À faire en ordre)
+
+**CRITIQUE (Sécurité/Intégrité):**
+1. Prévention stock négatif (contrainte BDD)
+2. Prévention modification directe stock_soldes
+3. Audit automatique des mouvements
+
+**IMPORTANT (Fonctionnalité):**
+4. Améliorer v_stock_mouvements (reference_id, reference_type)
+5. Ajouter locations (warehouse, in_transit, returned)
+6. Permissions strictes par utilisateur
+
+**OPTIMISATION:**
+7. Ajouter index de performance
+8. Materialized view pour stocks en temps réel
+9. Cache des calculs
+
+**OPTIONNEL:**
+10. Barcode support
+11. Lot tracking amélioré
+12. Réconciliation automatique
+
+---
+
+Voulez-vous que je vous prépare :
+1. **Le script SQL complet** pour les corrections critiques ?
+2. **Les modifications C++** pour la validation stricte ?
+3. **Les migrations** pour ajouter les colonnes manquantes ?
+
+Lequel en priorité ? 🚀

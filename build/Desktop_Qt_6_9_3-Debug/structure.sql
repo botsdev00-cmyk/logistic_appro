@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict NfsrEUxE6JZEyZF3BF4B80aDbpEeFXCTIu4VTko2WrJr3lE5nechzuaNLNSxm57
+\restrict wUd7ofDSYYIUVhbfd94UguzZzilehFFiVcSJkSj9CRHxlJc5YIxIfelSfYVaWWf
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -40,7 +40,14 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 CREATE FUNCTION public.trg_maj_date() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN NEW.date_mise_a_jour = CURRENT_TIMESTAMP; RETURN NEW; END;
+BEGIN 
+    IF TG_TABLE_NAME = 'stock_soldes' THEN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+    ELSE
+        NEW.date_mise_a_jour = CURRENT_TIMESTAMP;
+    END IF;
+    RETURN NEW; 
+END;
 $$;
 
 
@@ -501,10 +508,10 @@ CREATE VIEW public.v_statut_stock AS
     tp.nom AS type,
     COALESCE(sum(es.quantite), (0)::bigint) AS stock_total
    FROM (((public.produits p
-     JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
-     JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
+     LEFT JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
+     LEFT JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
      LEFT JOIN public.entrees_stock es ON ((p.produit_id = es.produit_id)))
-  GROUP BY p.nom, p.code_sku, cp.nom, tp.nom;
+  GROUP BY p.produit_id, p.nom, p.code_sku, cp.nom, tp.nom;
 
 
 ALTER VIEW public.v_statut_stock OWNER TO postgres;
@@ -533,8 +540,8 @@ CREATE VIEW public.v_stock_detail AS
         END AS statut_stock,
     ss.dernier_mouvement_date
    FROM (((public.produits p
-     JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
-     JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
+     LEFT JOIN public.categories_produits cp ON ((p.categorie_produit_id = cp.categorie_produit_id)))
+     LEFT JOIN public.types_produits tp ON ((p.type_produit_id = tp.type_produit_id)))
      LEFT JOIN public.stock_soldes ss ON ((p.produit_id = ss.produit_id)))
   WHERE (p.est_actif = true);
 
@@ -550,6 +557,7 @@ CREATE VIEW public.v_stock_mouvements AS
     (es.entree_stock_id)::character varying AS mouvement_id,
     es.produit_id,
     p.nom AS produit_nom,
+    p.code_sku,
     es.quantite AS quantite_delta,
     'PRODUCTION'::character varying AS raison,
     es.cree_par AS utilisateur_id,
@@ -559,12 +567,13 @@ CREATE VIEW public.v_stock_mouvements AS
    FROM ((public.entrees_stock es
      JOIN public.produits p ON ((es.produit_id = p.produit_id)))
      JOIN public.sources_entree se ON ((es.source_entree_id = se.source_entree_id)))
-  WHERE ((es.statut_validation)::text = ANY ((ARRAY['APPROUVE'::character varying, 'EN_ATTENTE'::character varying])::text[]))
+  WHERE ((es.statut_validation)::text = ANY (ARRAY[('APPROUVE'::character varying)::text, ('EN_ATTENTE'::character varying)::text]))
 UNION ALL
  SELECT 'SORTIE'::character varying AS type_mouvement,
     (ar.article_repartition_id)::character varying AS mouvement_id,
     ar.produit_id,
     p.nom AS produit_nom,
+    p.code_sku,
     (- (ar.quantite_vente + ar.quantite_cadeau)) AS quantite_delta,
     'REPARTITION'::character varying AS raison,
     NULL::uuid AS utilisateur_id,
@@ -579,6 +588,7 @@ UNION ALL
     (rs.retour_stock_id)::character varying AS mouvement_id,
     rs.produit_id,
     p.nom AS produit_nom,
+    p.code_sku,
     rs.quantite AS quantite_delta,
     COALESCE(rr.code, 'INCONNU'::character varying) AS raison,
     rs.cree_par AS utilisateur_id,
@@ -588,8 +598,8 @@ UNION ALL
    FROM ((public.retours_stock rs
      JOIN public.produits p ON ((rs.produit_id = p.produit_id)))
      LEFT JOIN public.raisons_retour rr ON ((rs.raison_retour_id = rr.raison_retour_id)))
-  WHERE ((rs.statut_validation)::text = ANY ((ARRAY['APPROUVE'::character varying, 'EN_ATTENTE'::character varying])::text[]))
-  ORDER BY 8 DESC;
+  WHERE ((rs.statut_validation)::text = ANY (ARRAY[('APPROUVE'::character varying)::text, ('EN_ATTENTE'::character varying)::text]))
+  ORDER BY 9 DESC;
 
 
 ALTER VIEW public.v_stock_mouvements OWNER TO postgres;
@@ -668,6 +678,8 @@ COPY public.credits (credit_id, vente_id, client_id, montant, date_echeance, sta
 --
 
 COPY public.entrees_stock (entree_stock_id, produit_id, quantite, source_entree_id, date, cree_par, numero_facture, prix_unitaire, numero_lot, date_expiration, approuve_par, statut_validation, date_mise_a_jour, cree_par_updated) FROM stdin;
+e9ebe02c-d9ad-4f89-b029-02897b4f651b	857f7c59-4ff6-45af-81fc-81d534af18de	100	c656b280-7660-4ebf-b20c-28880d7cd5f7	2026-04-16 07:49:59.537	78a24f11-9714-4014-ae40-f38318fef119	\N	1200.00	\N	2027-04-16	\N	EN_ATTENTE	2026-04-16 07:49:59.537509	\N
+45f2d7cc-dd91-4e0f-b65b-1a20d796c584	03dc330a-6da1-41ca-86ba-60945244182a	100	c656b280-7660-4ebf-b20c-28880d7cd5f7	2026-04-16 07:51:39.589	78a24f11-9714-4014-ae40-f38318fef119	\N	1000.00	\N	2027-04-16	\N	EN_ATTENTE	2026-04-16 07:51:39.589764	\N
 \.
 
 
@@ -707,9 +719,9 @@ ab845788-0800-489a-9129-9be7e29d7c55	CAISSE_VALIDER	Valider la caisse	Caisse
 --
 
 COPY public.produits (produit_id, categorie_produit_id, type_produit_id, nom, code_sku, prix_unitaire, stock_minimum, est_actif, date_mise_a_jour, description) FROM stdin;
-6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	10	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque
-03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	10	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
-857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	10	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
+6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	50	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque
+03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	50	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
+857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	50	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
 \.
 
 
@@ -830,9 +842,8 @@ d8a91671-fd79-4af7-a75e-ea7e39b8be24	ANNULEE	Annulée
 --
 
 COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at) FROM stdin;
-95e5b0ef-3d7d-43aa-b3fc-115dd1277d61	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
-a91470a5-5b7a-43e0-8bcf-7d9ce1a9056d	03dc330a-6da1-41ca-86ba-60945244182a	0	0	0.00	1000.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
-6910576a-2deb-4c42-80f2-9ee7b3ea4937	857f7c59-4ff6-45af-81fc-81d534af18de	0	0	0.00	1200.00	2026-04-15 08:11:46.517194	2026-04-15 08:11:46.517194
+f083b1c6-96f7-4476-9c3c-798f199c58c9	857f7c59-4ff6-45af-81fc-81d534af18de	100	0	0.00	1200.00	2026-04-16 07:55:48.947538	2026-04-16 07:55:48.947538
+7721677f-e9a2-4a5c-94fa-870488acaf04	03dc330a-6da1-41ca-86ba-60945244182a	100	0	0.00	1000.00	2026-04-16 07:55:48.947538	2026-04-16 07:55:48.947538
 \.
 
 
@@ -1302,45 +1313,10 @@ CREATE TRIGGER trg_articles_repartition_sync AFTER INSERT OR DELETE OR UPDATE ON
 
 
 --
--- Name: categories_produits trg_cat_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_cat_maj BEFORE UPDATE ON public.categories_produits FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
--- Name: clients trg_cli_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_cli_maj BEFORE UPDATE ON public.clients FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
--- Name: entrees_stock trg_entrees_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_entrees_maj BEFORE UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
 -- Name: entrees_stock trg_entrees_stock_sync; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
 CREATE TRIGGER trg_entrees_stock_sync AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
-
-
---
--- Name: produits trg_prod_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_prod_maj BEFORE UPDATE ON public.produits FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
-
-
---
--- Name: retours_stock trg_retours_maj; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_retours_maj BEFORE UPDATE ON public.retours_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
 
 
 --
@@ -1351,10 +1327,24 @@ CREATE TRIGGER trg_retours_stock_sync AFTER INSERT OR UPDATE ON public.retours_s
 
 
 --
--- Name: stock_soldes trg_solde_maj; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: entrees_stock trg_sync_stock; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER trg_solde_maj BEFORE UPDATE ON public.stock_soldes FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+CREATE TRIGGER trg_sync_stock AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
+
+
+--
+-- Name: entrees_stock trg_update_date_entrees_stock; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_update_date_entrees_stock BEFORE INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
+
+
+--
+-- Name: stock_soldes trg_update_date_stock_soldes; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_update_date_stock_soldes BEFORE INSERT OR UPDATE ON public.stock_soldes FOR EACH ROW EXECUTE FUNCTION public.trg_maj_date();
 
 
 --
@@ -1633,5 +1623,5 @@ ALTER TABLE ONLY public.ventes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict NfsrEUxE6JZEyZF3BF4B80aDbpEeFXCTIu4VTko2WrJr3lE5nechzuaNLNSxm57
+\unrestrict wUd7ofDSYYIUVhbfd94UguzZzilehFFiVcSJkSj9CRHxlJc5YIxIfelSfYVaWWf
 
