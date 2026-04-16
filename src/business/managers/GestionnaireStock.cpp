@@ -2,12 +2,13 @@
 #include "../../data/repositories/RepositoryEntreeStock.h"
 #include "../../data/repositories/RepositoryRetourStock.h"
 #include "../../data/repositories/RepositoryStockSoldes.h"
+#include "../../data/repositories/RepositoryStockMouvements.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../services/ServicePermissions.h"
 #include "../../core/entities/EntreeStock.h"
 #include "../../core/entities/RetourStock.h"
 #include "../../core/entities/StockSolde.h"
-#include "../../data/database/ConnexionBaseDonnees.h"  // ✅ AJOUT MANQUANT
+#include "../../data/database/ConnexionBaseDonnees.h"
 #include <QDebug>
 #include <QDate>
 #include <QDateTime>
@@ -377,7 +378,6 @@ StockInfo GestionnaireStock::obtenirStockDetail(const QUuid& produitId)
     return info;
 }
 
-// À la ligne 371-395, remplacez obtenirTousLesStocks() par :
 QList<StockInfo> GestionnaireStock::obtenirTousLesStocks()
 {
     QList<StockInfo> stocks;
@@ -427,63 +427,65 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsRecents(const QUuid& produi
     
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    
-    // ✅ Requête SQL CORRECTE
-    QString sqlQuery = 
+
+    qDebug() << "[GESTIONNAIRE STOCK] Récupération mouvements récents - Jours:" << jours;
+
+    // ✅ REQUÊTE SIMPLE ET DIRECTE (sans paramétrisation complexe)
+    QString sqlQuery =
         "SELECT "
-        "  vsm.type_mouvement, "
-        "  vsm.mouvement_id, "
-        "  vsm.produit_id, "
-        "  vsm.produit_nom, "
-        "  vsm.code_sku, "
-        "  vsm.quantite_delta, "
-        "  vsm.raison, "
-        "  vsm.utilisateur_id, "
-        "  COALESCE(u.nom_complet, 'Système') AS nom_utilisateur, "
-        "  vsm.created_at, "
-        "  vsm.source "
-        "FROM v_stock_mouvements vsm "
-        "LEFT JOIN utilisateurs u ON vsm.utilisateur_id = u.utilisateur_id ";
+        "  sm.type_mouvement, "
+        "  p.nom AS produit_nom, "
+        "  p.code_sku, "
+        "  sm.quantite_delta, "
+        "  sm.raison, "
+        "  u.nom_complet AS nom_utilisateur, "
+        "  sm.created_at, "
+        "  COALESCE(se.nom, 'N/A') AS source "
+        "FROM stock_mouvements sm "
+        "JOIN produits p ON sm.produit_id = p.produit_id "
+        "JOIN utilisateurs u ON sm.utilisateur_id = u.utilisateur_id "
+        "LEFT JOIN sources_entree se ON sm.reference_type = 'ENTREE_STOCK' "
+        "WHERE sm.created_at >= CURRENT_TIMESTAMP - INTERVAL '" + QString::number(jours) + " days' ";
     
+    // Ajouter filtre produit si spécifié
     if (!produitId.isNull()) {
-        sqlQuery += " WHERE vsm.produit_id = '" + produitId.toString() + "' ";
-        sqlQuery += " AND vsm.created_at >= NOW() - INTERVAL '" + QString::number(jours) + " days'";
-    } else {
-        sqlQuery += " WHERE vsm.created_at >= NOW() - INTERVAL '" + QString::number(jours) + " days'";
+        sqlQuery += " AND sm.produit_id = '" + produitId.toString() + "' ";
     }
     
-    sqlQuery += " ORDER BY vsm.created_at DESC LIMIT 100";
-    
-    qDebug() << "[GESTIONNAIRE STOCK] SQL:" << sqlQuery;
-    
+    sqlQuery += " ORDER BY sm.created_at DESC LIMIT 500";
+
+    qDebug() << "[GESTIONNAIRE STOCK] SQL Query: " << sqlQuery;
+
     if (query.exec(sqlQuery)) {
         int count = 0;
         while (query.next()) {
             Mouvement mvt;
             mvt.type = query.value("type_mouvement").toString();
-            mvt.raison = query.value("raison").toString();
             mvt.nomProduit = query.value("produit_nom").toString();
             mvt.codeSKU = query.value("code_sku").toString();
             mvt.quantiteDelta = query.value("quantite_delta").toInt();
+            mvt.raison = query.value("raison").toString();
             mvt.nomUtilisateur = query.value("nom_utilisateur").toString();
             mvt.dateCreation = query.value("created_at").toDateTime().toString("dd/MM/yyyy HH:mm:ss");
             mvt.source = query.value("source").toString();
             
             mouvements.append(mvt);
             count++;
-            
-            qDebug() << "[MOUVEMENT] Type:" << mvt.type 
-                     << "Produit:" << mvt.nomProduit 
-                     << "Qté:" << mvt.quantiteDelta 
-                     << "Utilisateur:" << mvt.nomUtilisateur;
+
+            qDebug() << "[MOUVEMENT #" << count << "]"
+                     << "Type:" << mvt.type
+                     << "| Produit:" << mvt.nomProduit
+                     << "| SKU:" << mvt.codeSKU
+                     << "| Qté:" << mvt.quantiteDelta
+                     << "| User:" << mvt.nomUtilisateur
+                     << "| Date:" << mvt.dateCreation;
         }
-        qDebug() << "[GESTIONNAIRE STOCK] ✓ Mouvements:" << count;
+        qDebug() << "[GESTIONNAIRE STOCK] ✅ Total mouvements chargés:" << count;
     } else {
-        qDebug() << "[GESTIONNAIRE STOCK] ❌ Erreur SQL:" << query.lastError().text();
-        qDebug() << "[GESTIONNAIRE STOCK] Query:" << sqlQuery;
+        qDebug() << "[GESTIONNAIRE STOCK] ❌ ERREUR SQL:" << query.lastError().text();
         m_dernierErreur = query.lastError().text();
     }
-    
+
     return mouvements;
 }
 
@@ -566,7 +568,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParType(const QString& type
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     
-    QString sqlQuery = 
+    query.prepare(
         "SELECT "
         "  vsm.type_mouvement, "
         "  vsm.mouvement_id, "
@@ -581,10 +583,12 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParType(const QString& type
         "  vsm.source "
         "FROM v_stock_mouvements vsm "
         "LEFT JOIN utilisateurs u ON vsm.utilisateur_id = u.utilisateur_id "
-        "WHERE vsm.type_mouvement = '" + type + "' "
-        "ORDER BY vsm.created_at DESC LIMIT 100";
+        "WHERE vsm.type_mouvement = ? "
+        "ORDER BY vsm.created_at DESC LIMIT 100"
+    );
+    query.addBindValue(type);
     
-    if (query.exec(sqlQuery)) {
+    if (query.exec()) {
         while (query.next()) {
             Mouvement mvt;
             mvt.type = query.value("type_mouvement").toString();
@@ -613,7 +617,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParDateRange(const QDate& d
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     
-    QString sqlQuery = QString(
+    query.prepare(
         "SELECT "
         "  vsm.type_mouvement, "
         "  vsm.mouvement_id, "
@@ -628,11 +632,13 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParDateRange(const QDate& d
         "  vsm.source "
         "FROM v_stock_mouvements vsm "
         "LEFT JOIN utilisateurs u ON vsm.utilisateur_id = u.utilisateur_id "
-        "WHERE DATE(vsm.created_at) >= '%1' AND DATE(vsm.created_at) <= '%2' "
+        "WHERE DATE(vsm.created_at) >= ? AND DATE(vsm.created_at) <= ? "
         "ORDER BY vsm.created_at DESC LIMIT 100"
-    ).arg(dateDebut.toString("yyyy-MM-dd"), dateFin.toString("yyyy-MM-dd"));
+    );
+    query.addBindValue(dateDebut.toString("yyyy-MM-dd"));
+    query.addBindValue(dateFin.toString("yyyy-MM-dd"));
     
-    if (query.exec(sqlQuery)) {
+    if (query.exec()) {
         while (query.next()) {
             Mouvement mvt;
             mvt.type = query.value("type_mouvement").toString();
@@ -659,6 +665,7 @@ int GestionnaireStock::obtenirNombreMouvements(const QUuid& produitId)
     auto mouvements = obtenirMouvementsRecents(produitId);
     return mouvements.count();
 }
+
 // ============================================================================
 // ALERTES
 // ============================================================================

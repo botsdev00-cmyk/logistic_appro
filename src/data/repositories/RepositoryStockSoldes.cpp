@@ -108,33 +108,17 @@ QList<StockSolde> RepositoryStockSoldes::getAll()
 
 bool RepositoryStockSoldes::update(const StockSolde& entity)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare(
-        "UPDATE stock_soldes SET "
-        "quantite_total = ?, quantite_reserve = ?, "
-        "valeur_stock = ?, prix_moyen = ?, "
-        "dernier_mouvement_date = ?, updated_at = CURRENT_TIMESTAMP "
-        "WHERE solde_id = ?"
-    );
+    // ============================================================
+    // ❌ BLOQUÉ: UPDATE directe sur stock_soldes INTERDIT!
+    // ✅ UTILISER: fn_create_stock_movement() pour créer mouvements
+    // ============================================================
     
-    query.addBindValue(entity.getQuantiteTotal());
-    query.addBindValue(entity.getQuantiteReservee());
-    query.addBindValue(entity.getValeurStock());
-    query.addBindValue(entity.getPrixMoyen());
-    query.addBindValue(entity.getDernierMouvementDate());
-    query.addBindValue(entity.getSoldeId().toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur mise à jour solde stock: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] UPDATE ERROR:" << m_dernierErreur;
-        return false;
-    }
+    m_dernierErreur = "⚠️  Modification directe de stock_soldes INTERDITE! "
+                      "Créez un mouvement de stock via fn_create_stock_movement() à la place.";
     
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-SOLDE] ✓ UPDATE: rows affected=" << affected;
-    return affected > 0;
+    qDebug() << "[REPO-SOLDE] ❌ UPDATE BLOQUÉ - " << m_dernierErreur;
+    
+    return false;
 }
 
 bool RepositoryStockSoldes::remove(const QUuid& id)
@@ -200,7 +184,7 @@ StockSolde RepositoryStockSoldes::getByProduit(const QUuid& produitId)
     return solde;
 }
 
-// ✅ NOUVELLE FONCTION - Retourne les stocks avec tous les détails du produit depuis v_stock_detail
+// ✅ MÉTHODE: Obtenir stocks avec tous les détails du produit
 QList<StockSolde> RepositoryStockSoldes::obtenirStockDetail()
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
@@ -239,7 +223,7 @@ QList<StockSolde> RepositoryStockSoldes::obtenirStockDetail()
             solde.setSoldeId(QUuid(query.value("solde_id").toString()));
             solde.setProduitId(QUuid(query.value("produit_id").toString()));
             
-            // Données Produit (depuis v_stock_detail)
+            // Données Produit
             solde.setProduitNom(query.value("produit_nom").toString());
             solde.setCodeSKU(query.value("code_sku").toString());
             solde.setCategorie(query.value("categorie").toString());
@@ -430,18 +414,18 @@ bool RepositoryStockSoldes::synchroniserTousSoldes()
 
     qDebug() << "[REPO-SOLDE] DÉBUT synchronisation tous les soldes...";
 
-    // Cette requête recalcule tous les soldes à partir des mouvements
+    // ✅ CORRECTION: Pas d'ABS() - quantite_delta est déjà signé
     query.prepare(
         "WITH mouvements_par_produit AS ( "
         "  SELECT produit_id, "
         "    COALESCE(SUM(CASE WHEN type_mouvement='ENTREE' THEN quantite_delta ELSE 0 END), 0) as entrees, "
-        "    COALESCE(SUM(CASE WHEN type_mouvement='SORTIE' THEN ABS(quantite_delta) ELSE 0 END), 0) as sorties, "
+        "    COALESCE(SUM(CASE WHEN type_mouvement='SORTIE' THEN quantite_delta ELSE 0 END), 0) as sorties, "
         "    COALESCE(SUM(CASE WHEN type_mouvement='RETOUR' THEN quantite_delta ELSE 0 END), 0) as retours "
-        "  FROM v_stock_mouvements "
+        "  FROM stock_mouvements "
         "  GROUP BY produit_id "
         ") "
         "UPDATE stock_soldes SET "
-        "  quantite_total = COALESCE(entrees - sorties + retours, 0), "
+        "  quantite_total = COALESCE(entrees + sorties + retours, 0), "
         "  dernier_mouvement_date = CURRENT_TIMESTAMP, "
         "  updated_at = CURRENT_TIMESTAMP "
         "FROM mouvements_par_produit "

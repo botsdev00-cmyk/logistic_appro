@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict JXNuRZl6hVOLqCCCr4u99A6dfpFh0BbeIdfA97qsoFGBpwhRXCvN9O0sh82gHQp
+\restrict mwlQTLikf4OpMqofbsK0rjS1oWUz2kY3aZWVkV7QKS4Fl9lmAgqJv8OCdYf7h9R
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -232,6 +232,27 @@ $_$;
 
 
 ALTER FUNCTION public.fn_get_current_stock(p_produit_id uuid) OWNER TO postgres;
+
+--
+-- Name: fn_get_stock_by_location(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_get_stock_by_location(p_produit_id uuid) RETURNS TABLE(warehouse integer, in_transit integer, returned integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(CASE WHEN sm.location_id = 'WAREHOUSE' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER,
+        COALESCE(SUM(CASE WHEN sm.location_id = 'IN_TRANSIT' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER,
+        COALESCE(SUM(CASE WHEN sm.location_id = 'RETURNED' THEN sm.quantite_delta ELSE 0 END), 0)::INTEGER
+    FROM public.stock_mouvements sm
+    WHERE sm.produit_id = p_produit_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_get_stock_by_location(p_produit_id uuid) OWNER TO postgres;
 
 --
 -- Name: fn_log_entree_stock_movement(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -2321,6 +2342,41 @@ ALTER TABLE ONLY public.ventes
 
 
 --
+-- Name: FUNCTION fn_check_stock_availability(p_produit_id uuid, p_quantite_requise integer); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.fn_check_stock_availability(p_produit_id uuid, p_quantite_requise integer) TO stock_editor;
+
+
+--
+-- Name: FUNCTION fn_create_stock_movement(p_produit_id uuid, p_type_mouvement character varying, p_quantite_delta integer, p_reference_id uuid, p_reference_type character varying, p_utilisateur_id uuid, p_location_id character varying, p_raison character varying, p_observations text); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_mouvement character varying, p_quantite_delta integer, p_reference_id uuid, p_reference_type character varying, p_utilisateur_id uuid, p_location_id character varying, p_raison character varying, p_observations text) TO stock_editor;
+
+
+--
+-- Name: FUNCTION fn_refresh_stock_cache(); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.fn_refresh_stock_cache() TO stock_approver;
+
+
+--
+-- Name: FUNCTION fn_repair_stock_integrity(); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.fn_repair_stock_integrity() TO stock_approver;
+
+
+--
+-- Name: FUNCTION fn_verify_stock_operation(p_produit_id uuid, p_quantite_delta integer, p_type_mouvement character varying); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.fn_verify_stock_operation(p_produit_id uuid, p_quantite_delta integer, p_type_mouvement character varying) TO stock_editor;
+
+
+--
 -- Name: TABLE articles_repartition; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2522,6 +2578,13 @@ GRANT SELECT ON TABLE public.utilisateurs TO stock_viewer;
 
 
 --
+-- Name: TABLE v_audit_stock_trail; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.v_audit_stock_trail TO stock_viewer;
+
+
+--
 -- Name: TABLE v_statut_stock; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2533,6 +2596,20 @@ GRANT SELECT ON TABLE public.v_statut_stock TO stock_viewer;
 --
 
 GRANT SELECT ON TABLE public.v_stock_detail TO stock_viewer;
+
+
+--
+-- Name: TABLE v_stock_integrity_check; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.v_stock_integrity_check TO stock_viewer;
+
+
+--
+-- Name: TABLE v_stock_mouvements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.v_stock_mouvements TO stock_viewer;
 
 
 --
@@ -2553,5 +2630,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict JXNuRZl6hVOLqCCCr4u99A6dfpFh0BbeIdfA97qsoFGBpwhRXCvN9O0sh82gHQp
+\unrestrict mwlQTLikf4OpMqofbsK0rjS1oWUz2kY3aZWVkV7QKS4Fl9lmAgqJv8OCdYf7h9R
 
