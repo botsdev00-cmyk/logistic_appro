@@ -39,16 +39,40 @@ template <> constexpr inline auto BoiteDialogEntreeStock::qt_create_metaobjectda
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "BoiteDialogEntreeStock",
-        "onValider",
+        "onAjouterLigne",
         "",
-        "onAnnuler"
+        "onSupprimerLigne",
+        "onSelectionnerProduit",
+        "row",
+        "col",
+        "onValider",
+        "onAnnuler",
+        "onCellChanged",
+        "onImprimer",
+        "onExporter"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'onValider'
+        // Slot 'onAjouterLigne'
         QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onAnnuler'
+        // Slot 'onSupprimerLigne'
         QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onSelectionnerProduit'
+        QtMocHelpers::SlotData<void(int, int)>(4, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 5 }, { QMetaType::Int, 6 },
+        }}),
+        // Slot 'onValider'
+        QtMocHelpers::SlotData<void()>(7, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onAnnuler'
+        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onCellChanged'
+        QtMocHelpers::SlotData<void(int, int)>(9, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 5 }, { QMetaType::Int, 6 },
+        }}),
+        // Slot 'onImprimer'
+        QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onExporter'
+        QtMocHelpers::SlotData<void()>(11, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -72,12 +96,17 @@ void BoiteDialogEntreeStock::qt_static_metacall(QObject *_o, QMetaObject::Call _
     auto *_t = static_cast<BoiteDialogEntreeStock *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->onValider(); break;
-        case 1: _t->onAnnuler(); break;
+        case 0: _t->onAjouterLigne(); break;
+        case 1: _t->onSupprimerLigne(); break;
+        case 2: _t->onSelectionnerProduit((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2]))); break;
+        case 3: _t->onValider(); break;
+        case 4: _t->onAnnuler(); break;
+        case 5: _t->onCellChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2]))); break;
+        case 6: _t->onImprimer(); break;
+        case 7: _t->onExporter(); break;
         default: ;
         }
     }
-    (void)_a;
 }
 
 const QMetaObject *BoiteDialogEntreeStock::metaObject() const
@@ -99,14 +128,14 @@ int BoiteDialogEntreeStock::qt_metacall(QMetaObject::Call _c, int _id, void **_a
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 2)
+        if (_id < 8)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 2;
+        _id -= 8;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 2)
+        if (_id < 8)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 2;
+        _id -= 8;
     }
     return _id;
 }

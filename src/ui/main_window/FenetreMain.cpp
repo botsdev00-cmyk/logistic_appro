@@ -19,6 +19,7 @@
 #include "../views/VueCaisse.h"
 #include "../views/VueRapport.h"
 #include "../views/VueClient.h"
+#include "../widgets/TableauCatalogue.h"
 #include "../../core/entities/Utilisateur.h"
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -44,13 +45,14 @@ FenetreMain::FenetreMain(const Utilisateur& utilisateur, QWidget* parent)
       m_utilisateurId(utilisateur.getUtilisateurId())
 {
     qDebug() << "[FENETRE MAIN] ═══════════════════════════════════════════════";
-    qDebug() << "[FENETRE MAIN] Initialisation pour utilisateur:" << utilisateur.getNomUtilisateur();
-    qDebug() << "[FENETRE MAIN] Rôle:" << utilisateur.getNomComplet();
+    qDebug() << "[FENETRE MAIN] Utilisateur:" << utilisateur.getNomUtilisateur();
+    qDebug() << "[FENETRE MAIN] UUID:" << m_utilisateurId.toString();
+    qDebug() << "[FENETRE MAIN] Email:" << utilisateur.getEmail();
+    qDebug() << "[FENETRE MAIN] ═══════════════════════════════════════════════";
 
     initializeUI();
     initializeManagers();
-    setupTabs();
-    setupMenuBar();
+    setupTabs();    setupMenuBar();
     setupToolBar();
     setupStatusBar();
     connectSignals();
@@ -153,17 +155,18 @@ void FenetreMain::initializeManagers()
 void FenetreMain::setupTabs()
 {
     qDebug() << "[FENETRE MAIN] Configuration des onglets...";
+    qDebug() << "[FENETRE MAIN] Utilisateur ID:" << m_utilisateurId.toString();  // ✅ DEBUG
 
-    // ====== TABLEAU DE BORD ======
-    m_vueTableau = new VueTableau();
-    m_tabWidget->addTab(m_vueTableau, "📊 Tableau de Bord");
-    qDebug() << "[FENETRE MAIN]   ✓ Onglet Tableau de Bord créé";
+    // ====== GESTION DU CATALOGUE ======
+    m_Catalogue = new TableauCatalogue(m_gestionnaireCatalogue.get(), m_utilisateurId);
+    m_tabWidget->addTab(m_vueStock, "📦 Catalogue");
 
     // ====== GESTION DU STOCK ======
     m_vueStock = new VueStock(m_gestionnaireStock.get(), m_utilisateurId);
     m_tabWidget->addTab(m_vueStock, "📦 Gestion du Stock");
-    qDebug() << "[FENETRE MAIN]   ✓ Onglet Stock créé";
-
+    
+    qDebug() << "[FENETRE MAIN] ✓ UUID passé à VueStock:" << m_utilisateurId.toString();  // ✅ DEBUG
+   
     // ====== RÉPARTITION ======
     m_vueRepartition = new VueRepartition();
     m_tabWidget->addTab(m_vueRepartition, "🚚 Répartitions");
@@ -423,7 +426,7 @@ void FenetreMain::onActualiserDonnees()
     m_statusLabel->setText("🔄 Actualisation...");
 
     if (m_vueStock) {
-        m_vueStock->onActualiser();
+        m_vueStock->actualiser();
     }
 
     QTimer::singleShot(1000, this, [this]() {
@@ -444,7 +447,7 @@ void FenetreMain::onSynchroniserStock()
 
     if (m_gestionnaireStock->synchroniserStockSoldes()) {
         if (m_vueStock) {
-            m_vueStock->onActualiser();
+            m_vueStock->actualiser();
         }
         QMessageBox::information(this, "✓ Succès", 
                                 "Stock synchronisé avec succès");

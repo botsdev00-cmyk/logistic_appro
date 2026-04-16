@@ -1,5 +1,5 @@
-#ifndef VUESTOCK_H
-#define VUESTOCK_H
+#ifndef VUE_STOCK_H
+#define VUE_STOCK_H
 
 #include <QWidget>
 #include <QUuid>
@@ -14,8 +14,8 @@ class QLabel;
 class TableauStock;
 class TableauHistoriqueStock;
 class PanelAlertes;
-class BoiteDialogEntreeStock;
-class BoiteDialogRetourStock;
+class EntreeStock;
+class RetourStock;
 
 class VueStock : public QWidget
 {
@@ -24,16 +24,16 @@ class VueStock : public QWidget
 public:
     explicit VueStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, QWidget* parent = nullptr);
     ~VueStock();
-    void onActualiser();
+
     void chargerDonnees();
-
-
+    void actualiser();
 
 private slots:
     void onAjouterEntree();
     void onAjouterRetour();
     void onEntreesEnAttente();
     void onRetoursEnAttente();
+    void onActualiser();
     void onRechercherStock();
     void onFiltrerParStatut(int index);
     void onExporterStock();
@@ -67,4 +67,4 @@ private:
     QLabel* m_labelValeurTotal;
 };
 
-#endif // VUESTOCK_H
+#endif // VUE_STOCK_H

@@ -21,6 +21,7 @@ class RepositoryEntreeStock;
 class RepositoryRetourStock;
 class RepositoryStockSoldes;
 class ServicePermissions;
+class TableauCatalogue;
 
 class VueTableau;
 class VueStock;
@@ -78,6 +79,7 @@ private:
     std::unique_ptr<GestionnaireCaisse> m_gestionnaireCaisse;
     std::unique_ptr<GestionnaireClient> m_gestionnaireClient;
     std::unique_ptr<GestionnaireRapport> m_gestionnaireRapport;
+    TableauCatalogue* m_Catalogue;
 
     // UI
     QTabWidget* m_tabWidget;

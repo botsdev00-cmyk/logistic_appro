@@ -26,12 +26,16 @@ VueStock::VueStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, 
       m_gestionnaire(gestionnaire),
       m_utilisateurId(utilisateurId)
 {
+    qDebug() << "[VUE STOCK] ═══════════════════════════════════════════════";
     qDebug() << "[VUE STOCK] Initialisation pour utilisateur:" << utilisateurId;
     
     initializeUI();
     connectSignals();
     chargerDonnees();
     afficherAlertes();
+
+    qDebug() << "[VUE STOCK] ✓ Initialisation OK";
+    qDebug() << "[VUE STOCK] ═══════════════════════════════════════════════";
 }
 
 VueStock::~VueStock()
@@ -48,27 +52,59 @@ void VueStock::initializeUI()
     qDebug() << "[VUE STOCK] Initialisation UI";
     
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
+    layoutPrincipal->setSpacing(10);
+    layoutPrincipal->setContentsMargins(10, 10, 10, 10);
 
-    // ====== TOOLBAR ======
+    // ====== TITRE ======
+    QLabel* titleLabel = new QLabel("📦 GESTION DU STOCK");
+    titleLabel->setStyleSheet(
+        "font-size: 16px; font-weight: bold; color: #1976D2; padding: 10px; "
+        "background-color: #E3F2FD; border-radius: 5px;"
+    );
+    layoutPrincipal->addWidget(titleLabel);
+
+    // ====== TOOLBAR PRINCIPALE ======
     QHBoxLayout* toolbar = new QHBoxLayout();
+    toolbar->setSpacing(8);
 
-    m_btnAjouterEntree = new QPushButton("➕ Nouvelle Entrée");
-    m_btnAjouterEntree->setMinimumWidth(140);
-    m_btnAjouterRetour = new QPushButton("↩️ Nouveau Retour");
+    // Boutons d'action
+    m_btnAjouterEntree = new QPushButton("📥 Approvisionnement");
+    m_btnAjouterEntree->setMinimumWidth(160);
+    m_btnAjouterEntree->setStyleSheet(
+        "background-color: #2196F3; color: white; font-weight: bold; padding: 8px; border-radius: 4px;"
+    );
+
+    m_btnAjouterRetour = new QPushButton("↩️ Retour Stock");
     m_btnAjouterRetour->setMinimumWidth(140);
-    m_btnEntreesEnAttente = new QPushButton("⏳ Entrées en attente");
-    m_btnEntreesEnAttente->setMinimumWidth(150);
-    m_btnRetoursEnAttente = new QPushButton("⏳ Retours en attente");
-    m_btnRetoursEnAttente->setMinimumWidth(150);
+    m_btnAjouterRetour->setStyleSheet(
+        "background-color: #FF9800; color: white; font-weight: bold; padding: 8px; border-radius: 4px;"
+    );
+
+    m_btnEntreesEnAttente = new QPushButton("⏳ Entrées en Attente");
+    m_btnEntreesEnAttente->setMinimumWidth(160);
+    m_btnEntreesEnAttente->setStyleSheet("padding: 8px; border-radius: 4px;");
+
+    m_btnRetoursEnAttente = new QPushButton("⏳ Retours en Attente");
+    m_btnRetoursEnAttente->setMinimumWidth(160);
+    m_btnRetoursEnAttente->setStyleSheet("padding: 8px; border-radius: 4px;");
+
     m_btnActualiser = new QPushButton("🔄 Actualiser");
-    m_btnActualiser->setMinimumWidth(100);
+    m_btnActualiser->setMinimumWidth(120);
+    m_btnActualiser->setStyleSheet("padding: 8px; border-radius: 4px;");
+
     m_btnExporter = new QPushButton("📊 Exporter");
     m_btnExporter->setMinimumWidth(100);
+    m_btnExporter->setStyleSheet("padding: 8px; border-radius: 4px;");
+
     m_btnSynchroniser = new QPushButton("🔗 Synchroniser");
-    m_btnSynchroniser->setMinimumWidth(120);
+    m_btnSynchroniser->setMinimumWidth(140);
+    m_btnSynchroniser->setStyleSheet(
+        "background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; border-radius: 4px;"
+    );
 
     toolbar->addWidget(m_btnAjouterEntree);
     toolbar->addWidget(m_btnAjouterRetour);
+    toolbar->addSpacing(15);
     toolbar->addWidget(m_btnEntreesEnAttente);
     toolbar->addWidget(m_btnRetoursEnAttente);
     toolbar->addStretch();
@@ -78,12 +114,19 @@ void VueStock::initializeUI()
 
     layoutPrincipal->addLayout(toolbar);
 
-    // ====== SEARCH & FILTER ======
+    // ====== SEARCH & FILTER BAR ======
     QHBoxLayout* searchLayout = new QHBoxLayout();
+    searchLayout->setSpacing(10);
 
     m_searchBox = new QLineEdit();
-    m_searchBox->setPlaceholderText("Rechercher par produit, SKU...");
-    m_searchBox->setMaximumWidth(300);
+    m_searchBox->setPlaceholderText("🔍 Rechercher par produit, SKU...");
+    m_searchBox->setMaximumWidth(350);
+    m_searchBox->setStyleSheet(
+        "padding: 8px; border: 1px solid #BDBDBD; border-radius: 4px;"
+    );
+
+    QLabel* labelStatut = new QLabel("Filtre Statut:");
+    labelStatut->setStyleSheet("font-weight: bold;");
 
     m_filterStatus = new QComboBox();
     m_filterStatus->addItem("Tous les statuts");
@@ -92,15 +135,21 @@ void VueStock::initializeUI()
     m_filterStatus->addItem("CRITIQUE");
     m_filterStatus->addItem("RUPTURE");
     m_filterStatus->setMaximumWidth(150);
+    m_filterStatus->setStyleSheet(
+        "padding: 6px; border: 1px solid #BDBDBD; border-radius: 4px;"
+    );
 
-    QLabel* labelValeur = new QLabel("Valeur totale du stock: ");
+    QLabel* labelValeur = new QLabel("💰 Valeur Totale:");
+    labelValeur->setStyleSheet("font-weight: bold; margin-left: 20px;");
+
     m_labelValeurTotal = new QLabel("0,00 €");
-    m_labelValeurTotal->setStyleSheet("font-weight: bold; color: #2196F3; font-size: 12px;");
+    m_labelValeurTotal->setStyleSheet(
+        "font-weight: bold; color: #2196F3; font-size: 13px; "
+        "background-color: #E3F2FD; padding: 6px 12px; border-radius: 4px;"
+    );
 
-    searchLayout->addWidget(new QLabel("🔍 Recherche:"));
     searchLayout->addWidget(m_searchBox);
-    searchLayout->addSpacing(20);
-    searchLayout->addWidget(new QLabel("Statut:"));
+    searchLayout->addWidget(labelStatut);
     searchLayout->addWidget(m_filterStatus);
     searchLayout->addStretch();
     searchLayout->addWidget(labelValeur);
@@ -108,12 +157,13 @@ void VueStock::initializeUI()
 
     layoutPrincipal->addLayout(searchLayout);
 
-    // ====== TABS ======
+    // ====== TABS PRINCIPALES ======
     m_tabWidget = new QTabWidget();
     m_tabWidget->setDocumentMode(true);
     m_tabWidget->setStyleSheet(
         "QTabWidget::pane { border: 1px solid #E0E0E0; } "
-        "QTabBar::tab { padding: 8px 20px; margin-right: 2px; }"
+        "QTabBar::tab { padding: 10px 20px; margin-right: 2px; background-color: #F5F5F5; } "
+        "QTabBar::tab:selected { background-color: white; color: #1976D2; font-weight: bold; }"
     );
 
     // Tab 1: Stock actuel
@@ -185,7 +235,7 @@ void VueStock::chargerDonnees()
     double valeurTotal = m_gestionnaire->obtenirValeurTotalStock();
     m_labelValeurTotal->setText(QString::number(valeurTotal, 'f', 2) + " €");
 
-    qDebug() << "[VUE STOCK] ✓ Valeur totale:" << valeurTotal;
+    qDebug() << "[VUE STOCK] ✓ Valeur totale: " << valeurTotal;
 }
 
 // ============================================================================
@@ -197,17 +247,15 @@ void VueStock::afficherAlertes()
     if (!m_gestionnaire) return;
 
     auto alertes = m_gestionnaire->obtenirAlertes();
-    qDebug() << "[VUE STOCK] Alertes actives:" << alertes.count();
+    qDebug() << "[VUE STOCK] Alertes totales:" << alertes.count();
 
     if (!alertes.isEmpty()) {
         auto critiques = m_gestionnaire->obtenirAlertesCritiques();
-        // ...
         if (!critiques.isEmpty()) {
             QString message = QString("⚠️ ALERTES CRITIQUES STOCK\n\n");
             message += QString("Total: %1 alerte(s)\n\n").arg(critiques.count());
-
-            // CORRECTION ICI : static_cast<int>(critiques.count())
-            for (int i = 0; i < std::min(5, static_cast<int>(critiques.count())); ++i) {
+            
+            for (int i = 0; i < std::min(5, (int)critiques.count()); ++i) {
                 const auto& alerte = critiques[i];
                 message += QString("• %1 (%2)\n  Qté: %3 (min: %4)\n  Action: %5\n\n")
                     .arg(alerte.produitNom, alerte.codeSKU)
@@ -219,7 +267,7 @@ void VueStock::afficherAlertes()
                 message += QString("... et %1 autre(s)").arg(critiques.count() - 5);
             }
 
-            // ✅ Afficher dans le premier onglet (alertes)
+            // Afficher dans le premier onglet (alertes)
             m_tabWidget->setCurrentIndex(2);
         }
     }
@@ -229,7 +277,7 @@ void VueStock::afficherAlertes()
 // ACTUALISATION
 // ============================================================================
 
-void VueStock::onActualiser()
+void VueStock::actualiser()
 {
     qDebug() << "[VUE STOCK] Actualisation manuelle";
     chargerDonnees();
@@ -242,12 +290,13 @@ void VueStock::onActualiser()
 
 void VueStock::onAjouterEntree()
 {
-    qDebug() << "[VUE STOCK] Ouvrir dialog nouvelle entrée";
+    qDebug() << "[VUE STOCK] Ouverture dialog approvisionement";
 
     BoiteDialogEntreeStock dialog(m_gestionnaire, m_utilisateurId, this);
     if (dialog.exec() == QDialog::Accepted) {
         chargerDonnees();
-        QMessageBox::information(this, "✓ Succès", "Entrée de stock créée avec succès");
+        afficherAlertes();
+        QMessageBox::information(this, "✓ Succès", "Approvisionement complété avec succès");
     }
 }
 
@@ -258,15 +307,15 @@ void VueStock::onEntreesEnAttente()
     auto entrees = m_gestionnaire->obtenirEntreesEnAttente();
     
     if (entrees.isEmpty()) {
-        QMessageBox::information(this, "Entrées en Attente", "Aucune entrée en attente");
+        QMessageBox::information(this, "📥 Entrées en Attente", "Aucune entrée en attente");
         return;
     }
 
-    QString message = QString("ENTRÉES EN ATTENTE (%1)\n\n").arg(entrees.count());
+    QString message = QString("📥 ENTRÉES EN ATTENTE (%1)\n\n").arg(entrees.count());
     
-    for (int i = 0; i < std::min(10, static_cast<int>(entrees.count())); ++i) {
+    for (int i = 0; i < std::min(10, (int)entrees.count()); ++i) {
         const auto& entree = entrees[i];
-        message += QString("• ID: %1\n  Quantité: %2\n  Créée: %3\n\n")
+        message += QString("• ID: %1\n  Quantité: %2 unités\n  Créée: %3\n\n")
             .arg(entree.getEntreeStockId().toString().mid(0, 8))
             .arg(entree.getQuantite())
             .arg(entree.getDate().toString("dd/MM/yyyy HH:mm"));
@@ -276,7 +325,7 @@ void VueStock::onEntreesEnAttente()
         message += QString("... et %1 autre(s)").arg(entrees.count() - 10);
     }
 
-    QMessageBox::information(this, "Entrées en Attente", message);
+    QMessageBox::information(this, "📥 Entrées en Attente", message);
 }
 
 // ============================================================================
@@ -285,11 +334,12 @@ void VueStock::onEntreesEnAttente()
 
 void VueStock::onAjouterRetour()
 {
-    qDebug() << "[VUE STOCK] Ouvrir dialog nouveau retour";
+    qDebug() << "[VUE STOCK] Ouverture dialog nouveau retour";
 
     BoiteDialogRetourStock dialog(m_gestionnaire, m_utilisateurId, this);
     if (dialog.exec() == QDialog::Accepted) {
         chargerDonnees();
+        afficherAlertes();
         QMessageBox::information(this, "✓ Succès", "Retour de stock créé avec succès");
     }
 }
@@ -301,15 +351,15 @@ void VueStock::onRetoursEnAttente()
     auto retours = m_gestionnaire->obtenirRetoursEnAttente();
     
     if (retours.isEmpty()) {
-        QMessageBox::information(this, "Retours en Attente", "Aucun retour en attente");
+        QMessageBox::information(this, "↩️ Retours en Attente", "Aucun retour en attente");
         return;
     }
 
-    QString message = QString("RETOURS EN ATTENTE (%1)\n\n").arg(retours.count());
+    QString message = QString("↩️ RETOURS EN ATTENTE (%1)\n\n").arg(retours.count());
     
-    for (int i = 0; i < std::min(10, static_cast<int>(retours.count())); ++i) {
+    for (int i = 0; i < std::min(10, (int)retours.count()); ++i) {
         const auto& retour = retours[i];
-        message += QString("• ID: %1\n  Quantité: %2\n  Créé: %3\n\n")
+        message += QString("• ID: %1\n  Quantité: %2 unités\n  Créé: %3\n\n")
             .arg(retour.getRetourStockId().toString().mid(0, 8))
             .arg(retour.getQuantite())
             .arg(retour.getDate().toString("dd/MM/yyyy HH:mm"));
@@ -319,7 +369,7 @@ void VueStock::onRetoursEnAttente()
         message += QString("... et %1 autre(s)").arg(retours.count() - 10);
     }
 
-    QMessageBox::information(this, "Retours en Attente", message);
+    QMessageBox::information(this, "↩️ Retours en Attente", message);
 }
 
 // ============================================================================
@@ -336,8 +386,9 @@ void VueStock::onRechercherStock()
     }
 }
 
-void VueStock::onFiltrerParStatut(int /*index*/)
+void VueStock::onFiltrerParStatut(int index)
 {
+    (void)index;
     QString statut = m_filterStatus->currentText();
     qDebug() << "[VUE STOCK] Filtre statut:" << statut;
 
@@ -350,10 +401,18 @@ void VueStock::onFiltrerParStatut(int /*index*/)
 // SLOTS - ACTIONS
 // ============================================================================
 
+void VueStock::onActualiser()
+{
+    qDebug() << "[VUE STOCK] Actualisation demandée";
+    actualiser();
+    QMessageBox::information(this, "✓ Actualisation", "Données actualisées avec succès");
+}
+
 void VueStock::onExporterStock()
 {
     qDebug() << "[VUE STOCK] Export stock en CSV/Excel";
-    QMessageBox::information(this, "Export", "Fonctionnalité d'export (À implémenter)");
+    QMessageBox::information(this, "📊 Export", 
+                            "Fonctionnalité d'export CSV (À implémenter)");
 }
 
 void VueStock::onSynchroniser()
@@ -367,11 +426,12 @@ void VueStock::onSynchroniser()
 
     if (m_gestionnaire->synchroniserStockSoldes()) {
         chargerDonnees();
+        afficherAlertes();
         QMessageBox::information(this, "✓ Synchronisation", 
                                 "Soldes synchronisés avec succès");
     } else {
-        QMessageBox::critical(this, "Erreur", 
-                             "Erreur lors de la synchronisation: " + 
+        QMessageBox::critical(this, "❌ Erreur", 
+                             "Erreur lors de la synchronisation:\n" + 
                              m_gestionnaire->obtenirDernierErreur());
     }
 }
