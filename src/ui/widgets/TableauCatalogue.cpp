@@ -10,9 +10,11 @@
 #include <QDebug>
 #include <QTabWidget>
 
+// Constructeur par défaut
 TableauCatalogue::TableauCatalogue(QWidget* parent)
     : QWidget(parent),
       m_gestionnaireCatalogue(nullptr),
+      m_utilisateurId(QUuid()),
       m_tableauProduits(nullptr),
       m_tableauCategories(nullptr),
       m_champRecherche(nullptr),
@@ -24,6 +26,26 @@ TableauCatalogue::TableauCatalogue(QWidget* parent)
     initializeUI();
 }
 
+// Constructeur avec gestionnaire et utilisateur
+TableauCatalogue::TableauCatalogue(GestionnaireCatalogue* gestionnaire, const QUuid& utilisateurId, QWidget* parent)
+    : QWidget(parent),
+      m_gestionnaireCatalogue(gestionnaire),
+      m_utilisateurId(utilisateurId),
+      m_tableauProduits(nullptr),
+      m_tableauCategories(nullptr),
+      m_champRecherche(nullptr),
+      m_modeleTableau(nullptr),
+      m_modeleCategories(nullptr),
+      m_proxyModele(nullptr),
+      m_proxyModeleCategories(nullptr)
+{
+    qDebug() << "[TABLEAU CATALOGUE] Initialisation avec utilisateur ID:" << utilisateurId.toString();
+    initializeUI();
+    if (m_gestionnaireCatalogue) {
+        rafraichir();
+    }
+}
+
 TableauCatalogue::~TableauCatalogue()
 {
 }
@@ -32,6 +54,12 @@ void TableauCatalogue::setGestionnaireCatalogue(GestionnaireCatalogue* gestionna
 {
     m_gestionnaireCatalogue = gestionnaire;
     rafraichir();
+}
+
+void TableauCatalogue::setUtilisateurId(const QUuid& utilisateurId)
+{
+    m_utilisateurId = utilisateurId;
+    qDebug() << "[TABLEAU CATALOGUE] Utilisateur ID défini:" << utilisateurId.toString();
 }
 
 void TableauCatalogue::initializeUI()

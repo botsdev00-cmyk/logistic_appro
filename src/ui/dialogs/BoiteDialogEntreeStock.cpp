@@ -500,11 +500,23 @@ bool BoiteDialogEntreeStock::validerLigne(int row)
 bool BoiteDialogEntreeStock::sauvegarderEntrees()
 {
     qDebug() << "[ENTREE STOCK] Sauvegarde des entrées...";
-    qDebug() << "[ENTREE STOCK] Utilisateur créateur ID:" << m_utilisateurId.toString();  // ✅ DEBUG
-
+    
     int count = 0;
     for (int row = 0; row < m_tableWidget->rowCount(); ++row) {
-        // ...
+        QComboBox* comboProduit = qobject_cast<QComboBox*>(m_tableWidget->cellWidget(row, 0));
+        if (!comboProduit || comboProduit->currentText() == "-- Sélectionner --") continue;
+        
+        QSpinBox* spinQte = qobject_cast<QSpinBox*>(m_tableWidget->cellWidget(row, 3));
+        QDoubleSpinBox* spinPrix = qobject_cast<QDoubleSpinBox*>(m_tableWidget->cellWidget(row, 4));
+        QTableWidgetItem* factureItem = m_tableWidget->item(row, 6);
+        QTableWidgetItem* lotItem = m_tableWidget->item(row, 7);
+        QDateEdit* dateExp = qobject_cast<QDateEdit*>(m_tableWidget->cellWidget(row, 8));
+        QComboBox* comboSource = qobject_cast<QComboBox*>(m_tableWidget->cellWidget(row, 9));
+        
+        if (!spinQte || !spinPrix || !factureItem || !lotItem || !dateExp || !comboSource) {
+            qWarning() << "[ENTREE STOCK] ❌ Contrôles manquants ligne" << row;
+            continue;
+        }
 
         // Créer l'entrée
         EntreeStock entree;
@@ -515,11 +527,9 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
         entree.setNumeroFacture(factureItem->text());
         entree.setNumeroLot(lotItem->text());
         entree.setDateExpiration(dateExp->date());
-        entree.setCreePar(m_utilisateurId);  // ✅ Vérifier cette valeur
+        entree.setCreePar(m_utilisateurId);
         entree.setSourceEntreeId(m_sourcesMap[comboSource->currentText()]);
         entree.setStatutValidation("EN_ATTENTE");
-
-        qDebug() << "[ENTREE STOCK] Ligne" << row << "- CreePar:" << m_utilisateurId.toString();  // ✅ DEBUG
 
         // Sauvegarder
         if (m_gestionnaire->creerEntreeStock(entree)) {

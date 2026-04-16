@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QStandardItemModel>
 #include <QSortFilterProxyModel>
+#include <QUuid>
 #include "../../business/managers/GestionnaireCatalogue.h"
 #include "../dialogs/BoiteDialogCategorie.h"
 #include "../dialogs/BoiteDialogProduit.h"
@@ -16,9 +17,11 @@ class TableauCatalogue : public QWidget
 
 public:
     explicit TableauCatalogue(QWidget* parent = nullptr);
+    explicit TableauCatalogue(GestionnaireCatalogue* gestionnaire, const QUuid& utilisateurId, QWidget* parent = nullptr);
     ~TableauCatalogue();
 
     void setGestionnaireCatalogue(GestionnaireCatalogue* gestionnaire);
+    void setUtilisateurId(const QUuid& utilisateurId);
 
     void rafraichir();
 
@@ -48,6 +51,7 @@ private:
     void chargerCategories();
 
     GestionnaireCatalogue* m_gestionnaireCatalogue;
+    QUuid m_utilisateurId;
     QTableView* m_tableauProduits;
     QTableView* m_tableauCategories;
     QLineEdit* m_champRecherche;

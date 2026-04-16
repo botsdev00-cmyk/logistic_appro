@@ -11,6 +11,8 @@
 #include "../../data/repositories/RepositoryEntreeStock.h"
 #include "../../data/repositories/RepositoryRetourStock.h"
 #include "../../data/repositories/RepositoryStockSoldes.h"
+#include "../../data/repositories/RepositoryProduit.h"
+#include "../../data/repositories/RepositoryCategorieProduit.h"
 #include "../views/VueTableau.h"
 #include "../views/VueStock.h"
 #include "../views/VueRepartition.h"
@@ -42,7 +44,16 @@
 FenetreMain::FenetreMain(const Utilisateur& utilisateur, QWidget* parent)
     : QMainWindow(parent),
       m_utilisateur(utilisateur),
-      m_utilisateurId(utilisateur.getUtilisateurId())
+      m_utilisateurId(utilisateur.getUtilisateurId()),
+      m_vueTableau(nullptr),
+      m_vueStock(nullptr),
+      m_vueRepartition(nullptr),
+      m_vueVentes(nullptr),
+      m_vueCredit(nullptr),
+      m_vueCaisse(nullptr),
+      m_vueRapport(nullptr),
+      m_vueClient(nullptr),
+      m_Catalogue(nullptr)
 {
     qDebug() << "[FENETRE MAIN] ═══════════════════════════════════════════════";
     qDebug() << "[FENETRE MAIN] Utilisateur:" << utilisateur.getNomUtilisateur();
@@ -52,7 +63,8 @@ FenetreMain::FenetreMain(const Utilisateur& utilisateur, QWidget* parent)
 
     initializeUI();
     initializeManagers();
-    setupTabs();    setupMenuBar();
+    setupTabs();
+    setupMenuBar();
     setupToolBar();
     setupStatusBar();
     connectSignals();
@@ -123,9 +135,20 @@ void FenetreMain::initializeManagers()
     m_repoEntrees = std::make_unique<RepositoryEntreeStock>();
     m_repoRetours = std::make_unique<RepositoryRetourStock>();
     m_repoSoldes = std::make_unique<RepositoryStockSoldes>();
+    m_repoProduits = std::make_unique<RepositoryProduit>();
+    m_repoCategories = std::make_unique<RepositoryCategorieProduit>();
     m_servicePermissions = std::make_unique<ServicePermissions>();
 
     qDebug() << "[FENETRE MAIN]   ✓ Repositories créés";
+
+    // ====== GESTIONNAIRE CATALOGUE ======
+    m_gestionnaireCatalogue = std::make_unique<GestionnaireCatalogue>();
+    m_gestionnaireCatalogue->setRepositoryProduit(m_repoProduits.get());
+    m_gestionnaireCatalogue->setRepositoryCategorieProduit(m_repoCategories.get());
+
+    qDebug() << "[FENETRE MAIN]   ✓ Gestionnaire Catalogue initialisé";
+    qDebug() << "[FENETRE MAIN]   ✓ Nombre de produits:" << m_gestionnaireCatalogue->obtenirNombreProduits();
+    qDebug() << "[FENETRE MAIN]   ✓ Nombre de catégories:" << m_gestionnaireCatalogue->obtenirNombreCategories();
 
     // ====== GESTIONNAIRE STOCK ======
     m_gestionnaireStock = std::make_unique<GestionnaireStock>();
@@ -137,7 +160,6 @@ void FenetreMain::initializeManagers()
     qDebug() << "[FENETRE MAIN]   ✓ Gestionnaire Stock initialisé";
 
     // ====== AUTRES GESTIONNAIRES ======
-    m_gestionnaireCatalogue = std::make_unique<GestionnaireCatalogue>();
     m_gestionnaireRepartition = std::make_unique<GestionnaireRepartition>();
     m_gestionnaireSales = std::make_unique<GestionnaireSales>();
     m_gestionnaireCredit = std::make_unique<GestionnaireCredit>();
@@ -155,17 +177,21 @@ void FenetreMain::initializeManagers()
 void FenetreMain::setupTabs()
 {
     qDebug() << "[FENETRE MAIN] Configuration des onglets...";
-    qDebug() << "[FENETRE MAIN] Utilisateur ID:" << m_utilisateurId.toString();  // ✅ DEBUG
+    qDebug() << "[FENETRE MAIN] Utilisateur ID:" << m_utilisateurId.toString();
 
     // ====== GESTION DU CATALOGUE ======
     m_Catalogue = new TableauCatalogue(m_gestionnaireCatalogue.get(), m_utilisateurId);
-    m_tabWidget->addTab(m_vueStock, "📦 Catalogue");
+    m_tabWidget->addTab(m_Catalogue, "📚 Catalogue");
+    qDebug() << "[FENETRE MAIN]   ✓ Onglet Catalogue créé avec" 
+             << m_gestionnaireCatalogue->obtenirNombreProduits() 
+             << "produit(s) et" 
+             << m_gestionnaireCatalogue->obtenirNombreCategories() 
+             << "catégorie(s)";
 
     // ====== GESTION DU STOCK ======
     m_vueStock = new VueStock(m_gestionnaireStock.get(), m_utilisateurId);
     m_tabWidget->addTab(m_vueStock, "📦 Gestion du Stock");
-    
-    qDebug() << "[FENETRE MAIN] ✓ UUID passé à VueStock:" << m_utilisateurId.toString();  // ✅ DEBUG
+    qDebug() << "[FENETRE MAIN] ✓ UUID passé à VueStock:" << m_utilisateurId.toString();
    
     // ====== RÉPARTITION ======
     m_vueRepartition = new VueRepartition();
