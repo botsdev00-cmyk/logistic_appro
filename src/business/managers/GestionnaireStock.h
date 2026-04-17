@@ -14,10 +14,11 @@ class StockSolde;
 class RepositoryEntreeStock;
 class RepositoryRetourStock;
 class RepositoryStockSoldes;
+class RepositoryStockMouv ements;
 class ServicePermissions;
 
 // ============================================================================
-// STRUCTURES DE DONNÉES
+// STRUCTURES DE DONNÉES ENRICHIES
 // ============================================================================
 
 struct StockInfo {
@@ -37,7 +38,7 @@ struct StockInfo {
 };
 
 struct Mouvement {
-    QString type;               // ENTREE, SORTIE, RETOUR
+    QString type;               // ENTREE, SORTIE, RETOUR, AJUSTEMENT
     QString raison;
     QString nomProduit;
     QString codeSKU;
@@ -71,6 +72,27 @@ struct StatistiquesStock {
     int quantiteDisponibleUnites;
 };
 
+// ✅ NOUVEAU: Structure pour stocks par location
+struct StockParLocation {
+    QUuid produitId;
+    QString produitNom;
+    int warehouse;
+    int inTransit;
+    int returned;
+    int total;
+};
+
+// ✅ NOUVEAU: Structure pour réconciliation
+struct ReconciliationResult {
+    QUuid produitId;
+    QString produitNom;
+    int stockFromMovements;
+    int stockInSoldes;
+    int difference;
+    bool isConsistent;
+    QString status;
+};
+
 // ============================================================================
 // GESTIONNAIRE PRINCIPAL
 // ============================================================================
@@ -85,6 +107,7 @@ public:
     void setRepositoryEntreeStock(RepositoryEntreeStock* repo);
     void setRepositoryRetourStock(RepositoryRetourStock* repo);
     void setRepositoryStockSoldes(RepositoryStockSoldes* repo);
+    void setRepositoryStockMouv ements(RepositoryStockMouv ements* repo);
     void setServicePermissions(ServicePermissions* service);
 
     // ====== GESTION DES ENTRÉES ======
@@ -120,6 +143,10 @@ public:
     QList<StockInfo> filtrerStocksParStatut(const QString& statut);
     QList<StockInfo> filtrerStocksParCategorie(const QUuid& categorieId);
 
+    // ✅ NOUVEAU: Stocks par location
+    StockParLocation obtenirStockParLocation(const QUuid& produitId);
+    QList<StockParLocation> obtenirTousStocksParLocation();
+
     // ====== MOUVEMENTS ======
     QList<Mouvement> obtenirMouvementsRecents(const QUuid& produitId = QUuid(), int jours = 30);
     QList<Mouvement> obtenirHistoriqueProduit(const QUuid& produitId);
@@ -142,6 +169,11 @@ public:
     bool validerRetour(const RetourStock& retour);
     QString obtenirErreurValidation();
 
+    // ✅ NOUVEAU: Réconciliation stock
+    QList<ReconciliationResult> verifierIntegriteStock();
+    bool repairerIntegriteStock();
+    ReconciliationResult verifierIntegriteProduit(const QUuid& produitId);
+
     // ====== TRANSACTIONS ======
     bool reserverStock(const QUuid& repartitionId, const QUuid& produitId, int quantite);
     bool confirmerConsommation(const QUuid& repartitionId, const QUuid& produitId, int quantite);
@@ -160,6 +192,7 @@ public:
     QString genererRapportStock();
     QString genererRapportAlertes();
     QString genererRapportMouvements(const QDate& dateDebut, const QDate& dateFin);
+    QString genererRapportReconciliation();
 
     // ====== GESTION DES ERREURS ======
     QString obtenirDernierErreur() const { return m_dernierErreur; }
@@ -170,6 +203,7 @@ private:
     RepositoryEntreeStock* m_repoEntrees;
     RepositoryRetourStock* m_repoRetours;
     RepositoryStockSoldes* m_repoSoldes;
+    RepositoryStockMouv ements* m_repoMouv ements;
     ServicePermissions* m_servicePermissions;
 
     // Cache des erreurs
