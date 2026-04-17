@@ -1080,6 +1080,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockMouvements.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryStockMouvements.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryStockSoldes.cpp",
@@ -1236,6 +1242,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauReconciliation.h",
+			"MU",
+			"JCA2YNWUYB/moc_TableauReconciliation.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.h",
 			"MU",
 			"JCA2YNWUYB/moc_TableauRepartition.cpp",
@@ -1245,6 +1257,12 @@
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.h",
 			"MU",
 			"JCA2YNWUYB/moc_TableauStock.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.h",
+			"MU",
+			"JCA2YNWUYB/moc_TableauStockLocation.cpp",
 			null
 		],
 		[
@@ -1592,6 +1610,11 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockMouvements.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.cpp",
 			"MU",
 			null
@@ -1703,12 +1726,22 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauReconciliation.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.cpp",
 			"MU",
 			null
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.cpp",
 			"MU",
 			null
 		],

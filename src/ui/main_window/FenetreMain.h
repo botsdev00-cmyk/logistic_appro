@@ -20,6 +20,7 @@ class GestionnaireRapport;
 class RepositoryEntreeStock;
 class RepositoryRetourStock;
 class RepositoryStockSoldes;
+class RepositoryStockMouvements;  // ✅ NOUVEAU
 class RepositoryProduit;
 class RepositoryCategorieProduit;
 class ServicePermissions;
@@ -73,6 +74,7 @@ private:
     std::unique_ptr<RepositoryEntreeStock> m_repoEntrees;
     std::unique_ptr<RepositoryRetourStock> m_repoRetours;
     std::unique_ptr<RepositoryStockSoldes> m_repoSoldes;
+    std::unique_ptr<RepositoryStockMouvements> m_repoMouvements;  // ✅ NOUVEAU
     std::unique_ptr<RepositoryProduit> m_repoProduits;
     std::unique_ptr<RepositoryCategorieProduit> m_repoCategories;
     std::unique_ptr<ServicePermissions> m_servicePermissions;

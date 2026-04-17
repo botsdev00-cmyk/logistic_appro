@@ -2,7 +2,7 @@
 #include "../../data/repositories/RepositoryEntreeStock.h"
 #include "../../data/repositories/RepositoryRetourStock.h"
 #include "../../data/repositories/RepositoryStockSoldes.h"
-#include "../../data/repositories/RepositoryStockMouv ements.h"
+#include "../../data/repositories/RepositoryStockMouvements.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../services/ServicePermissions.h"
 #include "../../core/entities/EntreeStock.h"
@@ -20,7 +20,7 @@ GestionnaireStock::GestionnaireStock()
     : m_repoEntrees(nullptr),
       m_repoRetours(nullptr),
       m_repoSoldes(nullptr),
-      m_repoMouv ements(nullptr),
+      m_repoMouvements(nullptr),
       m_servicePermissions(nullptr)
 {
     qDebug() << "[GESTIONNAIRE STOCK] Initialisation";
@@ -53,9 +53,9 @@ void GestionnaireStock::setRepositoryStockSoldes(RepositoryStockSoldes* repo)
     qDebug() << "[GESTIONNAIRE STOCK] Repository Soldes défini";
 }
 
-void GestionnaireStock::setRepositoryStockMouv ements(RepositoryStockMouv ements* repo)
+void GestionnaireStock::setRepositoryStockMouvements(RepositoryStockMouvements* repo)
 {
-    m_repoMouv ements = repo;
+    m_repoMouvements = repo;
     qDebug() << "[GESTIONNAIRE STOCK] Repository Mouvements défini";
 }
 

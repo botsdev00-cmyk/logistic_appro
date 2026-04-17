@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7khgmhmKlk39IpcPJOCvSQjmLvVBQ7WSFa0e6t6p7aC5szGbn06dVwUhGzdFaKX
+\restrict ORKTFJKWavU8dQubbctCf26LoirvLU85GPKJDCdeGwLVBuhWSSGIfNjZDjfNoXy
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -418,10 +418,10 @@ BEGIN
     SET quantite_total = movements_sum.total
     FROM (
         SELECT 
-            produit_id,
-            COALESCE(SUM(quantite_delta), 0)::INTEGER as total
-        FROM public.stock_mouvements
-        GROUP BY produit_id
+            sm.produit_id,
+            COALESCE(SUM(sm.quantite_delta), 0)::INTEGER as total
+        FROM public.stock_mouvements sm
+        GROUP BY sm.produit_id
     ) movements_sum
     WHERE ss.produit_id = movements_sum.produit_id
         AND ss.quantite_total != movements_sum.total
@@ -2569,13 +2569,6 @@ GRANT ALL ON FUNCTION public.fn_refresh_stock_cache() TO stock_approver;
 
 
 --
--- Name: FUNCTION fn_repair_stock_integrity(); Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON FUNCTION public.fn_repair_stock_integrity() TO stock_approver;
-
-
---
 -- Name: FUNCTION fn_verify_stock_operation(p_produit_id uuid, p_quantite_delta integer, p_type_mouvement character varying); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2836,5 +2829,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7khgmhmKlk39IpcPJOCvSQjmLvVBQ7WSFa0e6t6p7aC5szGbn06dVwUhGzdFaKX
+\unrestrict ORKTFJKWavU8dQubbctCf26LoirvLU85GPKJDCdeGwLVBuhWSSGIfNjZDjfNoXy
 

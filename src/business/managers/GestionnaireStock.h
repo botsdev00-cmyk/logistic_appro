@@ -14,7 +14,7 @@ class StockSolde;
 class RepositoryEntreeStock;
 class RepositoryRetourStock;
 class RepositoryStockSoldes;
-class RepositoryStockMouv ements;
+class RepositoryStockMouvements;
 class ServicePermissions;
 
 // ============================================================================
@@ -107,7 +107,7 @@ public:
     void setRepositoryEntreeStock(RepositoryEntreeStock* repo);
     void setRepositoryRetourStock(RepositoryRetourStock* repo);
     void setRepositoryStockSoldes(RepositoryStockSoldes* repo);
-    void setRepositoryStockMouv ements(RepositoryStockMouv ements* repo);
+    void setRepositoryStockMouvements(RepositoryStockMouvements* repo);
     void setServicePermissions(ServicePermissions* service);
 
     // ====== GESTION DES ENTRÉES ======
@@ -203,7 +203,7 @@ private:
     RepositoryEntreeStock* m_repoEntrees;
     RepositoryRetourStock* m_repoRetours;
     RepositoryStockSoldes* m_repoSoldes;
-    RepositoryStockMouv ements* m_repoMouv ements;
+    RepositoryStockMouvements* m_repoMouvements;
     ServicePermissions* m_servicePermissions;
 
     // Cache des erreurs

@@ -725,6 +725,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositorySales.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStock.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockMouvements.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockMouvements.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryStockSoldes.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryTypeProduit.cpp \
@@ -778,10 +780,14 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauCredit.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauHistoriqueStock.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauReconciliation.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauReconciliation.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauVentes.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauVentes.h \
 	/home/bots/semuliki_logistic/src/utils/helpers/AideDateTime.cpp \

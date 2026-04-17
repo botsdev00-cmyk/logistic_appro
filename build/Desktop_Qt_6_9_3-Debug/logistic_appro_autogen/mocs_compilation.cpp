@@ -22,6 +22,8 @@
 #include "JCA2YNWUYB/moc_TableauClient.cpp"
 #include "JCA2YNWUYB/moc_TableauCredit.cpp"
 #include "JCA2YNWUYB/moc_TableauHistoriqueStock.cpp"
+#include "JCA2YNWUYB/moc_TableauReconciliation.cpp"
 #include "JCA2YNWUYB/moc_TableauRepartition.cpp"
 #include "JCA2YNWUYB/moc_TableauStock.cpp"
+#include "JCA2YNWUYB/moc_TableauStockLocation.cpp"
 #include "JCA2YNWUYB/moc_TableauVentes.cpp"

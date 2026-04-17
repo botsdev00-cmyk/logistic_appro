@@ -8,12 +8,12 @@
 // CONSTRUCTEUR & DESTRUCTEUR
 // ============================================================================
 
-RepositoryStockMouv ements::RepositoryStockMouv ements()
+RepositoryStockMouvements::RepositoryStockMouvements()
 {
     qDebug() << "[REPO-MVT] Initialisation";
 }
 
-RepositoryStockMouv ements::~RepositoryStockMouv ements()
+RepositoryStockMouvements::~RepositoryStockMouvements()
 {
     qDebug() << "[REPO-MVT] Destruction";
 }
@@ -22,7 +22,7 @@ RepositoryStockMouv ements::~RepositoryStockMouv ements()
 // CRÉATION SÉCURISÉE DE MOUVEMENTS
 // ============================================================================
 
-ResultatMouvement RepositoryStockMouv ements::creerMouvementSecurise(
+ResultatMouvement RepositoryStockMouvements::creerMouvementSecurise(
     const QUuid& produitId,
     const QString& typeMouvement,
     int quantiteDelta,
@@ -93,7 +93,7 @@ ResultatMouvement RepositoryStockMouv ements::creerMouvementSecurise(
 // VÉRIFICATION AVANT CRÉATION
 // ============================================================================
 
-ResultatMouvement RepositoryStockMouv ements::verifierOperationStock(
+ResultatMouvement RepositoryStockMouvements::verifierOperationStock(
     const QUuid& produitId,
     int quantiteDelta,
     const QString& typeMouvement)

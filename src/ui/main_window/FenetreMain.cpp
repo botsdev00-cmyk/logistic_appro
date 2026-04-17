@@ -13,6 +13,7 @@
 #include "../../data/repositories/RepositoryStockSoldes.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryCategorieProduit.h"
+#include "../../data/repositories/RepositoryStockMouvements.h"
 #include "../views/VueTableau.h"
 #include "../views/VueStock.h"
 #include "../views/VueRepartition.h"
@@ -135,6 +136,7 @@ void FenetreMain::initializeManagers()
     m_repoEntrees = std::make_unique<RepositoryEntreeStock>();
     m_repoRetours = std::make_unique<RepositoryRetourStock>();
     m_repoSoldes = std::make_unique<RepositoryStockSoldes>();
+    m_repoMouvements = std::make_unique<RepositoryStockMouvements>();  // ✅ NOUVEAU
     m_repoProduits = std::make_unique<RepositoryProduit>();
     m_repoCategories = std::make_unique<RepositoryCategorieProduit>();
     m_servicePermissions = std::make_unique<ServicePermissions>();
@@ -155,6 +157,7 @@ void FenetreMain::initializeManagers()
     m_gestionnaireStock->setRepositoryEntreeStock(m_repoEntrees.get());
     m_gestionnaireStock->setRepositoryRetourStock(m_repoRetours.get());
     m_gestionnaireStock->setRepositoryStockSoldes(m_repoSoldes.get());
+    m_gestionnaireStock->setRepositoryStockMouvements(m_repoMouvements.get());  // ✅ NOUVEAU
     m_gestionnaireStock->setServicePermissions(m_servicePermissions.get());
 
     qDebug() << "[FENETRE MAIN]   ✓ Gestionnaire Stock initialisé";

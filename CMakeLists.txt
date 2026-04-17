@@ -111,6 +111,8 @@ set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryEntreeStock.cpp
     ${SRC_DIR}/data/repositories/RepositoryRetourStock.cpp
     ${SRC_DIR}/data/repositories/RepositoryStockSoldes.cpp
+    ${SRC_DIR}/data/repositories/RepositoryStockMouvements.cpp
+
 )
 
 set(DATA_SOURCES ${DATA_DATABASE} ${DATA_REPOSITORIES})
@@ -190,6 +192,8 @@ set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauVentes.cpp
     ${SRC_DIR}/ui/widgets/TableauCredit.cpp
     ${SRC_DIR}/ui/widgets/TableauCatalogue.cpp
+    ${SRC_DIR}/ui/widgets/TableauStockLocation.cpp
+    ${SRC_DIR}/ui/widgets/TableauReconciliation.cpp
 )
 
 # ============================================================================
