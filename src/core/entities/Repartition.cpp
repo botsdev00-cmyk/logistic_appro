@@ -10,26 +10,18 @@ Repartition::Repartition()
 {
 }
 
-Repartition::~Repartition()
-{
-}
+Repartition::~Repartition() {}
 
-QString Repartition::statutToString(Statut statut)
+QString Repartition::statutToString(Statut s)
 {
-    switch (statut) {
-        case Statut::EnAttente:
-            return "en_attente";
-        case Statut::EnCours:
-            return "en_cours";
-        case Statut::Completee:
-            return "completee";
-        case Statut::Annulee:
-            return "annulee";
-        default:
-            return "en_attente";
+    switch (s) {
+        case Statut::EnAttente: return "en_attente";
+        case Statut::EnCours: return "en_cours";
+        case Statut::Completee: return "completee";
+        case Statut::Annulee: return "annulee";
+        default: return "en_attente";
     }
 }
-
 Repartition::Statut Repartition::stringToStatut(const QString& str)
 {
     QString lower = str.toLower();
@@ -38,19 +30,13 @@ Repartition::Statut Repartition::stringToStatut(const QString& str)
     if (lower == "annulee") return Statut::Annulee;
     return Statut::EnAttente;
 }
-
 QString Repartition::getStatutLabel() const
 {
     switch (m_statut) {
-        case Statut::EnAttente:
-            return "En attente";
-        case Statut::EnCours:
-            return "En cours";
-        case Statut::Completee:
-            return "Complétée";
-        case Statut::Annulee:
-            return "Annulée";
-        default:
-            return "Inconnu";
+        case Statut::EnAttente: return "En attente";
+        case Statut::EnCours: return "En cours";
+        case Statut::Completee: return "Complétée";
+        case Statut::Annulee: return "Annulée";
+        default: return "Inconnu";
     }
 }

@@ -5,7 +5,14 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QAction>
-#include <QDebug>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QLabel>
+#include "../../core/entities/Repartition.h"
+#include "../../core/entities/ArticleRepartition.h"
 
 TableauRepartition::TableauRepartition(QWidget* parent)
     : QTableWidget(parent),
@@ -19,18 +26,16 @@ TableauRepartition::TableauRepartition(QWidget* parent)
     );
 }
 
-TableauRepartition::~TableauRepartition()
-{
-}
+TableauRepartition::~TableauRepartition() {}
 
 void TableauRepartition::initialiserColonnes()
 {
     setColumnCount(6);
     setHorizontalHeaderLabels({"Équipe", "Route", "Date", "Montant attendu", "Statut", "Actions"});
-    
+
     horizontalHeader()->setStretchLastSection(false);
     horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    
+
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setAlternatingRowColors(true);
@@ -38,7 +43,7 @@ void TableauRepartition::initialiserColonnes()
 
 void TableauRepartition::chargerDonnees()
 {
-    remplirTableau();
+    rafraichir();
 }
 
 void TableauRepartition::rafraichir()
@@ -50,23 +55,22 @@ void TableauRepartition::rafraichir()
 
 void TableauRepartition::remplirTableau()
 {
-    // Données fictives
-    insertRow(0);
-    setItem(0, 0, new QTableWidgetItem("Équipe Alpha"));
-    setItem(0, 1, new QTableWidgetItem("Route Nord"));
-    setItem(0, 2, new QTableWidgetItem("2026-04-10"));
-    setItem(0, 3, new QTableWidgetItem("5000 FCFA"));
-    setItem(0, 4, new QTableWidgetItem("En cours"));
-    setItem(0, 5, new QTableWidgetItem("Détails | Articles"));
-    
-    insertRow(1);
-    setItem(1, 0, new QTableWidgetItem("Équipe Bravo"));
-    setItem(1, 1, new QTableWidgetItem("Route Sud"));
-    setItem(1, 2, new QTableWidgetItem("2026-04-09"));
-    setItem(1, 3, new QTableWidgetItem("3500 FCFA"));
-    setItem(1, 4, new QTableWidgetItem("Complétée"));
-    setItem(1, 5, new QTableWidgetItem("Détails | Articles"));
-    
+    QList<Repartition> repartitions = m_gestionnaire->obtenirRepartitionsEnCours();
+    setRowCount(repartitions.size());
+    int row = 0;
+    for (const auto& rep : repartitions) {
+        setItem(row, 0, new QTableWidgetItem(rep.getEquipeId().toString())); // TODO : Remplacer par nom
+        setItem(row, 1, new QTableWidgetItem(rep.getRouteId().toString())); // TODO : Remplacer par nom
+        setItem(row, 2, new QTableWidgetItem(rep.getDateRepartition().toString(Qt::ISODate)));
+        setItem(row, 3, new QTableWidgetItem(QString::number(rep.getMontantCashAttendu(), 'f', 2)));
+        setItem(row, 4, new QTableWidgetItem(rep.getStatutLabel()));
+
+        QTableWidgetItem* itemId = new QTableWidgetItem(rep.getRepartitionId().toString());
+        itemId->setData(Qt::UserRole, rep.getRepartitionId().toString());
+        setItem(row, 5, itemId);
+
+        ++row;
+    }
     mettreEnEvidence();
 }
 
@@ -74,7 +78,7 @@ void TableauRepartition::filtrerParStatut(const QString& statut)
 {
     for (int row = 0; row < rowCount(); ++row) {
         QString itemStatut = item(row, 4)->text();
-        bool visible = statut.isEmpty() || itemStatut.contains(statut, Qt::CaseInsensitive);
+        bool visible = statut == "Tous" || itemStatut == statut;
         setRowHidden(row, !visible);
     }
 }
@@ -83,16 +87,11 @@ void TableauRepartition::mettreEnEvidence()
 {
     for (int row = 0; row < rowCount(); ++row) {
         QString statut = item(row, 4)->text();
-        
-        if (statut == "En cours") {
-            for (int col = 0; col < columnCount(); ++col) {
-                item(row, col)->setBackground(QColor("#d1ecf1"));
-            }
-        } else if (statut == "Complétée") {
-            for (int col = 0; col < columnCount(); ++col) {
-                item(row, col)->setBackground(QColor("#d4edda"));
-            }
-        }
+        QColor bg = Qt::white;
+        if (statut == "En cours") bg = QColor("#d1ecf1");
+        else if (statut == "Complétée") bg = QColor("#d4edda");
+        for (int col = 0; col < columnCount(); ++col)
+            if (item(row, col)) item(row, col)->setBackground(bg);
     }
 }
 
@@ -104,28 +103,100 @@ void TableauRepartition::creerContextMenu()
         menu.addAction("Afficher détails", this, &TableauRepartition::afficherDetailsRepartition);
         menu.addAction("Afficher articles", this, &TableauRepartition::afficherArticles);
         menu.addAction("Changer statut", this, &TableauRepartition::changerStatut);
+        menu.addAction("Imprimer bon PDF", this, &TableauRepartition::imprimerBon);
         menu.exec(mapToGlobal(pos));
     });
 }
 
+QUuid TableauRepartition::repartitionIdFromRow(int row) const
+{
+    if (row < 0) return QUuid();
+    auto item = this->item(row, 5);
+    if (!item) return QUuid();
+    return QUuid(item->data(Qt::UserRole).toString());
+}
+
 void TableauRepartition::afficherDetailsRepartition()
 {
-    if (currentRow() >= 0) {
-        QString equipe = item(currentRow(), 0)->text();
-        qDebug() << "Détails répartition:" << equipe;
+    int row = currentRow();
+    if (row < 0) return;
+    QUuid id = repartitionIdFromRow(row);
+    if (id.isNull()) return;
+
+    // -- Implémentation déjà fournie dans la réponse précédente, gardée ici pour cohérence
+    Repartition repartition = m_gestionnaire->obtenirRepartition(id, true);
+    if (repartition.getRepartitionId().isNull()) {
+        QMessageBox::warning(this, "Erreur", "Impossible de charger la répartition.");
+        return;
     }
+
+    QDialog* dlg = new QDialog(this);
+    dlg->setWindowTitle("Détails de la répartition");
+    QVBoxLayout* layout = new QVBoxLayout(dlg);
+
+    layout->addWidget(new QLabel(QString("<b>Equipe :</b> %1 &nbsp; <b>Route :</b> %2")
+                                .arg(repartition.getEquipeId().toString())
+                                .arg(repartition.getRouteId().toString())));
+    layout->addWidget(new QLabel(QString("<b>Date :</b> %1 &nbsp; <b>Statut :</b> %2")
+                                .arg(repartition.getDateRepartition().toString(Qt::ISODate))
+                                .arg(repartition.getStatutLabel())));
+
+    QTableWidget* tbl = new QTableWidget(dlg);
+    const auto& arts = repartition.getArticles();
+    tbl->setColumnCount(6);
+    tbl->setRowCount(arts.size());
+    tbl->setHorizontalHeaderLabels(QStringList() << "Produit" << "Vente" << "Cadeau" << "Dégustation" << "Total" << "Observation");
+
+    for (int i = 0; i < arts.size(); ++i) {
+        const ArticleRepartition& art = arts.at(i);
+        tbl->setItem(i, 0, new QTableWidgetItem(art.getProduitId().toString()));
+        tbl->setItem(i, 1, new QTableWidgetItem(QString::number(art.getQuantiteVente())));
+        tbl->setItem(i, 2, new QTableWidgetItem(QString::number(art.getQuantiteCadeau())));
+        tbl->setItem(i, 3, new QTableWidgetItem(QString::number(art.getQuantiteDegustation())));
+        tbl->setItem(i, 4, new QTableWidgetItem(QString::number(art.getQuantiteTotale())));
+        tbl->setItem(i, 5, new QTableWidgetItem(art.getObservation()));
+    }
+
+    tbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tbl->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    tbl->setSelectionMode(QAbstractItemView::NoSelection);
+    layout->addWidget(tbl);
+
+    QHBoxLayout* btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    QPushButton* btnFermer = new QPushButton("Fermer", dlg);
+    connect(btnFermer, &QPushButton::clicked, dlg, &QDialog::accept);
+    btnLayout->addWidget(btnFermer);
+    layout->addLayout(btnLayout);
+
+    dlg->setLayout(layout);
+    dlg->resize(600, 350);
+    dlg->exec();
+    delete dlg;
 }
 
 void TableauRepartition::changerStatut()
 {
-    if (currentRow() >= 0) {
-        qDebug() << "Changer statut";
-    }
+    // À développer selon workflow, eg : dialogue pour choisir statut, puis appel au manager & rafraîchir
 }
 
 void TableauRepartition::afficherArticles()
 {
-    if (currentRow() >= 0) {
-        qDebug() << "Afficher articles";
-    }
+    // Variante : même que afficherDetailsRepartition() ou variante, selon UX
+    afficherDetailsRepartition();
+}
+
+void TableauRepartition::imprimerBon()
+{
+    int row = currentRow();
+    if (row < 0) return;
+    QUuid id = repartitionIdFromRow(row);
+    if (id.isNull()) return;
+    QString fichier = QFileDialog::getSaveFileName(this, "Exporter PDF", "bon_commande.pdf", "PDF (*.pdf)");
+    if (fichier.isEmpty()) return;
+    QString err;
+    if (!m_gestionnaire->imprimerBonCommande(id, fichier, &err))
+        QMessageBox::warning(this, "Erreur impression", err);
+    else
+        QMessageBox::information(this, "PDF Généré", "Le bon de commande a été exporté dans :\n" + fichier);
 }

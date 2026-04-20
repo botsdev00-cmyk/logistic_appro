@@ -1,133 +1,115 @@
 #include "GestionnaireRepartition.h"
-#include "../exceptions/BusinessException.h"
 #include "../../data/repositories/RepositoryRepartition.h"
-#include "../../data/repositories/RepositorySales.h"
-#include "../../core/entities/Repartition.h"
-#include "../../core/entities/ArticleRepartition.h"
-#include <QDebug>
+#include "../../data/repositories/RepositoryArticleRepartition.h"
+#include <QTextDocument>
+#include <QPrinter>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QMessageBox>
 
-GestionnaireRepartition::GestionnaireRepartition()
-{
-}
+GestionnaireRepartition::GestionnaireRepartition() {}
 
-QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& dateRepartition)
+QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& utilisateurId)
 {
-    try {
-        if (equipeId.isNull() || routeId.isNull() || !dateRepartition.isValid()) {
-            m_dernierErreur = "Paramètres invalides";
-            return QUuid();
-        }
-        
-        Repartition repartition;
-        repartition.setEquipeId(equipeId);
-        repartition.setRouteId(routeId);
-        repartition.setDateRepartition(dateRepartition);
-        repartition.setStatut(Repartition::Statut::EnAttente);
-        
-        RepositoryRepartition repo;
-        if (!repo.create(repartition)) {
-            m_dernierErreur = "Erreur lors de la création : " + repo.getLastError();
-            return QUuid();
-        }
-        
-        qDebug() << "Répartition créée :" << repartition.getRepartitionId().toString();
-        return repartition.getRepartitionId();
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    clearErreur();
+    if (equipeId.isNull() || routeId.isNull() || !date.isValid()) {
+        m_dernierErreur = "Paramètres invalides";
         return QUuid();
     }
+    Repartition repartition;
+    repartition.setRepartitionId(QUuid::createUuid());
+    repartition.setEquipeId(equipeId);
+    repartition.setRouteId(routeId);
+    repartition.setDateRepartition(date);
+    repartition.setStatut(Repartition::Statut::EnAttente);
+    repartition.setCreePar(utilisateurId);
+
+    RepositoryRepartition repo;
+    if (!repo.create(repartition)) {
+        m_dernierErreur = "Erreur création repartition : " + repo.getLastError();
+        return QUuid();
+    }
+    return repartition.getRepartitionId();
 }
 
-bool GestionnaireRepartition::ajouterArticle(const QUuid& repartitionId, const QUuid& produitId, 
-                                             int quantiteVente, int quantiteCadeau, int quantiteDegustation)
+bool GestionnaireRepartition::ajouterArticle(const ArticleRepartition& article)
 {
-    try {
-        if (repartitionId.isNull() || produitId.isNull()) {
-            m_dernierErreur = "IDs invalides";
-            return false;
-        }
-        
-        if (quantiteVente < 0 || quantiteCadeau < 0 || quantiteDegustation < 0) {
-            m_dernierErreur = "Quantités invalides";
-            return false;
-        }
-        
-        ArticleRepartition article;
-        article.setRepartitionId(repartitionId);
-        article.setProduitId(produitId);
-        article.setQuantiteVente(quantiteVente);
-        article.setQuantiteCadeau(quantiteCadeau);
-        article.setQuantiteDegustation(quantiteDegustation);
-        
-        // Note: Vous aurez besoin d'une méthode create pour ArticleRepartition
-        // Pour l'instant, on simule
-        
-        return true;
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    clearErreur();
+    if (article.getRepartitionId().isNull() || article.getProduitId().isNull()) {
+        m_dernierErreur = "Article ou produit invalide";
         return false;
     }
+    RepositoryArticleRepartition repo;
+    if (!repo.create(article)) {
+        m_dernierErreur = "Erreur ajout article : " + repo.getLastError();
+        return false;
+    }
+    return true;
 }
 
 bool GestionnaireRepartition::marquerEnCours(const QUuid& repartitionId)
 {
-    try {
-        RepositoryRepartition repo;
-        Repartition repartition = repo.getById(repartitionId);
-        
-        if (repartition.getRepartitionId().isNull()) {
-            m_dernierErreur = "Répartition non trouvée";
-            return false;
-        }
-        
-        repartition.setStatut(Repartition::Statut::EnCours);
-        return repo.update(repartition);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    clearErreur();
+    RepositoryRepartition repo;
+    Repartition repartition = repo.getById(repartitionId);
+
+    if (repartition.getRepartitionId().isNull()) {
+        m_dernierErreur = "Répartition non trouvée";
         return false;
     }
+
+    if (!verifierQuantitesDisponibles(repartitionId, &m_dernierErreur)) {
+        return false;
+    }
+
+    repartition.setStatut(Repartition::Statut::EnCours);
+    if (!repo.update(repartition)) {
+        m_dernierErreur = "Passage à En cours échoué : " + repo.getLastError();
+        return false;
+    }
+    return true;
 }
 
 bool GestionnaireRepartition::marquerCompletee(const QUuid& repartitionId)
 {
-    try {
-        RepositoryRepartition repo;
-        Repartition repartition = repo.getById(repartitionId);
-        
-        if (repartition.getRepartitionId().isNull()) {
-            m_dernierErreur = "Répartition non trouvée";
-            return false;
-        }
-        
-        repartition.setStatut(Repartition::Statut::Completee);
-        repartition.setDateRetour(QDate::currentDate());
-        return repo.update(repartition);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    clearErreur();
+    RepositoryRepartition repo;
+    Repartition repartition = repo.getById(repartitionId);
+
+    if (repartition.getRepartitionId().isNull()) {
+        m_dernierErreur = "Répartition non trouvée";
         return false;
     }
+    repartition.setStatut(Repartition::Statut::Completee);
+    repartition.setDateRetour(QDate::currentDate());
+    if (!repo.update(repartition)) {
+        m_dernierErreur = "Passage à Complétée échoué : " + repo.getLastError();
+        return false;
+    }
+    return true;
 }
 
 bool GestionnaireRepartition::annulerRepartition(const QUuid& repartitionId)
 {
-    try {
-        RepositoryRepartition repo;
-        return repo.remove(repartitionId);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    clearErreur();
+    RepositoryRepartition repo;
+    if (!repo.remove(repartitionId)) {
+        m_dernierErreur = "Annulation échouée : " + repo.getLastError();
         return false;
     }
+    return true;
 }
 
-Repartition GestionnaireRepartition::obtenirRepartition(const QUuid& repartitionId)
+Repartition GestionnaireRepartition::obtenirRepartition(const QUuid& repartitionId, bool avecArticles)
 {
     RepositoryRepartition repo;
-    return repo.getById(repartitionId);
+    Repartition repartition = repo.getById(repartitionId);
+    if (avecArticles && !repartition.getRepartitionId().isNull()) {
+        RepositoryArticleRepartition ra;
+        repartition.setArticles(ra.getByRepartitionId(repartitionId));
+    }
+    return repartition;
 }
 
 QList<Repartition> GestionnaireRepartition::obtenirRepartitionsEnCours()
@@ -142,45 +124,71 @@ QList<Repartition> GestionnaireRepartition::obtenirRepartitionsParEquipe(const Q
     return repo.getByEquipe(equipeId);
 }
 
-int GestionnaireRepartition::obtenirNombreClientsVisites(const QUuid& repartitionId)
+bool GestionnaireRepartition::verifierQuantitesDisponibles(const QUuid& repartitionId, QString* err)
 {
-    // À implémenter avec une requête SQL
-    return 0;
-}
+    clearErreur();
+    RepositoryArticleRepartition repoArticles;
+    QList<ArticleRepartition> articles = repoArticles.getByRepartitionId(repartitionId);
 
-double GestionnaireRepartition::obtenirMontantVentes(const QUuid& repartitionId)
-{
-    RepositorySales repo;
-    return repo.getTotalVentes(repartitionId);
-}
-
-double GestionnaireRepartition::obtenirMontantCash(const QUuid& repartitionId)
-{
-    RepositorySales repo;
-    return repo.getTotalCash(repartitionId);
-}
-
-bool GestionnaireRepartition::validerRepartition(const QUuid& repartitionId)
-{
-    try {
-        RepositoryRepartition repo;
-        Repartition repartition = repo.getById(repartitionId);
-        
-        if (repartition.getRepartitionId().isNull()) {
-            m_dernierErreur = "Répartition non trouvée";
+    QSqlDatabase db = QSqlDatabase::database();
+    for (const ArticleRepartition& a : articles) {
+        int total = a.getQuantiteTotale();
+        if (total <= 0)
+            continue;
+        QSqlQuery q(db);
+        q.prepare("SELECT disponible, quantite_actuelle, message FROM fn_check_stock_availability(?, ?)");
+        q.addBindValue(a.getProduitId().toString());
+        q.addBindValue(total);
+        if (!q.exec() || !q.next() || !q.value(0).toBool()) {
+            if (err) *err = q.value(2).toString();
             return false;
         }
-        
-        return verifierQuantitesDisponibles(repartitionId);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
-        return false;
     }
+    return true;
 }
 
-bool GestionnaireRepartition::verifierQuantitesDisponibles(const QUuid& repartitionId)
+bool GestionnaireRepartition::imprimerBonCommande(const QUuid& repartitionId, const QString& cheminFichier, QString* erreur)
 {
-    // À implémenter avec vérification du stock
+    clearErreur();
+    auto r = obtenirRepartition(repartitionId, true);
+    if (r.getRepartitionId().isNull()) {
+        if (erreur) *erreur = "Répartition introuvable";
+        return false;
+    }
+
+    QTextDocument doc;
+    QString html;
+    html += "<h2>Bon de Commande - Répartition</h2>";
+    html += QString("<p><b>Date :</b> %1<br>"
+                    "<b>Équipe :</b> %2<br>"
+                    "<b>Route :</b> %3<br>"
+                    "<b>Statut :</b> %4</p>")
+                .arg(r.getDateRepartition().toString(Qt::ISODate))
+                .arg(r.getEquipeId().toString())
+                .arg(r.getRouteId().toString())
+                .arg(r.getStatutLabel());
+
+    html += "<table border='1' cellspacing='0' cellpadding='3'><tr>"
+            "<th>Produit</th><th>Qté Vente</th><th>Qté Cadeau</th><th>Qté Dégustation</th><th>Total</th><th>Obs.</th>"
+            "</tr>";
+    for (const ArticleRepartition& a : r.getArticles()) {
+        html += QString("<tr>"
+                        "<td>%1</td><td>%2</td><td>%3</td><td>%4</td><td>%5</td><td>%6</td>"
+                        "</tr>")
+                    .arg(a.getProduitId().toString())
+                    .arg(a.getQuantiteVente())
+                    .arg(a.getQuantiteCadeau())
+                    .arg(a.getQuantiteDegustation())
+                    .arg(a.getQuantiteTotale())
+                    .arg(a.getObservation().toHtmlEscaped());
+    }
+    html += "</table>";
+    doc.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(cheminFichier);
+    doc.print(&printer);
+
     return true;
 }

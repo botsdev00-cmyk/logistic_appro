@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7khgmhmKlk39IpcPJOCvSQjmLvVBQ7WSFa0e6t6p7aC5szGbn06dVwUhGzdFaKX
+\restrict Y5ShfAmwHuFSR1VcfKdQyJs8T2TrvBpIVu7bWUQ1vPlmFdpSJWC7q14r7j9dv8d
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -32,6 +32,24 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
+
+--
+-- Name: fn_audit_repartition_statut(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_audit_repartition_statut() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF (NEW.statut_repartition_id IS DISTINCT FROM OLD.statut_repartition_id) THEN
+    INSERT INTO repartition_audit(repartition_id, utilisateur_id, ancien_statut, nouveau_statut)
+    VALUES (NEW.repartition_id, current_setting('my.app.user', true)::uuid, OLD.statut_repartition_id, NEW.statut_repartition_id);
+  END IF;
+  RETURN NEW;
+END; $$;
+
+
+ALTER FUNCTION public.fn_audit_repartition_statut() OWNER TO postgres;
 
 --
 -- Name: fn_audit_stock_movements(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -418,10 +436,10 @@ BEGIN
     SET quantite_total = movements_sum.total
     FROM (
         SELECT 
-            produit_id,
-            COALESCE(SUM(quantite_delta), 0)::INTEGER as total
-        FROM public.stock_mouvements
-        GROUP BY produit_id
+            sm.produit_id,
+            COALESCE(SUM(sm.quantite_delta), 0)::INTEGER as total
+        FROM public.stock_mouvements sm
+        GROUP BY sm.produit_id
     ) movements_sum
     WHERE ss.produit_id = movements_sum.produit_id
         AND ss.quantite_total != movements_sum.total
@@ -431,6 +449,35 @@ $$;
 
 
 ALTER FUNCTION public.fn_repair_stock_integrity() OWNER TO postgres;
+
+--
+-- Name: fn_repartition_generate_stock_movements(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_repartition_generate_stock_movements() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_chef_id uuid;
+    v_count int;
+BEGIN
+    IF COALESCE(NEW.mouvements_generes, false) THEN
+        -- Déjà traité, ne rien faire
+        RETURN NEW;
+    END IF;
+
+    -- Exécution normale comme plus haut ...
+
+    -- À la fin, noter que c’est fait
+    UPDATE repartitions
+    SET mouvements_generes = true
+    WHERE repartition_id = NEW.repartition_id;
+
+    RETURN NEW;
+END; $$;
+
+
+ALTER FUNCTION public.fn_repartition_generate_stock_movements() OWNER TO postgres;
 
 --
 -- Name: fn_sync_stock_after_movement(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -643,7 +690,8 @@ CREATE TABLE public.articles_repartition (
     produit_id uuid NOT NULL,
     quantite_vente integer DEFAULT 0,
     quantite_cadeau integer DEFAULT 0,
-    quantite_totale integer GENERATED ALWAYS AS ((quantite_vente + quantite_cadeau)) STORED
+    quantite_totale integer GENERATED ALWAYS AS ((quantite_vente + quantite_cadeau)) STORED,
+    observation text
 );
 
 
@@ -911,6 +959,23 @@ CREATE TABLE public.receptions_caisse (
 ALTER TABLE public.receptions_caisse OWNER TO postgres;
 
 --
+-- Name: repartition_audit; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.repartition_audit (
+    repartition_audit_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    repartition_id uuid NOT NULL,
+    utilisateur_id uuid,
+    date_action timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    ancien_statut uuid,
+    nouveau_statut uuid,
+    commentaire text
+);
+
+
+ALTER TABLE public.repartition_audit OWNER TO postgres;
+
+--
 -- Name: repartitions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -921,7 +986,10 @@ CREATE TABLE public.repartitions (
     statut_repartition_id uuid NOT NULL,
     date_repartition date NOT NULL,
     montant_cash_attendu numeric(12,2) DEFAULT 0,
-    date_mise_a_jour timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    date_mise_a_jour timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    chef_id uuid,
+    annule boolean DEFAULT false,
+    mouvements_generes boolean DEFAULT false
 );
 
 
@@ -1345,7 +1413,7 @@ ALTER TABLE public.ventes OWNER TO postgres;
 -- Data for Name: articles_repartition; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.articles_repartition (article_repartition_id, repartition_id, produit_id, quantite_vente, quantite_cadeau) FROM stdin;
+COPY public.articles_repartition (article_repartition_id, repartition_id, produit_id, quantite_vente, quantite_cadeau, observation) FROM stdin;
 \.
 
 
@@ -1466,10 +1534,18 @@ COPY public.receptions_caisse (reception_caisse_id, repartition_id, montant_atte
 
 
 --
+-- Data for Name: repartition_audit; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.repartition_audit (repartition_audit_id, repartition_id, utilisateur_id, date_action, ancien_statut, nouveau_statut, commentaire) FROM stdin;
+\.
+
+
+--
 -- Data for Name: repartitions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.repartitions (repartition_id, equipe_id, route_id, statut_repartition_id, date_repartition, montant_cash_attendu, date_mise_a_jour) FROM stdin;
+COPY public.repartitions (repartition_id, equipe_id, route_id, statut_repartition_id, date_repartition, montant_cash_attendu, date_mise_a_jour, chef_id, annule, mouvements_generes) FROM stdin;
 \.
 
 
@@ -1554,6 +1630,7 @@ COPY public.statuts_repartition (statut_repartition_id, code, nom) FROM stdin;
 e0059987-5a9f-44bd-b806-18434792491d	EN_COURS	En cours
 936c875a-f441-410d-9098-98531a60c073	COMPLETEE	Complétée
 d8a91671-fd79-4af7-a75e-ea7e39b8be24	ANNULEE	Annulée
+d6f4c36d-9951-44ba-b5e1-1e0609968275	BROUILLON	Brouillon
 \.
 
 
@@ -1772,6 +1849,14 @@ ALTER TABLE ONLY public.receptions_caisse
 
 
 --
+-- Name: repartition_audit repartition_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartition_audit
+    ADD CONSTRAINT repartition_audit_pkey PRIMARY KEY (repartition_audit_id);
+
+
+--
 -- Name: repartitions repartitions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1945,6 +2030,14 @@ ALTER TABLE ONLY public.types_vente
 
 ALTER TABLE ONLY public.types_vente
     ADD CONSTRAINT types_vente_pkey PRIMARY KEY (type_vente_id);
+
+
+--
+-- Name: repartitions unq_repartition_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartitions
+    ADD CONSTRAINT unq_repartition_unique UNIQUE (date_repartition, equipe_id, route_id);
 
 
 --
@@ -2183,6 +2276,13 @@ CREATE TRIGGER trg_articles_repartition_sync AFTER INSERT OR DELETE OR UPDATE ON
 
 
 --
+-- Name: repartitions trg_audit_repartition_statut; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_audit_repartition_statut AFTER UPDATE ON public.repartitions FOR EACH ROW EXECUTE FUNCTION public.fn_audit_repartition_statut();
+
+
+--
 -- Name: stock_mouvements trg_audit_stock_movements_insert; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -2194,6 +2294,13 @@ CREATE TRIGGER trg_audit_stock_movements_insert AFTER INSERT ON public.stock_mou
 --
 
 CREATE TRIGGER trg_entrees_stock_sync AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
+
+
+--
+-- Name: repartitions trg_generate_stock_on_edit_repartition; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_generate_stock_on_edit_repartition AFTER UPDATE ON public.repartitions FOR EACH ROW WHEN ((old.statut_repartition_id IS DISTINCT FROM new.statut_repartition_id)) EXECUTE FUNCTION public.fn_repartition_generate_stock_movements();
 
 
 --
@@ -2420,6 +2527,38 @@ ALTER TABLE ONLY public.receptions_caisse
 
 
 --
+-- Name: repartition_audit repartition_audit_ancien_statut_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartition_audit
+    ADD CONSTRAINT repartition_audit_ancien_statut_fkey FOREIGN KEY (ancien_statut) REFERENCES public.statuts_repartition(statut_repartition_id);
+
+
+--
+-- Name: repartition_audit repartition_audit_nouveau_statut_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartition_audit
+    ADD CONSTRAINT repartition_audit_nouveau_statut_fkey FOREIGN KEY (nouveau_statut) REFERENCES public.statuts_repartition(statut_repartition_id);
+
+
+--
+-- Name: repartition_audit repartition_audit_repartition_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartition_audit
+    ADD CONSTRAINT repartition_audit_repartition_id_fkey FOREIGN KEY (repartition_id) REFERENCES public.repartitions(repartition_id);
+
+
+--
+-- Name: repartitions repartitions_chef_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.repartitions
+    ADD CONSTRAINT repartitions_chef_id_fkey FOREIGN KEY (chef_id) REFERENCES public.utilisateurs(utilisateur_id);
+
+
+--
 -- Name: repartitions repartitions_equipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2566,13 +2705,6 @@ GRANT ALL ON FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_
 --
 
 GRANT ALL ON FUNCTION public.fn_refresh_stock_cache() TO stock_approver;
-
-
---
--- Name: FUNCTION fn_repair_stock_integrity(); Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON FUNCTION public.fn_repair_stock_integrity() TO stock_approver;
 
 
 --
@@ -2836,5 +2968,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7khgmhmKlk39IpcPJOCvSQjmLvVBQ7WSFa0e6t6p7aC5szGbn06dVwUhGzdFaKX
+\unrestrict Y5ShfAmwHuFSR1VcfKdQyJs8T2TrvBpIVu7bWUQ1vPlmFdpSJWC7q14r7j9dv8d
 

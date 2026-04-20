@@ -1,5 +1,5 @@
-#ifndef BOITEDIALOGPARTITION_H
-#define BOITEDIALOGPARTITION_H
+#ifndef BOITEDIALOGREPARTITION_H
+#define BOITEDIALOGREPARTITION_H
 
 #include <QDialog>
 #include <QUuid>
@@ -20,7 +20,7 @@ class BoiteDialogRepartition : public QDialog
 public:
     BoiteDialogRepartition(QWidget* parent = nullptr);
     ~BoiteDialogRepartition();
-    
+
     QUuid getRepartitionId() const { return m_repartitionId; }
 
 private slots:
@@ -49,9 +49,9 @@ private:
     std::unique_ptr<QPushButton> m_boutonSupprimer;
     std::unique_ptr<QPushButton> m_boutonCreer;
     std::unique_ptr<QPushButton> m_boutonAnnuler;
-    
+
     std::unique_ptr<GestionnaireRepartition> m_gestionnaire;
     QUuid m_repartitionId;
 };
 
-#endif // BOITEDIALOGPARTITION_H
+#endif // BOITEDIALOGREPARTITION_H

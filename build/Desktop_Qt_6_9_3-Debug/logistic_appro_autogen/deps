@@ -701,6 +701,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/data/database/MigrationBaseDonnees.h \
 	/home/bots/semuliki_logistic/src/data/database/PoolConnexions.cpp \
 	/home/bots/semuliki_logistic/src/data/database/PoolConnexions.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCategorieProduit.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCategorieProduit.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryClient.cpp \

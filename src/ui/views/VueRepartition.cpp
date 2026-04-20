@@ -1,11 +1,13 @@
 #include "VueRepartition.h"
 #include "../widgets/TableauRepartition.h"
+#include "../dialogs/BoiteDialogRepartition.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QComboBox>
 #include <QPushButton>
 #include <QGroupBox>
+#include <QMessageBox>
 
 VueRepartition::VueRepartition(QWidget* parent)
     : QWidget(parent)
@@ -15,25 +17,23 @@ VueRepartition::VueRepartition(QWidget* parent)
     initialiserConnexions();
 }
 
-VueRepartition::~VueRepartition()
-{
-}
+VueRepartition::~VueRepartition() {}
 
 void VueRepartition::creerWidgets()
 {
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
     layoutPrincipal->setSpacing(10);
     layoutPrincipal->setContentsMargins(20, 20, 20, 20);
-    
+
     // Titre
     QLabel* labelTitre = new QLabel("Gestion des Répartitions");
     labelTitre->setStyleSheet("font-size: 22px; font-weight: bold; color: #2c3e50;");
     layoutPrincipal->addWidget(labelTitre);
-    
+
     // Filtres
     QGroupBox* groupFiltres = new QGroupBox("Filtres");
     QHBoxLayout* layoutFiltres = new QHBoxLayout(groupFiltres);
-    
+
     layoutFiltres->addWidget(new QLabel("Statut:"));
     m_comboStatut = std::make_unique<QComboBox>();
     m_comboStatut->addItem("Tous");
@@ -41,30 +41,30 @@ void VueRepartition::creerWidgets()
     m_comboStatut->addItem("En cours");
     m_comboStatut->addItem("Complétée");
     layoutFiltres->addWidget(m_comboStatut.get());
-    
+
     layoutFiltres->addStretch();
     layoutPrincipal->addWidget(groupFiltres);
-    
+
     // Tableau
     m_tableauRepartition = std::make_unique<TableauRepartition>();
     layoutPrincipal->addWidget(m_tableauRepartition.get());
-    
+
     // Boutons
     QHBoxLayout* layoutBoutons = new QHBoxLayout();
     layoutBoutons->addStretch();
-    
+
     QPushButton* btnCreer = new QPushButton("Créer répartition");
     connect(btnCreer, &QPushButton::clicked, this, &VueRepartition::creerRepartition);
     layoutBoutons->addWidget(btnCreer);
-    
+
     QPushButton* btnVerifier = new QPushButton("Vérifier statut");
     connect(btnVerifier, &QPushButton::clicked, this, &VueRepartition::verifierStatut);
     layoutBoutons->addWidget(btnVerifier);
-    
+
     QPushButton* btnRetours = new QPushButton("Charger retours");
     connect(btnRetours, &QPushButton::clicked, this, &VueRepartition::chargerRetours);
     layoutBoutons->addWidget(btnRetours);
-    
+
     layoutPrincipal->addLayout(layoutBoutons);
 }
 
@@ -76,17 +76,22 @@ void VueRepartition::initialiserConnexions()
 
 void VueRepartition::creerRepartition()
 {
-    // À implémenter
+    BoiteDialogRepartition boite(this);
+    if (boite.exec() == QDialog::Accepted) {
+        m_tableauRepartition->rafraichir();
+    }
 }
 
 void VueRepartition::verifierStatut()
 {
-    // À implémenter
+    // Optionnel : fonctionnalité avancée (ex : relire statut, afficher popup, etc.)
+    QMessageBox::information(this, "Non implémenté", "Vérification détaillée à venir.");
 }
 
 void VueRepartition::chargerRetours()
 {
-    // À implémenter
+    // Optionnel : fonctionnalité à développer selon workflow de retours
+    QMessageBox::information(this, "Non implémenté", "Chargement des retours à venir.");
 }
 
 void VueRepartition::filtrerParStatut()

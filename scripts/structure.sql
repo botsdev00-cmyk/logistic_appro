@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Y5ShfAmwHuFSR1VcfKdQyJs8T2TrvBpIVu7bWUQ1vPlmFdpSJWC7q14r7j9dv8d
+\restrict me5NZ0GsU2Sg4gchcQT6kZdSK0IFhsvDtN1ckF7NGhZ08P3xuoJGdX9PDBpcRY6
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -224,6 +224,73 @@ $$;
 ALTER FUNCTION public.fn_create_sortie_on_repartition() OWNER TO postgres;
 
 --
+-- Name: fn_create_stock_movement(uuid, text, integer, uuid, text, uuid, text, text, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_mouvement text, p_quantite integer, p_reference_id uuid, p_reference_type text, p_utilisateur_id uuid, p_location_id text, p_raison text, p_observations text) RETURNS TABLE(success boolean, mouvement_id uuid, message text, current_stock integer, resulting_stock integer)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_mvt_id uuid;
+    v_current int;
+BEGIN
+    -- 1. Récupérer le stock actuel (solde avant mouvement)
+    SELECT COALESCE(quantite_total, 0) INTO v_current 
+    FROM public.stock_soldes 
+    WHERE produit_id = p_produit_id;
+    
+    -- Si le produit n'existe pas encore dans les soldes, on part de 0
+    IF NOT FOUND THEN 
+        v_current := 0; 
+    END IF;
+
+    -- 2. Insertion du mouvement dans la table de traçabilité
+    INSERT INTO public.stock_mouvements (
+        produit_id, 
+        type_mouvement, 
+        quantite_delta, 
+        reference_id, 
+        reference_type, 
+        utilisateur_id, 
+        location_id, 
+        raison, 
+        observations
+    ) 
+    VALUES (
+        p_produit_id, 
+        p_type_mouvement, 
+        p_quantite, 
+        p_reference_id, 
+        p_reference_type, 
+        p_utilisateur_id, 
+        p_location_id, 
+        p_raison, 
+        p_observations
+    ) 
+    RETURNING public.stock_mouvements.mouvement_id INTO v_mvt_id;
+
+    -- Note : Le trigger 'trg_sync_stock_after_movement' sur la table stock_mouvements
+    -- va automatiquement mettre à jour la table stock_soldes.
+
+    -- 3. Retourner les résultats attendus par RepositoryStockMouvements.cpp
+    RETURN QUERY 
+    SELECT 
+        true, 
+        v_mvt_id, 
+        'Mouvement enregistré avec succès'::text, 
+        v_current, 
+        v_current + p_quantite;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- En cas d'erreur (ex: violation de contrainte), on retourne un échec proprement
+        RETURN QUERY SELECT false, NULL::uuid, SQLERRM::text, 0, 0;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_create_stock_movement(p_produit_id uuid, p_type_mouvement text, p_quantite integer, p_reference_id uuid, p_reference_type text, p_utilisateur_id uuid, p_location_id text, p_raison text, p_observations text) OWNER TO postgres;
+
+--
 -- Name: fn_create_stock_movement(uuid, character varying, integer, uuid, character varying, uuid, character varying, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -385,6 +452,9 @@ CREATE FUNCTION public.fn_prevent_direct_stock_modification() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
+    IF pg_trigger_depth() > 0 THEN
+        RETURN NEW;
+    END IF;
     RAISE EXCEPTION 'Modification directe de stock_soldes interdite. Utiliser les mouvements.';
 END;
 $$;
@@ -1484,6 +1554,7 @@ COPY public.equipes (equipe_id, nom, nom_chef) FROM stdin;
 COPY public.journaux_audit (journal_audit_id, utilisateur_id, action, type_entite, identifiant_entite, anciennes_valeurs, nouvelles_valeurs, date_heure) FROM stdin;
 7f93a79e-d6df-4df8-8754-3dc9b7244bb1	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "e9ebe02c-d9ad-4f89-b029-02897b4f651b", "quantite_delta": 100}	2026-04-16 13:38:58.619548
 55174608-3dbe-441e-b709-2bbb50ca7a9d	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	04267c8b-e20f-4e93-9117-066e7039277b	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "45f2d7cc-dd91-4e0f-b65b-1a20d796c584", "quantite_delta": 100}	2026-04-16 13:38:58.619548
+3a282db2-e000-477a-882b-b37c332bd0a5	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	87fdca57-c181-40fe-b396-afd9e0896dc1	\N	{"type": "ENTREE", "raison": "Approvisionnement", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "3fce8b76-ac27-4b7c-a1cc-852e20d98a7c", "quantite_delta": 100}	2026-04-20 09:29:46.256518
 \.
 
 
@@ -1652,6 +1723,7 @@ RETURNED	Retourné	Stock retourné des équipes	t
 COPY public.stock_mouvements (mouvement_id, produit_id, type_mouvement, quantite_delta, reference_id, reference_type, utilisateur_id, location_id, raison, observations, created_at, updated_at) FROM stdin;
 bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	100	e9ebe02c-d9ad-4f89-b029-02897b4f651b	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:49:59.537	2026-04-16 13:38:58.619548
 04267c8b-e20f-4e93-9117-066e7039277b	03dc330a-6da1-41ca-86ba-60945244182a	ENTREE	100	45f2d7cc-dd91-4e0f-b65b-1a20d796c584	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:51:39.589	2026-04-16 13:38:58.619548
+87fdca57-c181-40fe-b396-afd9e0896dc1	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	100	3fce8b76-ac27-4b7c-a1cc-852e20d98a7c	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-20 09:29:46.256518	2026-04-20 09:29:46.256518
 \.
 
 
@@ -1662,7 +1734,7 @@ bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE
 COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at, location_id, location_historique, derniere_location_id) FROM stdin;
 3ff64cbc-a09a-4e5a-969b-8d19e3f02d78	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	\N	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
 5db1f7d3-6ed1-4878-9a64-d74cccb370c2	03dc330a-6da1-41ca-86ba-60945244182a	100	0	0.00	1000.00	2026-04-16 07:51:39.589	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
-1478a37b-4099-40ff-9664-115fe09d1bda	857f7c59-4ff6-45af-81fc-81d534af18de	100	0	0.00	1200.00	2026-04-16 07:49:59.537	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+1478a37b-4099-40ff-9664-115fe09d1bda	857f7c59-4ff6-45af-81fc-81d534af18de	200	0	0.00	1200.00	2026-04-20 09:29:46.256518	2026-04-20 09:29:46.256518	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
 \.
 
 
@@ -2290,17 +2362,17 @@ CREATE TRIGGER trg_audit_stock_movements_insert AFTER INSERT ON public.stock_mou
 
 
 --
--- Name: entrees_stock trg_entrees_stock_sync; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_entrees_stock_sync AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
-
-
---
 -- Name: repartitions trg_generate_stock_on_edit_repartition; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
 CREATE TRIGGER trg_generate_stock_on_edit_repartition AFTER UPDATE ON public.repartitions FOR EACH ROW WHEN ((old.statut_repartition_id IS DISTINCT FROM new.statut_repartition_id)) EXECUTE FUNCTION public.fn_repartition_generate_stock_movements();
+
+
+--
+-- Name: entrees_stock trg_log_entree_stock_movement; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_log_entree_stock_movement AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.fn_log_entree_stock_movement();
 
 
 --
@@ -2336,13 +2408,6 @@ CREATE TRIGGER trg_retours_stock_sync AFTER INSERT OR UPDATE ON public.retours_s
 --
 
 CREATE TRIGGER trg_sortie_on_articles_repartition AFTER INSERT ON public.articles_repartition FOR EACH ROW EXECUTE FUNCTION public.fn_create_sortie_on_repartition();
-
-
---
--- Name: entrees_stock trg_sync_stock; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_sync_stock AFTER INSERT OR UPDATE ON public.entrees_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
 
 
 --
@@ -2968,5 +3033,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Y5ShfAmwHuFSR1VcfKdQyJs8T2TrvBpIVu7bWUQ1vPlmFdpSJWC7q14r7j9dv8d
+\unrestrict me5NZ0GsU2Sg4gchcQT6kZdSK0IFhsvDtN1ckF7NGhZ08P3xuoJGdX9PDBpcRY6
 

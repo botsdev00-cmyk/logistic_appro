@@ -7,7 +7,4 @@ ArticleRepartition::ArticleRepartition()
       m_quantiteDegustation(0)
 {
 }
-
-ArticleRepartition::~ArticleRepartition()
-{
-}
+ArticleRepartition::~ArticleRepartition() {}

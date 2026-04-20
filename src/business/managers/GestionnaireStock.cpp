@@ -153,9 +153,6 @@ QList<StockParLocation> GestionnaireStock::obtenirTousStocksParLocation()
     return stocks;
 }
 
-// ============================================================================
-// ✅ NOUVEAU: RÉCONCILIATION STOCK
-// ============================================================================
 
 QList<ReconciliationResult> GestionnaireStock::verifierIntegriteStock()
 {
@@ -262,25 +259,44 @@ bool GestionnaireStock::repairerIntegriteStock()
 
 bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
 {
-    if (!m_repoEntrees) {
-        m_dernierErreur = "Repository entrees non initialisé";
+    // 1. Vérifier que le repository des mouvements est bien disponible
+    if (!m_repoMouvements) {
+        m_dernierErreur = "Repository mouvements non initialisé";
         qDebug() << "[GESTIONNAIRE STOCK] ERREUR:" << m_dernierErreur;
         return false;
     }
 
     if (!validerEntree(entree)) {
-        m_dernierErreur = "Entrée stock invalide";
         return false;
     }
 
-    if (m_repoEntrees->create(entree)) {
-        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée créée:" << entree.getEntreeStockId();
-        synchroniserStockSoldes();
+    // 2. Agréger les métadonnées de l'entrée pour la traçabilité
+    QString observations = QString("Facture: %1 | Lot: %2 | Source: %3")
+                               .arg(entree.getNumeroFacture().isEmpty() ? "N/A" : entree.getNumeroFacture())
+                               .arg(entree.getNumeroLot().isEmpty() ? "N/A" : entree.getNumeroLot())
+                               .arg(entree.getSourceEntreeId().toString());
+
+    // 3. Utiliser le système de mouvements (ce qui by-passera entrees_stock)
+    ResultatMouvement resultat = m_repoMouvements->creerMouvementSecurise(
+        entree.getProduitId(),
+        "ENTREE",                       // typeMouvement
+        entree.getQuantite(),           // quantiteDelta
+        entree.getEntreeStockId(),      // referenceId
+        "ENTREE_STOCK",                 // referenceType
+        entree.getCreePar(),            // utilisateurId
+        "WAREHOUSE",                    // locationId par défaut
+        "Approvisionnement",            // raison
+        observations                    // observations
+    );
+
+    if (resultat.success) {
+        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée créée via mouvement:" << resultat.mouvementId;
+        // La BDD s'occupe de la synchronisation de stock_soldes via fn_sync_stock_after_movement
         return true;
     }
 
-    m_dernierErreur = m_repoEntrees->getLastError();
-    qDebug() << "[GESTIONNAIRE STOCK] ERREUR création:" << m_dernierErreur;
+    m_dernierErreur = resultat.message;
+    qDebug() << "[GESTIONNAIRE STOCK] ERREUR création mouvement:" << m_dernierErreur;
     return false;
 }
 

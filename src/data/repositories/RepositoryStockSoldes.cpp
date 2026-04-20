@@ -14,35 +14,10 @@ RepositoryStockSoldes::RepositoryStockSoldes()
 // INTERFACE IREPOSITORY
 // ============================================================================
 
-bool RepositoryStockSoldes::create(const StockSolde& entity)
+bool RepositoryStockSoldes::create(const StockSolde&)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare(
-        "INSERT INTO stock_soldes "
-        "(solde_id, produit_id, quantite_total, quantite_reserve, "
-        "valeur_stock, prix_moyen, dernier_mouvement_date, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-    
-    query.addBindValue(entity.getSoldeId().toString());
-    query.addBindValue(entity.getProduitId().toString());
-    query.addBindValue(entity.getQuantiteTotal());
-    query.addBindValue(entity.getQuantiteReservee());
-    query.addBindValue(entity.getValeurStock());
-    query.addBindValue(entity.getPrixMoyen());
-    query.addBindValue(entity.getDernierMouvementDate());
-    query.addBindValue(entity.getUpdatedAt());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur création solde stock: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] CREATE ERROR:" << m_dernierErreur;
-        return false;
-    }
-    
-    qDebug() << "[REPO-SOLDE] ✓ CREATE SUCCESS: produit_id=" << entity.getProduitId();
-    return true;
+    m_dernierErreur = "Modification directe de stock_soldes interdite. Utilisez stock_mouvements.";
+    return false;
 }
 
 StockSolde RepositoryStockSoldes::getById(const QUuid& id)
@@ -106,39 +81,19 @@ QList<StockSolde> RepositoryStockSoldes::getAll()
     return soldes;
 }
 
-bool RepositoryStockSoldes::update(const StockSolde& entity)
+bool RepositoryStockSoldes::update(const StockSolde&)
 {
-    // ============================================================
-    // ❌ BLOQUÉ: UPDATE directe sur stock_soldes INTERDIT!
-    // ✅ UTILISER: fn_create_stock_movement() pour créer mouvements
-    // ============================================================
-    
-    m_dernierErreur = "⚠️  Modification directe de stock_soldes INTERDITE! "
-                      "Créez un mouvement de stock via fn_create_stock_movement() à la place.";
-    
-    qDebug() << "[REPO-SOLDE] ❌ UPDATE BLOQUÉ - " << m_dernierErreur;
-    
+    m_dernierErreur = "Modification directe de stock_soldes interdite. Utilisez stock_mouvements.";
     return false;
 }
 
-bool RepositoryStockSoldes::remove(const QUuid& id)
+
+bool RepositoryStockSoldes::remove(const QUuid&)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare("DELETE FROM stock_soldes WHERE solde_id = ?");
-    query.addBindValue(id.toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur suppression solde stock: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] REMOVE ERROR:" << m_dernierErreur;
-        return false;
-    }
-    
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-SOLDE] ✓ REMOVE: rows affected=" << affected;
-    return affected > 0;
+    m_dernierErreur = "Suppression directe de stock_soldes interdite. Utilisez stock_mouvements.";
+    return false;
 }
+
 
 QList<StockSolde> RepositoryStockSoldes::search(const QString& criterion)
 {
@@ -409,64 +364,14 @@ QList<StockSolde> RepositoryStockSoldes::obtenirStocksParCategorie(const QString
 
 bool RepositoryStockSoldes::synchroniserTousSoldes()
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    qDebug() << "[REPO-SOLDE] DÉBUT synchronisation tous les soldes...";
-
-    // ✅ CORRECTION: Pas d'ABS() - quantite_delta est déjà signé
-    query.prepare(
-        "WITH mouvements_par_produit AS ( "
-        "  SELECT produit_id, "
-        "    COALESCE(SUM(CASE WHEN type_mouvement='ENTREE' THEN quantite_delta ELSE 0 END), 0) as entrees, "
-        "    COALESCE(SUM(CASE WHEN type_mouvement='SORTIE' THEN quantite_delta ELSE 0 END), 0) as sorties, "
-        "    COALESCE(SUM(CASE WHEN type_mouvement='RETOUR' THEN quantite_delta ELSE 0 END), 0) as retours "
-        "  FROM stock_mouvements "
-        "  GROUP BY produit_id "
-        ") "
-        "UPDATE stock_soldes SET "
-        "  quantite_total = COALESCE(entrees + sorties + retours, 0), "
-        "  dernier_mouvement_date = CURRENT_TIMESTAMP, "
-        "  updated_at = CURRENT_TIMESTAMP "
-        "FROM mouvements_par_produit "
-        "WHERE stock_soldes.produit_id = mouvements_par_produit.produit_id"
-    );
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur synchronisation soldes: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] SYNCHRONISATION ERROR:" << m_dernierErreur;
-        return false;
-    }
-
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-SOLDE] ✓ SYNCHRONISATION OK: " << affected << " soldes mis à jour";
-    return true;
+    m_dernierErreur = "Synchronisation directe de stock_soldes interdite. Utilisez stock_mouvements.";
+    return false;
 }
 
-bool RepositoryStockSoldes::mettreAJourSolde(const QUuid& produitId)
+bool RepositoryStockSoldes::mettreAJourSolde(const QUuid&)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    qDebug() << "[REPO-SOLDE] Mise à jour solde pour produit:" << produitId.toString();
-
-    query.prepare(
-        "UPDATE stock_soldes SET "
-        "  dernier_mouvement_date = CURRENT_TIMESTAMP, "
-        "  updated_at = CURRENT_TIMESTAMP "
-        "WHERE produit_id = ?"
-    );
-    query.addBindValue(produitId.toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur mise à jour solde: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] UPDATE ERROR:" << m_dernierErreur;
-        return false;
-    }
-
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-SOLDE] ✓ Solde mis à jour:" << affected << "ligne(s)";
-    return affected > 0;
+    m_dernierErreur = "Mise à jour directe de stock_soldes interdite. Utilisez stock_mouvements.";
+    return false;
 }
 
 // ============================================================================

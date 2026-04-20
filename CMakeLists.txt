@@ -104,6 +104,7 @@ set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryRoute.cpp
     ${SRC_DIR}/data/repositories/RepositoryClient.cpp
     ${SRC_DIR}/data/repositories/RepositoryRepartition.cpp
+    ${SRC_DIR}/data/repositories/RepositoryArticleRepartition.cpp
     ${SRC_DIR}/data/repositories/RepositorySales.cpp
     ${SRC_DIR}/data/repositories/RepositoryCredit.cpp
     ${SRC_DIR}/data/repositories/RepositoryReceptionCaisse.cpp

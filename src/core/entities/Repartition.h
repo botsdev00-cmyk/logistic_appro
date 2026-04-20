@@ -5,16 +5,13 @@
 #include <QDateTime>
 #include <QDate>
 #include <QUuid>
+#include <QList>
+#include "ArticleRepartition.h"
 
 class Repartition
 {
 public:
-    enum class Statut {
-        EnAttente,
-        EnCours,
-        Completee,
-        Annulee
-    };
+    enum class Statut { EnAttente, EnCours, Completee, Annulee };
 
     Repartition();
     ~Repartition();
@@ -30,21 +27,23 @@ public:
     QUuid getCreePar() const { return m_creePar; }
     QDateTime getDateCreation() const { return m_dateCreation; }
     QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    QList<ArticleRepartition> getArticles() const { return m_articles; }
 
     // Setters
     void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
     void setEquipeId(const QUuid& id) { m_equipeId = id; }
     void setRouteId(const QUuid& id) { m_routeId = id; }
-    void setStatut(Statut statut) { m_statut = statut; }
-    void setDateRepartition(const QDate& date) { m_dateRepartition = date; }
-    void setDateRetour(const QDate& date) { m_dateRetour = date; }
-    void setMontantCashAttendu(double montant) { m_montantCashAttendu = montant; }
-    void setCreePar(const QUuid& id) { m_creePar = id; }
-    void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
-    void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
+    void setStatut(Statut s) { m_statut = s; }
+    void setDateRepartition(const QDate& d) { m_dateRepartition = d; }
+    void setDateRetour(const QDate& d) { m_dateRetour = d; }
+    void setMontantCashAttendu(double m) { m_montantCashAttendu = m; }
+    void setCreePar(const QUuid& c) { m_creePar = c; }
+    void setDateCreation(const QDateTime& d) { m_dateCreation = d; }
+    void setDateMiseAJour(const QDateTime& d) { m_dateMiseAJour = d; }
+    void setArticles(const QList<ArticleRepartition>& a) { m_articles = a; }
 
-    // Utility methods
-    static QString statutToString(Statut statut);
+    // Utilitaire
+    static QString statutToString(Statut s);
     static Statut stringToStatut(const QString& str);
     QString getStatutLabel() const;
 
@@ -55,10 +54,11 @@ private:
     Statut m_statut;
     QDate m_dateRepartition;
     QDate m_dateRetour;
-    double m_montantCashAttendu;
+    double m_montantCashAttendu = 0.0;
     QUuid m_creePar;
     QDateTime m_dateCreation;
     QDateTime m_dateMiseAJour;
+    QList<ArticleRepartition> m_articles;
 };
 
 #endif // REPARTITION_H

@@ -12,7 +12,7 @@ class VueRepartition : public QWidget
     Q_OBJECT
 
 public:
-    VueRepartition(QWidget* parent = nullptr);
+    explicit VueRepartition(QWidget* parent = nullptr);
     ~VueRepartition();
 
 private slots:

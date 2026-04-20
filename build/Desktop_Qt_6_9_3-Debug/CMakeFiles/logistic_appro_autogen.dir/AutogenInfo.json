@@ -1008,6 +1008,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryArticleRepartition.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryCategorieProduit.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryCategorieProduit.cpp",
@@ -1546,6 +1552,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/data/database/PoolConnexions.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.cpp",
 			"MU",
 			null
 		],
