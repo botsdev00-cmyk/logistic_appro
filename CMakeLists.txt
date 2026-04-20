@@ -152,6 +152,9 @@ set(BUSINESS_MANAGERS
     ${SRC_DIR}/business/managers/GestionnaireCaisse.cpp
     ${SRC_DIR}/business/managers/GestionnaireClient.cpp
     ${SRC_DIR}/business/managers/GestionnaireRapport.cpp
+    ${SRC_DIR}/business/managers/GestionnaireEquipe.cpp
+    ${SRC_DIR}/business/managers/GestionnaireRoute.cpp
+
 )
 
 set(BUSINESS_SOURCES ${BUSINESS_EXCEPTIONS} ${BUSINESS_SERVICES} ${BUSINESS_MANAGERS})
@@ -178,6 +181,9 @@ set(UI_DIALOGS
     ${SRC_DIR}/ui/dialogs/BoiteDialogAlerte.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogCategorie.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogProduit.cpp
+    ${SRC_DIR}/ui/dialogs/BoiteDialogNouvelleEquipe.cpp
+    ${SRC_DIR}/ui/dialogs/BoiteDialogNouvelleRoute.cpp
+
 )
 
 # ============================================================================

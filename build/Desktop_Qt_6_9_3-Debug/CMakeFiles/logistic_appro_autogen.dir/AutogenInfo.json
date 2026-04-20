@@ -858,6 +858,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.h",
+			"MU",
+			"5RRB5FJU4K/moc_GestionnaireEquipe.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.h",
 			"MU",
 			"5RRB5FJU4K/moc_GestionnaireRapport.cpp",
@@ -867,6 +873,12 @@
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRepartition.h",
 			"MU",
 			"5RRB5FJU4K/moc_GestionnaireRepartition.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRoute.h",
+			"MU",
+			"5RRB5FJU4K/moc_GestionnaireRoute.cpp",
 			null
 		],
 		[
@@ -1131,6 +1143,18 @@
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.h",
 			"MU",
 			"IYECXEJARV/moc_BoiteDialogEntreeStock.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleEquipe.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogNouvelleEquipe.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleRoute.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogNouvelleRoute.cpp",
 			null
 		],
 		[
@@ -1431,12 +1455,22 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.cpp",
 			"MU",
 			null
 		],
 		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRepartition.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRoute.cpp",
 			"MU",
 			null
 		],
@@ -1658,6 +1692,16 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleEquipe.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleRoute.cpp",
 			"MU",
 			null
 		],

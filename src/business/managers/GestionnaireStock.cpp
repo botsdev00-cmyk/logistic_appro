@@ -259,10 +259,9 @@ bool GestionnaireStock::repairerIntegriteStock()
 
 bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
 {
-    // 1. Vérifier que le repository des mouvements est bien disponible
+    // 1. Vérifications de base
     if (!m_repoMouvements) {
         m_dernierErreur = "Repository mouvements non initialisé";
-        qDebug() << "[GESTIONNAIRE STOCK] ERREUR:" << m_dernierErreur;
         return false;
     }
 
@@ -270,28 +269,45 @@ bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
         return false;
     }
 
-    // 2. Agréger les métadonnées de l'entrée pour la traçabilité
+    // 2. Déterminer le type de mouvement réel basé sur la source
+    // Au lieu de "ENTREE", on va chercher si c'est ACHAT, PRODUCTION ou RETOUR
+    QString typeMvtReal = "AJUSTEMENT"; // Valeur par défaut
+    
+    QSqlQuery queryType;
+    queryType.prepare("SELECT nom FROM sources_entree WHERE source_entree_id = ?");
+    queryType.addBindValue(entree.getSourceEntreeId().toString());
+    
+    if (queryType.exec() && queryType.next()) {
+        QString nomSource = queryType.value(0).toString().toUpper();
+        
+        if (nomSource.contains("ACHAT")) typeMvtReal = "ACHAT";
+        else if (nomSource.contains("PRODUCTION")) typeMvtReal = "PRODUCTION";
+        else if (nomSource.contains("RETOUR")) typeMvtReal = "RETOUR";
+        // Si c'est une autre source, on reste sur AJUSTEMENT ou on peut ajouter d'autres cas
+    }
+
+    // 3. Préparer les observations pour la traçabilité
     QString observations = QString("Facture: %1 | Lot: %2 | Source: %3")
                                .arg(entree.getNumeroFacture().isEmpty() ? "N/A" : entree.getNumeroFacture())
                                .arg(entree.getNumeroLot().isEmpty() ? "N/A" : entree.getNumeroLot())
                                .arg(entree.getSourceEntreeId().toString());
 
-    // 3. Utiliser le système de mouvements (ce qui by-passera entrees_stock)
+    // 4. Appeler le mouvement avec le type PRÉCIS (typeMvtReal)
+    // Cela évitera que le trigger SQL ne s'embrouille
     ResultatMouvement resultat = m_repoMouvements->creerMouvementSecurise(
         entree.getProduitId(),
-        "ENTREE",                       // typeMouvement
+        typeMvtReal,                    // <--- Utilisation du type dynamique ici
         entree.getQuantite(),           // quantiteDelta
         entree.getEntreeStockId(),      // referenceId
         "ENTREE_STOCK",                 // referenceType
         entree.getCreePar(),            // utilisateurId
-        "WAREHOUSE",                    // locationId par défaut
-        "Approvisionnement",            // raison
+        "WAREHOUSE",                    // locationId
+        "Approvisionnement " + typeMvtReal, // raison précise
         observations                    // observations
     );
 
     if (resultat.success) {
-        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée créée via mouvement:" << resultat.mouvementId;
-        // La BDD s'occupe de la synchronisation de stock_soldes via fn_sync_stock_after_movement
+        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée" << typeMvtReal << "créée:" << resultat.mouvementId;
         return true;
     }
 

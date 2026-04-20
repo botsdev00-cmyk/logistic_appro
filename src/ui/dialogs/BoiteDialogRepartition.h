@@ -18,7 +18,7 @@ class BoiteDialogRepartition : public QDialog
     Q_OBJECT
 
 public:
-    BoiteDialogRepartition(QWidget* parent = nullptr);
+    explicit BoiteDialogRepartition(QWidget* parent = nullptr);
     ~BoiteDialogRepartition();
 
     QUuid getRepartitionId() const { return m_repartitionId; }
@@ -29,6 +29,10 @@ private slots:
     void supprimerArticle();
     void mettreAJourArticles();
 
+    // Slots pour création équipe/route à la volée
+    void onNouvelleEquipe();
+    void onNouvelleRoute();
+
 private:
     void creerWidgets();
     void initialiserConnexions();
@@ -37,9 +41,14 @@ private:
     void remplirComboRoutes();
     void remplirTableProduits();
 
+    // Widgets
     std::unique_ptr<QComboBox> m_comboEquipe;
     std::unique_ptr<QComboBox> m_comboRoute;
     std::unique_ptr<QDateEdit> m_dateRepartition;
+
+    std::unique_ptr<QPushButton> m_btnNouvelleEquipe;
+    std::unique_ptr<QPushButton> m_btnNouvelleRoute;
+
     std::unique_ptr<QComboBox> m_comboProduit;
     std::unique_ptr<QSpinBox> m_spinVente;
     std::unique_ptr<QSpinBox> m_spinCadeau;

@@ -651,10 +651,14 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCredit.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCredit.h \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.cpp \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRepartition.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRepartition.h \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRoute.cpp \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRoute.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireSales.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireSales.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireStock.cpp \
@@ -744,6 +748,10 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogConnexion.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogEntreeStock.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleEquipe.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleEquipe.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleRoute.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogNouvelleRoute.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogProduit.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.cpp \

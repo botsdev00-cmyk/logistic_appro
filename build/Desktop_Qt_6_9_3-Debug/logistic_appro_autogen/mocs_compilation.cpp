@@ -3,6 +3,8 @@
 #include "IYECXEJARV/moc_BoiteDialogCategorie.cpp"
 #include "IYECXEJARV/moc_BoiteDialogConnexion.cpp"
 #include "IYECXEJARV/moc_BoiteDialogEntreeStock.cpp"
+#include "IYECXEJARV/moc_BoiteDialogNouvelleEquipe.cpp"
+#include "IYECXEJARV/moc_BoiteDialogNouvelleRoute.cpp"
 #include "IYECXEJARV/moc_BoiteDialogProduit.cpp"
 #include "IYECXEJARV/moc_BoiteDialogReceptionCaisse.cpp"
 #include "IYECXEJARV/moc_BoiteDialogRepartition.cpp"
