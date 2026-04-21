@@ -124,6 +124,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtenvironmentvariables.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtextstream.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtformat_impl.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtimezone.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtmetamacros.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtnoop.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qtpreprocessorsupport.h \
@@ -177,11 +178,13 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qvalidator.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDateEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLabel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QLineEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QMainWindow \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QPushButton \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QSpinBox \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableView \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QTableWidget \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QWidget \
@@ -192,6 +195,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractslider.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qabstractspinbox.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qcombobox.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdatetimeedit.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qdialog.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qframe.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qlabel.h \
@@ -201,6 +205,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qrubberband.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qsizepolicy.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qslider.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qspinbox.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyle.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qstyleoption.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtabbar.h \

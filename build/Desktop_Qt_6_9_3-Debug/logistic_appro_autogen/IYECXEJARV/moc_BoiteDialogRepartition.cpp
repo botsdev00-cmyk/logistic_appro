@@ -39,27 +39,27 @@ template <> constexpr inline auto BoiteDialogRepartition::qt_create_metaobjectda
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "BoiteDialogRepartition",
-        "creerRepartition",
+        "onNouvelleEquipe",
         "",
+        "onNouvelleRoute",
+        "creerRepartition",
         "ajouterArticle",
         "supprimerArticle",
-        "mettreAJourArticles",
-        "onNouvelleEquipe",
-        "onNouvelleRoute"
+        "mettreAJourArticles"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'creerRepartition'
-        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'ajouterArticle'
-        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'supprimerArticle'
-        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'mettreAJourArticles'
-        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onNouvelleEquipe'
-        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onNouvelleRoute'
+        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'creerRepartition'
+        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'ajouterArticle'
+        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'supprimerArticle'
+        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'mettreAJourArticles'
         QtMocHelpers::SlotData<void()>(7, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
@@ -84,12 +84,12 @@ void BoiteDialogRepartition::qt_static_metacall(QObject *_o, QMetaObject::Call _
     auto *_t = static_cast<BoiteDialogRepartition *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->creerRepartition(); break;
-        case 1: _t->ajouterArticle(); break;
-        case 2: _t->supprimerArticle(); break;
-        case 3: _t->mettreAJourArticles(); break;
-        case 4: _t->onNouvelleEquipe(); break;
-        case 5: _t->onNouvelleRoute(); break;
+        case 0: _t->onNouvelleEquipe(); break;
+        case 1: _t->onNouvelleRoute(); break;
+        case 2: _t->creerRepartition(); break;
+        case 3: _t->ajouterArticle(); break;
+        case 4: _t->supprimerArticle(); break;
+        case 5: _t->mettreAJourArticles(); break;
         default: ;
         }
     }

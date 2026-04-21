@@ -3,19 +3,16 @@
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryRoute.h"
 #include "../../data/repositories/RepositoryProduit.h"
+#include "BoiteDialogNouvelleEquipe.h"
+#include "BoiteDialogNouvelleRoute.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QComboBox>
-#include <QDateEdit>
-#include <QSpinBox>
-#include <QPushButton>
-#include <QTableWidget>
-#include <QTableWidgetItem>
-#include <QHeaderView>
 #include <QMessageBox>
+#include <QHeaderView>
 
 BoiteDialogRepartition::BoiteDialogRepartition(QWidget* parent)
     : QDialog(parent),
@@ -44,9 +41,15 @@ void BoiteDialogRepartition::creerWidgets()
     m_comboEquipe = std::make_unique<QComboBox>();
     layoutInfo->addWidget(m_comboEquipe.get(), 0, 1);
 
+    m_btnNouvelleEquipe = std::make_unique<QPushButton>("Nouvelle équipe...");
+    layoutInfo->addWidget(m_btnNouvelleEquipe.get(), 0, 2);
+
     layoutInfo->addWidget(new QLabel("Route:"), 1, 0);
     m_comboRoute = std::make_unique<QComboBox>();
     layoutInfo->addWidget(m_comboRoute.get(), 1, 1);
+
+    m_btnNouvelleRoute = std::make_unique<QPushButton>("Nouvelle route...");
+    layoutInfo->addWidget(m_btnNouvelleRoute.get(), 1, 2);
 
     layoutInfo->addWidget(new QLabel("Date:"), 2, 0);
     m_dateRepartition = std::make_unique<QDateEdit>();
@@ -115,6 +118,8 @@ void BoiteDialogRepartition::creerWidgets()
 
 void BoiteDialogRepartition::initialiserConnexions()
 {
+    connect(m_btnNouvelleEquipe.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleEquipe);
+    connect(m_btnNouvelleRoute.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleRoute);
     connect(m_boutonCreer.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::creerRepartition);
     connect(m_boutonAnnuler.get(), &QPushButton::clicked, this, &QDialog::reject);
     connect(m_boutonAjouter.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::ajouterArticle);
@@ -254,4 +259,26 @@ void BoiteDialogRepartition::supprimerArticle()
 void BoiteDialogRepartition::mettreAJourArticles()
 {
     // Prévu pour une éventuelle logique future <-> widget synchronisation
+}
+
+void BoiteDialogRepartition::onNouvelleEquipe()
+{
+    BoiteDialogNouvelleEquipe dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        remplirComboEquipes();
+        QUuid id = dialog.getEquipeCreeeId();
+        int idx = m_comboEquipe->findData(id);
+        if (idx >= 0) m_comboEquipe->setCurrentIndex(idx);
+    }
+}
+
+void BoiteDialogRepartition::onNouvelleRoute()
+{
+    BoiteDialogNouvelleRoute dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        remplirComboRoutes();
+        QUuid id = dialog.getRouteCreeeId();
+        int idx = m_comboRoute->findData(id);
+        if (idx >= 0) m_comboRoute->setCurrentIndex(idx);
+    }
 }
