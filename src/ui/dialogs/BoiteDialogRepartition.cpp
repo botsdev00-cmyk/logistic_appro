@@ -165,54 +165,82 @@ void BoiteDialogRepartition::remplirTableProduits()
 
 void BoiteDialogRepartition::creerRepartition()
 {
+    // 1. Vérification de base : au moins un article dans le tableau
     if (m_tableArticles->rowCount() == 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez ajouter au moins un article");
+        QMessageBox::warning(this, "Erreur", "Veuillez ajouter au moins un article avant de valider.");
         return;
     }
-    int idxEquipe = m_comboEquipe->currentIndex();
-    int idxRoute = m_comboRoute->currentIndex();
-    if (idxEquipe < 0 || idxRoute < 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une équipe et une route.");
-        return;
-    }
+
+    // 2. Récupération des IDs sélectionnés
     QUuid equipeId = m_comboEquipe->currentData().toUuid();
     QUuid routeId = m_comboRoute->currentData().toUuid();
     QDate dateRepartition = m_dateRepartition->date();
-    // À adapter avec la vraie récupération utilisateur courant
-    QUuid userId = QUuid::createUuid();
 
-    m_repartitionId = m_gestionnaire->creerRepartition(equipeId, routeId, dateRepartition, userId);
-    if (m_repartitionId.isNull()) {
-        QMessageBox::critical(this, "Erreur création", m_gestionnaire->getDernierErreur());
+    if (equipeId.isNull() || routeId.isNull()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une équipe et une route.");
         return;
     }
 
-    // Création des articles
+    // 3. Récupération du Chef d'équipe (utilisé comme créateur/chef_id)
+    RepositoryEquipe repoEquipe;
+    Equipe equipeSelectionnee = repoEquipe.getById(equipeId);
+    QUuid chefId = QUuid(equipeSelectionnee.getNomChef());
+
+    if (chefId.isNull()) {
+        QMessageBox::critical(this, "Erreur", "L'équipe sélectionnée n'a pas de chef assigné valide.");
+        return;
+    }
+
+    // 4. Création de l'entête de la répartition
+    // Note : Le manager doit être mis à jour pour forcer le statut "En cours"
+    m_repartitionId = m_gestionnaire->creerRepartition(equipeId, routeId, dateRepartition, chefId);
+    
+    if (m_repartitionId.isNull()) {
+        QMessageBox::critical(this, "Erreur de création", 
+                             "Impossible de créer la répartition : " + m_gestionnaire->getDernierErreur());
+        return;
+    }
+
+    // 5. Boucle d'ajout des articles avec vérification de stock
+    bool erreurDetectee = false;
     for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
         QString produitNom = m_tableArticles->item(row, 0)->text();
+        
+        // Récupération de l'ID du produit via le nom (recherche dans la combo)
         QUuid produitId;
-        // Reconstitution de l'id du produit via la combo des produits
-        for(int i=0; i < m_comboProduit->count(); ++i)
-            if(m_comboProduit->itemText(i) == produitNom)
+        for(int i = 0; i < m_comboProduit->count(); ++i) {
+            if(m_comboProduit->itemText(i).trimmed() == produitNom.trimmed()) {
                 produitId = m_comboProduit->itemData(i).toUuid();
-
-        int qVente = m_tableArticles->item(row, 1)->text().toInt();
-        int qCadeau = m_tableArticles->item(row, 2)->text().toInt();
-        int qDegustation = m_tableArticles->item(row, 3)->text().toInt();
+                break;
+            }
+        }
 
         ArticleRepartition article;
         article.setRepartitionId(m_repartitionId);
         article.setProduitId(produitId);
-        article.setQuantiteVente(qVente);
-        article.setQuantiteCadeau(qCadeau);
-        article.setQuantiteDegustation(qDegustation);
+        article.setQuantiteVente(m_tableArticles->item(row, 1)->text().toInt());
+        article.setQuantiteCadeau(m_tableArticles->item(row, 2)->text().toInt());
+        article.setQuantiteDegustation(m_tableArticles->item(row, 3)->text().toInt());
 
+        // Appel au gestionnaire qui va vérifier le stock avant d'insérer
         if (!m_gestionnaire->ajouterArticle(article)) {
-            QMessageBox::warning(this, "Erreur ajout article", m_gestionnaire->getDernierErreur());
+            QMessageBox::critical(this, "Erreur Stock / Article", 
+                                 QString("Erreur sur le produit '%1' : %2")
+                                 .arg(produitNom)
+                                 .arg(m_gestionnaire->getDernierErreur()));
+            erreurDetectee = true;
+            break; // On arrête tout si un article échoue (intégrité de la répartition)
         }
     }
-    QMessageBox::information(this, "Succès", "Répartition créée avec succès");
-    accept();
+
+    // 6. Finalisation
+    if (!erreurDetectee) {
+        QMessageBox::information(this, "Succès", "La répartition a été créée avec succès.");
+        accept();
+    } else {
+        // Optionnel : Logique pour supprimer la répartition vide si erreur d'articles
+        // m_gestionnaire->supprimerRepartition(m_repartitionId); 
+    }
 }
 
 void BoiteDialogRepartition::ajouterArticle()

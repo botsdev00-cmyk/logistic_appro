@@ -9,18 +9,15 @@ QUuid GestionnaireEquipe::creerEquipe(const QString& nom, const QUuid& chefId, c
     Equipe equipe;
     equipe.setEquipeId(QUuid::createUuid());
     equipe.setNom(nom);
-    equipe.setNomChef(chefId.toString()); // Utilisateur ID sous forme QString (à adapter si ta colonne attend autre chose)
-    // equipe.setEstActif(true);
+    
+    // CORRECTION : On formate l'UUID sans les accolades {} pour être 100% compatible avec PostgreSQL
+    equipe.setNomChef(chefId.toString(QUuid::WithoutBraces)); 
 
     RepositoryEquipe repo;
     if (!repo.create(equipe)) {
         m_dernierErreur = repo.getLastError();
         return QUuid();
     }
-    // Optionnel : ajout membres dans une table de jointure ici si tu as une table equipe_membres ! (à implémenter selon ton modèle)
-
-    // Tu pourrais faire un getById pour récupérer les infos : 
-    // Equipe eq = repo.getById(equipe.getEquipeId());
 
     return equipe.getEquipeId();
 }

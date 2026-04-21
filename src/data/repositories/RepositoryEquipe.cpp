@@ -14,7 +14,9 @@ bool RepositoryEquipe::create(const Equipe& entity)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("INSERT INTO equipes (equipe_id, nom, nom_chef) VALUES (:id, :nom, :nom_chef)");
-    query.addBindValue(entity.getEquipeId().toString());
+    
+    // CORRECTION : Envoi de l'UUID sans accolades
+    query.addBindValue(entity.getEquipeId().toString(QUuid::WithoutBraces));
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
 
@@ -68,6 +70,7 @@ QList<Equipe> RepositoryEquipe::getAll()
     return equipes;
 }
 
+
 bool RepositoryEquipe::update(const Equipe& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
@@ -76,7 +79,8 @@ bool RepositoryEquipe::update(const Equipe& entity)
     query.prepare("UPDATE equipes SET nom = :nom, nom_chef = :nom_chef WHERE equipe_id = :id");
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
-    query.addBindValue(entity.getEquipeId().toString());
+    // CORRECTION
+    query.addBindValue(entity.getEquipeId().toString(QUuid::WithoutBraces));
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur mise à jour équipe : " + query.lastError().text();
@@ -91,9 +95,9 @@ bool RepositoryEquipe::remove(const QUuid& id)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    // Suppression physique du membre - car pas de colonne est_actif (si tu veux un soft delete, ajoute la colonne !)
     query.prepare("DELETE FROM equipes WHERE equipe_id = :id");
-    query.addBindValue(id.toString());
+    // CORRECTION
+    query.addBindValue(id.toString(QUuid::WithoutBraces));
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur suppression équipe : " + query.lastError().text();

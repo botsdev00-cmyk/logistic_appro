@@ -36,30 +36,25 @@ bool RepositoryRepartition::create(const Repartition& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    // RepositoryRepartition.cpp - Méthode create()
-query.prepare(
-    "INSERT INTO repartitions ("
-    "  repartition_id, equipe_id, route_id, statut_repartition_id, "
-    "  date_repartition, montant_cash_attendu, chef_id, date_mise_a_jour" // Suppression de date_retour et date_creation
-    ") VALUES ("
-    "  :repartition_id, :equipe_id, :route_id, :statut_id, "
-    "  :date_repartition, :montant_cash_attendu, :chef_id, :date_maj"
-    ")"
-);
+    query.prepare("INSERT INTO repartitions (repartition_id, equipe_id, route_id, "
+                  "statut_repartition_id, date_repartition, montant_cash_attendu, chef_id) "
+                  "VALUES (:id, :equipe, :route, :statut, :date, :montant, :chef)");
 
-query.bindValue(":repartition_id", entity.getRepartitionId().toString());
-query.bindValue(":equipe_id", entity.getEquipeId().toString());
-query.bindValue(":route_id", entity.getRouteId().toString());
-query.bindValue(":date_repartition", entity.getDateRepartition());
-query.bindValue(":montant_cash_attendu", entity.getMontantCashAttendu());
-query.bindValue(":chef_id", entity.getCreePar().toString()); // Utilisation de chef_id
-query.bindValue(":date_maj", QDateTime::currentDateTime());
+    query.bindValue(":id", entity.getRepartitionId().toString(QUuid::WithoutBraces));
+    query.bindValue(":equipe", entity.getEquipeId().toString(QUuid::WithoutBraces));
+    query.bindValue(":route", entity.getRouteId().toString(QUuid::WithoutBraces));
+    
+    // C'EST ICI QUE LE NULL ARRIVAIT : On utilise le helper getStatutUuid
+    query.bindValue(":statut", getStatutUuid(entity.getStatut()));
+    
+    query.bindValue(":date", entity.getDateRepartition());
+    query.bindValue(":montant", entity.getMontantCashAttendu());
+    query.bindValue(":chef", entity.getCreePar().toString(QUuid::WithoutBraces));
 
     if (!query.exec()) {
-        m_dernierErreur = "Erreur création répartition : " + query.lastError().text();
+        m_dernierErreur = "Erreur SQL : " + query.lastError().text();
         return false;
     }
-
     return true;
 }
 

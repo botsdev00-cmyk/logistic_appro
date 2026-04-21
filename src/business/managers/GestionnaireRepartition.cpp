@@ -10,24 +10,23 @@
 
 GestionnaireRepartition::GestionnaireRepartition() {}
 
+// Dans GestionnaireRepartition.cpp
 QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& utilisateurId)
 {
     clearErreur();
-    if (equipeId.isNull() || routeId.isNull() || !date.isValid()) {
-        m_dernierErreur = "Paramètres invalides";
-        return QUuid();
-    }
     Repartition repartition;
     repartition.setRepartitionId(QUuid::createUuid());
     repartition.setEquipeId(equipeId);
     repartition.setRouteId(routeId);
     repartition.setDateRepartition(date);
-    repartition.setStatut(Repartition::Statut::EnAttente);
+    
+    // On passe directement en "En cours" comme demandé
+    repartition.setStatut(Repartition::Statut::EnCours); 
     repartition.setCreePar(utilisateurId);
 
     RepositoryRepartition repo;
     if (!repo.create(repartition)) {
-        m_dernierErreur = "Erreur création repartition : " + repo.getLastError();
+        m_dernierErreur = repo.getLastError();
         return QUuid();
     }
     return repartition.getRepartitionId();
@@ -36,13 +35,30 @@ QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUu
 bool GestionnaireRepartition::ajouterArticle(const ArticleRepartition& article)
 {
     clearErreur();
-    if (article.getRepartitionId().isNull() || article.getProduitId().isNull()) {
-        m_dernierErreur = "Article ou produit invalide";
+
+    // 1. Vérification du stock via la vue v_statut_stock
+    QSqlQuery query;
+    query.prepare("SELECT quantite_disponible FROM v_statut_stock WHERE produit_id = :id");
+    query.bindValue(":id", article.getProduitId().toString(QUuid::WithoutBraces));
+    
+    if (query.exec() && query.next()) {
+        int dispo = query.value(0).toInt();
+        int totalDemande = article.getQuantiteTotale(); // Vente + Cadeau + Dégustation
+        
+        if (totalDemande > dispo) {
+            m_dernierErreur = QString("Stock insuffisant pour ce produit (Disponible : %1, Demandé : %2)")
+                                .arg(dispo).arg(totalDemande);
+            return false;
+        }
+    } else {
+        m_dernierErreur = "Erreur lors de la lecture du stock ou produit introuvable.";
         return false;
     }
+
+    // 2. Si le stock est OK, on procède à l'ajout
     RepositoryArticleRepartition repo;
     if (!repo.create(article)) {
-        m_dernierErreur = "Erreur ajout article : " + repo.getLastError();
+        m_dernierErreur = repo.getLastError();
         return false;
     }
     return true;

@@ -45,13 +45,17 @@ BoiteDialogNouvelleEquipe::BoiteDialogNouvelleEquipe(QWidget* parent)
     QList<Utilisateur> userList = repoUtil.getAll();
     for (const Utilisateur& u : userList) {
         QString displayName = u.getNomComplet();
-        m_comboChef->addItem(displayName, u.getUtilisateurId());
-        m_utilisateurs[displayName] = u.getUtilisateurId();
+        QUuid uid = u.getUtilisateurId();
+        
+        // Ajout au combobox du chef
+        m_comboChef->addItem(displayName, uid);
+        m_utilisateurs[displayName] = uid;
+        
+        // Ajout à la liste des membres
+        QListWidgetItem* item = new QListWidgetItem(displayName, m_listeMembres);
+        item->setData(Qt::UserRole, uid);
     }
-    for (const Utilisateur& u : userList) {
-        QListWidgetItem* item = new QListWidgetItem(u.getNomComplet(), m_listeMembres);
-        item->setData(Qt::UserRole, u.getUtilisateurId());
-    }
+    
     // -------------- FIN UTILISATEURS REELS ----------------------------
 
     // Boutons
