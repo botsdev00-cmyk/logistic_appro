@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HNEKyEs2Zd3R0VFdJaZTHcj62Np8kknUIgq8608U1ckDAjCe3EFv249UQBdnglp
+\restrict r5g7CsofyDFp97l77lg4fjo08LROwuGhuf7AaqF6WyiUtvnd2xHni7jMpGf0VbS
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -772,8 +772,9 @@ CREATE TABLE public.articles_repartition (
     produit_id uuid NOT NULL,
     quantite_vente integer DEFAULT 0,
     quantite_cadeau integer DEFAULT 0,
-    quantite_totale integer GENERATED ALWAYS AS ((quantite_vente + quantite_cadeau)) STORED,
-    observation text
+    observation text,
+    quantite_degustation integer DEFAULT 0,
+    quantite_totale integer GENERATED ALWAYS AS (((quantite_vente + quantite_cadeau) + quantite_degustation)) STORED
 );
 
 
@@ -1497,7 +1498,7 @@ ALTER TABLE public.ventes OWNER TO postgres;
 -- Data for Name: articles_repartition; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.articles_repartition (article_repartition_id, repartition_id, produit_id, quantite_vente, quantite_cadeau, observation) FROM stdin;
+COPY public.articles_repartition (article_repartition_id, repartition_id, produit_id, quantite_vente, quantite_cadeau, observation, quantite_degustation) FROM stdin;
 \.
 
 
@@ -1559,6 +1560,7 @@ e9ebe02c-d9ad-4f89-b029-02897b4f651b	857f7c59-4ff6-45af-81fc-81d534af18de	100	c6
 
 COPY public.equipes (equipe_id, nom, nom_chef) FROM stdin;
 9a66d049-23a2-4db6-a271-10db9cc28ec0	Alpha	{78a24f11-9714-4014-ae40-f38318fef119}
+614554c2-9d3d-4165-8092-10b1fe4cc816	Beta	78a24f11-9714-4014-ae40-f38318fef119
 \.
 
 
@@ -1635,6 +1637,9 @@ COPY public.repartition_audit (repartition_audit_id, repartition_id, utilisateur
 --
 
 COPY public.repartitions (repartition_id, equipe_id, route_id, statut_repartition_id, date_repartition, montant_cash_attendu, date_mise_a_jour, chef_id, annule, mouvements_generes) FROM stdin;
+21389aa7-3d3e-4d9b-9bac-69535d8d33bd	9a66d049-23a2-4db6-a271-10db9cc28ec0	99c124c9-2e02-40ba-a792-7494bc094fc3	e0059987-5a9f-44bd-b806-18434792491d	2026-04-21	0.00	2026-04-21 08:19:05.414141	78a24f11-9714-4014-ae40-f38318fef119	f	f
+d4a5d967-ccd9-4cf3-b737-08f91f7414d5	614554c2-9d3d-4165-8092-10b1fe4cc816	4465ed8d-443d-4ac2-a13f-468a885367d0	e0059987-5a9f-44bd-b806-18434792491d	2026-04-21	0.00	2026-04-21 08:25:59.967551	78a24f11-9714-4014-ae40-f38318fef119	f	f
+ea21b44e-31ce-42ef-a043-40179c582f1d	9a66d049-23a2-4db6-a271-10db9cc28ec0	4465ed8d-443d-4ac2-a13f-468a885367d0	e0059987-5a9f-44bd-b806-18434792491d	2026-04-21	0.00	2026-04-21 09:55:35.079155	78a24f11-9714-4014-ae40-f38318fef119	f	f
 \.
 
 
@@ -1675,6 +1680,7 @@ COPY public.roles (role_id, code, nom) FROM stdin;
 
 COPY public.routes (route_id, nom, description, est_actif) FROM stdin;
 99c124c9-2e02-40ba-a792-7494bc094fc3	KASAPA-MOISE		t
+4465ed8d-443d-4ac2-a13f-468a885367d0	KASAPA-MARCHE MZEE		t
 \.
 
 
@@ -3055,5 +3061,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HNEKyEs2Zd3R0VFdJaZTHcj62Np8kknUIgq8608U1ckDAjCe3EFv249UQBdnglp
+\unrestrict r5g7CsofyDFp97l77lg4fjo08LROwuGhuf7AaqF6WyiUtvnd2xHni7jMpGf0VbS
 

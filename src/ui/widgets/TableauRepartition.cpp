@@ -13,6 +13,8 @@
 #include <QLabel>
 #include "../../core/entities/Repartition.h"
 #include "../../core/entities/ArticleRepartition.h"
+#include "../../data/repositories/RepositoryEquipe.h"
+#include "../../data/repositories/RepositoryRoute.h"
 
 TableauRepartition::TableauRepartition(QWidget* parent)
     : QTableWidget(parent),
@@ -33,12 +35,24 @@ void TableauRepartition::initialiserColonnes()
     setColumnCount(6);
     setHorizontalHeaderLabels({"Équipe", "Route", "Date", "Montant attendu", "Statut", "Actions"});
 
-    horizontalHeader()->setStretchLastSection(false);
-    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    // REDIMENSIONNEMENT égal de chaque colonne (stretch = même taille)
+    QHeaderView* header = horizontalHeader();
+    header->setSectionResizeMode(QHeaderView::Stretch);
 
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setAlternatingRowColors(true);
+}
+// Helper pour obtenir le nom d'une équipe/route via leur UUID
+QString getNomEquipe(const QUuid& id) {
+    RepositoryEquipe repo;
+    auto eq = repo.getById(id);
+    return eq.getNom();
+}
+QString getNomRoute(const QUuid& id) {
+    RepositoryRoute repo;
+    auto r = repo.getById(id);
+    return r.getNom();
 }
 
 void TableauRepartition::chargerDonnees()
@@ -59,8 +73,8 @@ void TableauRepartition::remplirTableau()
     setRowCount(repartitions.size());
     int row = 0;
     for (const auto& rep : repartitions) {
-        setItem(row, 0, new QTableWidgetItem(rep.getEquipeId().toString())); // TODO : Remplacer par nom
-        setItem(row, 1, new QTableWidgetItem(rep.getRouteId().toString())); // TODO : Remplacer par nom
+        setItem(row, 0, new QTableWidgetItem(getNomEquipe(rep.getEquipeId())));
+        setItem(row, 1, new QTableWidgetItem(getNomRoute(rep.getRouteId())));
         setItem(row, 2, new QTableWidgetItem(rep.getDateRepartition().toString(Qt::ISODate)));
         setItem(row, 3, new QTableWidgetItem(QString::number(rep.getMontantCashAttendu(), 'f', 2)));
         setItem(row, 4, new QTableWidgetItem(rep.getStatutLabel()));
@@ -123,7 +137,6 @@ void TableauRepartition::afficherDetailsRepartition()
     QUuid id = repartitionIdFromRow(row);
     if (id.isNull()) return;
 
-    // -- Implémentation déjà fournie dans la réponse précédente, gardée ici pour cohérence
     Repartition repartition = m_gestionnaire->obtenirRepartition(id, true);
     if (repartition.getRepartitionId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Impossible de charger la répartition.");
@@ -135,8 +148,8 @@ void TableauRepartition::afficherDetailsRepartition()
     QVBoxLayout* layout = new QVBoxLayout(dlg);
 
     layout->addWidget(new QLabel(QString("<b>Equipe :</b> %1 &nbsp; <b>Route :</b> %2")
-                                .arg(repartition.getEquipeId().toString())
-                                .arg(repartition.getRouteId().toString())));
+                                .arg(getNomEquipe(repartition.getEquipeId()))
+                                .arg(getNomRoute(repartition.getRouteId()))));
     layout->addWidget(new QLabel(QString("<b>Date :</b> %1 &nbsp; <b>Statut :</b> %2")
                                 .arg(repartition.getDateRepartition().toString(Qt::ISODate))
                                 .arg(repartition.getStatutLabel())));
@@ -177,12 +190,11 @@ void TableauRepartition::afficherDetailsRepartition()
 
 void TableauRepartition::changerStatut()
 {
-    // À développer selon workflow, eg : dialogue pour choisir statut, puis appel au manager & rafraîchir
+    // À développer selon workflow
 }
 
 void TableauRepartition::afficherArticles()
 {
-    // Variante : même que afficherDetailsRepartition() ou variante, selon UX
     afficherDetailsRepartition();
 }
 

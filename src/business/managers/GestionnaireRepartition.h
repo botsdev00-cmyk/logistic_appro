@@ -1,10 +1,11 @@
-#ifndef GESTIONNAIREREPARTITION_H
-#define GESTIONNAIREREPARTITION_H
+#pragma once
 
-#include <QString>
-#include <QList>
+#include <QObject>
 #include <QUuid>
 #include <QDate>
+#include <QString>
+#include <QList>
+#include <memory>
 #include "../../core/entities/Repartition.h"
 #include "../../core/entities/ArticleRepartition.h"
 
@@ -13,30 +14,28 @@ class GestionnaireRepartition
 public:
     GestionnaireRepartition();
 
-    // Opérations majeures
-    QUuid creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& dateRepartition, const QUuid& utilisateurId);
-    bool ajouterArticle(const ArticleRepartition& art);
-    bool marquerEnCours(const QUuid& repartitionId);      // = Départ
-    bool marquerCompletee(const QUuid& repartitionId);    // = Fin tournée
-    bool annulerRepartition(const QUuid& repartitionId);
+    QUuid creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& utilisateurId);
 
-    // Lecture & performance
+    bool ajouterArticle(const ArticleRepartition& article);
+    bool marquerEnCours(const QUuid& repartitionId);
+    bool marquerCompletee(const QUuid& repartitionId);
+    bool annulerRepartition(const QUuid& repartitionId);
     Repartition obtenirRepartition(const QUuid& repartitionId, bool avecArticles = false);
+
     QList<Repartition> obtenirRepartitionsEnCours();
     QList<Repartition> obtenirRepartitionsParEquipe(const QUuid& equipeId);
 
-    // Business logic
-    bool verifierQuantitesDisponibles(const QUuid& repartitionId, QString* erreur = nullptr);
+    bool verifierQuantitesDisponibles(const QUuid& repartitionId, QString* err = nullptr);
 
-    // PDF/Bons de commande
     bool imprimerBonCommande(const QUuid& repartitionId, const QString& cheminFichier, QString* erreur = nullptr);
 
-    // Gestion erreurs
     QString getDernierErreur() const { return m_dernierErreur; }
-    void clearErreur() { m_dernierErreur.clear(); }
+
+    // Ajouté pour la mise à jour du montant attendu
+    bool mettreAJourMontantAttendu(const QUuid& repartitionId, double montant);
 
 private:
+    void clearErreur() { m_dernierErreur.clear(); }
+
     QString m_dernierErreur;
 };
-
-#endif // GESTIONNAIREREPARTITION_H

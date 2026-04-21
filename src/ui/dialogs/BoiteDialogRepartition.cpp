@@ -87,10 +87,11 @@ void BoiteDialogRepartition::creerWidgets()
 
     layoutArticles->addLayout(layoutAjout);
 
-    // Table des articles
+    // Table des articles : 6 colonnes, première colonne = produit_id caché
     m_tableArticles = std::make_unique<QTableWidget>();
-    m_tableArticles->setColumnCount(5);
-    m_tableArticles->setHorizontalHeaderLabels({"Produit", "Vente", "Cadeau", "Dégustation", "Total"});
+    m_tableArticles->setColumnCount(6);
+    m_tableArticles->setHorizontalHeaderLabels({"ID Produit (caché)","Produit", "Vente", "Cadeau", "Dégustation", "Total"});
+    m_tableArticles->setColumnHidden(0, true);
     m_tableArticles->horizontalHeader()->setStretchLastSection(false);
     m_tableArticles->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableArticles->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -165,7 +166,7 @@ void BoiteDialogRepartition::remplirTableProduits()
 
 void BoiteDialogRepartition::creerRepartition()
 {
-    // 1. Vérification de base : au moins un article dans le tableau
+    // 1. Vérification : au moins un article dans le tableau
     if (m_tableArticles->rowCount() == 0) {
         QMessageBox::warning(this, "Erreur", "Veuillez ajouter au moins un article avant de valider.");
         return;
@@ -191,8 +192,7 @@ void BoiteDialogRepartition::creerRepartition()
         return;
     }
 
-    // 4. Création de l'entête de la répartition
-    // Note : Le manager doit être mis à jour pour forcer le statut "En cours"
+    // 4. Création de l'entête de la répartition (montant attendu à 0, calculé après)
     m_repartitionId = m_gestionnaire->creerRepartition(equipeId, routeId, dateRepartition, chefId);
     
     if (m_repartitionId.isNull()) {
@@ -204,42 +204,47 @@ void BoiteDialogRepartition::creerRepartition()
     // 5. Boucle d'ajout des articles avec vérification de stock
     bool erreurDetectee = false;
     for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
-        QString produitNom = m_tableArticles->item(row, 0)->text();
-        
-        // Récupération de l'ID du produit via le nom (recherche dans la combo)
-        QUuid produitId;
-        for(int i = 0; i < m_comboProduit->count(); ++i) {
-            if(m_comboProduit->itemText(i).trimmed() == produitNom.trimmed()) {
-                produitId = m_comboProduit->itemData(i).toUuid();
-                break;
-            }
-        }
+        QUuid produitId = QUuid(m_tableArticles->item(row, 0)->text());
+        int quantiteVente = m_tableArticles->item(row, 2)->text().toInt();
+        int quantiteCadeau = m_tableArticles->item(row, 3)->text().toInt();
+        int quantiteDegustation = m_tableArticles->item(row, 4)->text().toInt();
 
         ArticleRepartition article;
         article.setRepartitionId(m_repartitionId);
         article.setProduitId(produitId);
-        article.setQuantiteVente(m_tableArticles->item(row, 1)->text().toInt());
-        article.setQuantiteCadeau(m_tableArticles->item(row, 2)->text().toInt());
-        article.setQuantiteDegustation(m_tableArticles->item(row, 3)->text().toInt());
+        article.setQuantiteVente(quantiteVente);
+        article.setQuantiteCadeau(quantiteCadeau);
+        article.setQuantiteDegustation(quantiteDegustation);
 
-        // Appel au gestionnaire qui va vérifier le stock avant d'insérer
         if (!m_gestionnaire->ajouterArticle(article)) {
+            QString produitNom = m_tableArticles->item(row, 1)->text();
             QMessageBox::critical(this, "Erreur Stock / Article", 
                                  QString("Erreur sur le produit '%1' : %2")
                                  .arg(produitNom)
                                  .arg(m_gestionnaire->getDernierErreur()));
             erreurDetectee = true;
-            break; // On arrête tout si un article échoue (intégrité de la répartition)
+            break;
         }
     }
 
-    // 6. Finalisation
+    // 6. Finalisation et rollback si une erreur d'ajout article
     if (!erreurDetectee) {
+        // Calcul automatique du montant attendu
+        double montantAttendu = 0.0;
+        RepositoryProduit repoProduit;
+        for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
+            QUuid produitId = QUuid(m_tableArticles->item(row, 0)->text());
+            Produit prod = repoProduit.getById(produitId);
+            int quantiteVente = m_tableArticles->item(row, 2)->text().toInt();
+            montantAttendu += quantiteVente * prod.getPrixUnitaire();
+        }
+        m_gestionnaire->mettreAJourMontantAttendu(m_repartitionId, montantAttendu);
+
         QMessageBox::information(this, "Succès", "La répartition a été créée avec succès.");
         accept();
     } else {
-        // Optionnel : Logique pour supprimer la répartition vide si erreur d'articles
-        // m_gestionnaire->supprimerRepartition(m_repartitionId); 
+        // Suppression de la répartition vide si article(s) en erreur
+        m_gestionnaire->annulerRepartition(m_repartitionId);
     }
 }
 
@@ -247,6 +252,7 @@ void BoiteDialogRepartition::ajouterArticle()
 {
     if(m_comboProduit->currentIndex() < 0) return;
     QString produit = m_comboProduit->currentText();
+    QUuid produitId = m_comboProduit->currentData().toUuid();
     int qVente = m_spinVente->value();
     int qCadeau = m_spinCadeau->value();
     int qDegustation = m_spinDegustation->value();
@@ -257,9 +263,8 @@ void BoiteDialogRepartition::ajouterArticle()
         return;
     }
 
-    // Vérifier doublon produit
     for(int i=0; i<m_tableArticles->rowCount();++i)
-        if(m_tableArticles->item(i,0)->text() == produit) {
+        if(m_tableArticles->item(i,0)->text() == produitId.toString()) {
             QMessageBox::warning(this, "Erreur", "Produit déjà ajouté.");
             return;
         }
@@ -267,11 +272,18 @@ void BoiteDialogRepartition::ajouterArticle()
     int row = m_tableArticles->rowCount();
     m_tableArticles->insertRow(row);
 
-    m_tableArticles->setItem(row, 0, new QTableWidgetItem(produit));
-    m_tableArticles->setItem(row, 1, new QTableWidgetItem(QString::number(qVente)));
-    m_tableArticles->setItem(row, 2, new QTableWidgetItem(QString::number(qCadeau)));
-    m_tableArticles->setItem(row, 3, new QTableWidgetItem(QString::number(qDegustation)));
-    m_tableArticles->setItem(row, 4, new QTableWidgetItem(QString::number(total)));
+    QTableWidgetItem* itemId = new QTableWidgetItem(produitId.toString());
+    itemId->setData(Qt::UserRole, produitId);
+    itemId->setFlags(itemId->flags() & ~Qt::ItemIsEditable);
+    m_tableArticles->setItem(row, 0, itemId);
+
+    m_tableArticles->setItem(row, 1, new QTableWidgetItem(produit));
+    m_tableArticles->setItem(row, 2, new QTableWidgetItem(QString::number(qVente)));
+    m_tableArticles->setItem(row, 3, new QTableWidgetItem(QString::number(qCadeau)));
+    m_tableArticles->setItem(row, 4, new QTableWidgetItem(QString::number(qDegustation)));
+    m_tableArticles->setItem(row, 5, new QTableWidgetItem(QString::number(total)));
+
+    m_tableArticles->setColumnHidden(0, true);
 
     m_spinVente->setValue(0);
     m_spinCadeau->setValue(0);

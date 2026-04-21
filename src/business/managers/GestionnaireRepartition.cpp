@@ -10,7 +10,6 @@
 
 GestionnaireRepartition::GestionnaireRepartition() {}
 
-// Dans GestionnaireRepartition.cpp
 QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& utilisateurId)
 {
     clearErreur();
@@ -19,10 +18,9 @@ QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUu
     repartition.setEquipeId(equipeId);
     repartition.setRouteId(routeId);
     repartition.setDateRepartition(date);
-    
-    // On passe directement en "En cours" comme demandé
     repartition.setStatut(Repartition::Statut::EnCours); 
     repartition.setCreePar(utilisateurId);
+    repartition.setMontantCashAttendu(0.0); // Initialisé à 0, sera mis à jour plus loin
 
     RepositoryRepartition repo;
     if (!repo.create(repartition)) {
@@ -38,12 +36,12 @@ bool GestionnaireRepartition::ajouterArticle(const ArticleRepartition& article)
 
     // 1. Vérification du stock via la vue v_statut_stock
     QSqlQuery query;
-    query.prepare("SELECT quantite_disponible FROM v_statut_stock WHERE produit_id = :id");
+    query.prepare("SELECT quantite_disponible FROM stock_soldes WHERE produit_id = :id");
     query.bindValue(":id", article.getProduitId().toString(QUuid::WithoutBraces));
     
     if (query.exec() && query.next()) {
         int dispo = query.value(0).toInt();
-        int totalDemande = article.getQuantiteTotale(); // Vente + Cadeau + Dégustation
+        int totalDemande = article.getQuantiteTotale();
         
         if (totalDemande > dispo) {
             m_dernierErreur = QString("Stock insuffisant pour ce produit (Disponible : %1, Demandé : %2)")
@@ -207,4 +205,18 @@ bool GestionnaireRepartition::imprimerBonCommande(const QUuid& repartitionId, co
     doc.print(&printer);
 
     return true;
+}
+
+// Nouvelle méthode pour le calcul et la mise à jour du montant attendu
+bool GestionnaireRepartition::mettreAJourMontantAttendu(const QUuid& repartitionId, double montant)
+{
+    clearErreur();
+    RepositoryRepartition repo;
+    Repartition r = repo.getById(repartitionId);
+    if (r.getRepartitionId().isNull()) {
+        m_dernierErreur = "Répartition non trouvée";
+        return false;
+    }
+    r.setMontantCashAttendu(montant);
+    return repo.update(r);
 }
