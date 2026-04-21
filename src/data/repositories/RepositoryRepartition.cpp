@@ -13,18 +13,21 @@ bool RepositoryRepartition::create(const Repartition& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("INSERT INTO repartitions "
-                  "(repartition_id, equipe_id, route_id, statut, date_repartition, date_retour, montant_cash_attendu, cree_par) "
-                  "VALUES (:id, :equipe_id, :route_id, :statut, :date_rep, :date_ret, :montant, :cree_par)");
+    query.prepare(
+        "INSERT INTO repartitions (repartition_id, equipe_id, route_id, statut_repartition_id, date_repartition, date_retour, montant_cash_attendu, cree_par, date_creation, date_mise_a_jour) "
+        "VALUES (:repartition_id, :equipe_id, :route_id, :statut_repartition_id, :date_repartition, :date_retour, :montant_cash_attendu, :cree_par, :date_creation, :date_mise_a_jour)"
+    );
 
-    query.addBindValue(entity.getRepartitionId().toString());
-    query.addBindValue(entity.getEquipeId().toString());
-    query.addBindValue(entity.getRouteId().toString());
-    query.addBindValue(Repartition::statutToString(entity.getStatut()));
-    query.addBindValue(entity.getDateRepartition());
-    query.addBindValue(entity.getDateRetour());
-    query.addBindValue(entity.getMontantCashAttendu());
-    query.addBindValue(entity.getCreePar().toString());
+    query.bindValue(":repartition_id", entity.getRepartitionId().toString());
+    query.bindValue(":equipe_id", entity.getEquipeId().toString());
+    query.bindValue(":route_id", entity.getRouteId().toString());
+    query.bindValue(":statut_repartition_id", static_cast<int>(entity.getStatut())); // enum/int attendu
+    query.bindValue(":date_repartition", entity.getDateRepartition());
+    query.bindValue(":date_retour", entity.getDateRetour());
+    query.bindValue(":montant_cash_attendu", entity.getMontantCashAttendu());
+    query.bindValue(":cree_par", entity.getCreePar().toString());
+    query.bindValue(":date_creation", entity.getDateCreation());
+    query.bindValue(":date_mise_a_jour", entity.getDateMiseAJour());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création répartition : " + query.lastError().text();
@@ -40,46 +43,52 @@ Repartition RepositoryRepartition::getById(const QUuid& id)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("SELECT * FROM repartitions WHERE repartition_id = :id");
-    query.addBindValue(id.toString());
+    query.bindValue(":id", id.toString());
 
-    Repartition repartition;
+    Repartition rep;
     if (query.exec() && query.next()) {
-        repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-        repartition.setEquipeId(QUuid(query.value("equipe_id").toString()));
-        repartition.setRouteId(QUuid(query.value("route_id").toString()));
-        repartition.setStatut(Repartition::stringToStatut(query.value("statut").toString()));
-        repartition.setDateRepartition(query.value("date_repartition").toDate());
-        repartition.setDateRetour(query.value("date_retour").toDate());
-        repartition.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
-        repartition.setDateCreation(query.value("date_creation").toDateTime());
+        rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+        rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+        rep.setRouteId(QUuid(query.value("route_id").toString()));
+        rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+        rep.setDateRepartition(query.value("date_repartition").toDate());
+        rep.setDateRetour(query.value("date_retour").toDate());
+        rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+        rep.setCreePar(QUuid(query.value("cree_par").toString()));
+        rep.setDateCreation(query.value("date_creation").toDateTime());
+        rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+        // + articles si tu veux les charger (appel séparé)
     } else {
         m_dernierErreur = "Répartition non trouvée";
     }
-
-    return repartition;
+    return rep;
 }
 
 QList<Repartition> RepositoryRepartition::getAll()
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<Repartition> repartitions;
+    QList<Repartition> reps;
 
     query.prepare("SELECT * FROM repartitions ORDER BY date_repartition DESC");
 
     if (query.exec()) {
         while (query.next()) {
-            Repartition repartition;
-            repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-            repartition.setEquipeId(QUuid(query.value("equipe_id").toString()));
-            repartition.setRouteId(QUuid(query.value("route_id").toString()));
-            repartition.setStatut(Repartition::stringToStatut(query.value("statut").toString()));
-            repartition.setDateRepartition(query.value("date_repartition").toDate());
-            repartitions.append(repartition);
+            Repartition rep;
+            rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+            rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+            rep.setRouteId(QUuid(query.value("route_id").toString()));
+            rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+            rep.setDateRepartition(query.value("date_repartition").toDate());
+            rep.setDateRetour(query.value("date_retour").toDate());
+            rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+            rep.setCreePar(QUuid(query.value("cree_par").toString()));
+            rep.setDateCreation(query.value("date_creation").toDateTime());
+            rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            reps.append(rep);
         }
     }
-
-    return repartitions;
+    return reps;
 }
 
 bool RepositoryRepartition::update(const Repartition& entity)
@@ -87,20 +96,28 @@ bool RepositoryRepartition::update(const Repartition& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE repartitions SET "
-                  "statut = :statut, date_retour = :date_ret, montant_cash_attendu = :montant "
-                  "WHERE repartition_id = :id");
+    query.prepare(
+        "UPDATE repartitions SET equipe_id = :equipe_id, route_id = :route_id, statut_repartition_id = :statut_repartition_id, "
+        "date_repartition = :date_repartition, date_retour = :date_retour, montant_cash_attendu = :montant_cash_attendu, "
+        "cree_par = :cree_par, date_creation = :date_creation, date_mise_a_jour = :date_mise_a_jour "
+        "WHERE repartition_id = :repartition_id"
+    );
 
-    query.addBindValue(Repartition::statutToString(entity.getStatut()));
-    query.addBindValue(entity.getDateRetour());
-    query.addBindValue(entity.getMontantCashAttendu());
-    query.addBindValue(entity.getRepartitionId().toString());
+    query.bindValue(":equipe_id", entity.getEquipeId().toString());
+    query.bindValue(":route_id", entity.getRouteId().toString());
+    query.bindValue(":statut_repartition_id", static_cast<int>(entity.getStatut()));
+    query.bindValue(":date_repartition", entity.getDateRepartition());
+    query.bindValue(":date_retour", entity.getDateRetour());
+    query.bindValue(":montant_cash_attendu", entity.getMontantCashAttendu());
+    query.bindValue(":cree_par", entity.getCreePar().toString());
+    query.bindValue(":date_creation", entity.getDateCreation());
+    query.bindValue(":date_mise_a_jour", entity.getDateMiseAJour());
+    query.bindValue(":repartition_id", entity.getRepartitionId().toString());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur mise à jour répartition : " + query.lastError().text();
         return false;
     }
-
     return query.numRowsAffected() > 0;
 }
 
@@ -109,15 +126,13 @@ bool RepositoryRepartition::remove(const QUuid& id)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE repartitions SET statut = :statut WHERE repartition_id = :id");
-    query.addBindValue(Repartition::statutToString(Repartition::Statut::Annulee));
-    query.addBindValue(id.toString());
+    query.prepare("DELETE FROM repartitions WHERE repartition_id = :id");
+    query.bindValue(":id", id.toString());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur suppression répartition : " + query.lastError().text();
         return false;
     }
-
     return query.numRowsAffected() > 0;
 }
 
@@ -125,23 +140,28 @@ QList<Repartition> RepositoryRepartition::search(const QString& criterion)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<Repartition> repartitions;
+    QList<Repartition> reps;
 
-    query.prepare("SELECT r.* FROM repartitions r "
-                  "JOIN equipes e ON r.equipe_id = e.equipe_id "
-                  "WHERE e.nom ILIKE :criterion ORDER BY r.date_repartition DESC");
-    query.addBindValue("%" + criterion + "%");
+    query.prepare("SELECT * FROM repartitions WHERE CAST(repartition_id AS TEXT) ILIKE :crit OR CAST(equipe_id AS TEXT) ILIKE :crit OR CAST(route_id AS TEXT) ILIKE :crit ORDER BY date_repartition DESC");
+    query.bindValue(":crit", "%" + criterion + "%");
 
     if (query.exec()) {
         while (query.next()) {
-            Repartition repartition;
-            repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-            repartition.setEquipeId(QUuid(query.value("equipe_id").toString()));
-            repartitions.append(repartition);
+            Repartition rep;
+            rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+            rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+            rep.setRouteId(QUuid(query.value("route_id").toString()));
+            rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+            rep.setDateRepartition(query.value("date_repartition").toDate());
+            rep.setDateRetour(query.value("date_retour").toDate());
+            rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+            rep.setCreePar(QUuid(query.value("cree_par").toString()));
+            rep.setDateCreation(query.value("date_creation").toDateTime());
+            rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            reps.append(rep);
         }
     }
-
-    return repartitions;
+    return reps;
 }
 
 bool RepositoryRepartition::exists(const QUuid& id)
@@ -150,7 +170,7 @@ bool RepositoryRepartition::exists(const QUuid& id)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("SELECT 1 FROM repartitions WHERE repartition_id = :id");
-    query.addBindValue(id.toString());
+    query.bindValue(":id", id.toString());
 
     return query.exec() && query.next();
 }
@@ -159,58 +179,82 @@ QList<Repartition> RepositoryRepartition::getByEquipe(const QUuid& equipeId)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<Repartition> repartitions;
+    QList<Repartition> reps;
 
     query.prepare("SELECT * FROM repartitions WHERE equipe_id = :equipe_id ORDER BY date_repartition DESC");
-    query.addBindValue(equipeId.toString());
+    query.bindValue(":equipe_id", equipeId.toString());
 
     if (query.exec()) {
         while (query.next()) {
-            Repartition repartition;
-            repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-            repartitions.append(repartition);
+            Repartition rep;
+            rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+            rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+            rep.setRouteId(QUuid(query.value("route_id").toString()));
+            rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+            rep.setDateRepartition(query.value("date_repartition").toDate());
+            rep.setDateRetour(query.value("date_retour").toDate());
+            rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+            rep.setCreePar(QUuid(query.value("cree_par").toString()));
+            rep.setDateCreation(query.value("date_creation").toDateTime());
+            rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            reps.append(rep);
         }
     }
-
-    return repartitions;
+    return reps;
 }
 
 QList<Repartition> RepositoryRepartition::getByRoute(const QUuid& routeId)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<Repartition> repartitions;
+    QList<Repartition> reps;
 
     query.prepare("SELECT * FROM repartitions WHERE route_id = :route_id ORDER BY date_repartition DESC");
-    query.addBindValue(routeId.toString());
+    query.bindValue(":route_id", routeId.toString());
 
     if (query.exec()) {
         while (query.next()) {
-            Repartition repartition;
-            repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-            repartitions.append(repartition);
+            Repartition rep;
+            rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+            rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+            rep.setRouteId(QUuid(query.value("route_id").toString()));
+            rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+            rep.setDateRepartition(query.value("date_repartition").toDate());
+            rep.setDateRetour(query.value("date_retour").toDate());
+            rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+            rep.setCreePar(QUuid(query.value("cree_par").toString()));
+            rep.setDateCreation(query.value("date_creation").toDateTime());
+            rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            reps.append(rep);
         }
     }
-
-    return repartitions;
+    return reps;
 }
 
 QList<Repartition> RepositoryRepartition::getByStatut(const Repartition::Statut& statut)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<Repartition> repartitions;
+    QList<Repartition> reps;
 
-    query.prepare("SELECT * FROM repartitions WHERE statut = :statut ORDER BY date_repartition DESC");
-    query.addBindValue(Repartition::statutToString(statut));
+    query.prepare("SELECT * FROM repartitions WHERE statut_repartition_id = :statut_id ORDER BY date_repartition DESC");
+    query.bindValue(":statut_id", static_cast<int>(statut));
 
     if (query.exec()) {
         while (query.next()) {
-            Repartition repartition;
-            repartition.setRepartitionId(QUuid(query.value("repartition_id").toString()));
-            repartitions.append(repartition);
+            Repartition rep;
+            rep.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+            rep.setEquipeId(QUuid(query.value("equipe_id").toString()));
+            rep.setRouteId(QUuid(query.value("route_id").toString()));
+            rep.setStatut(Repartition::Statut(query.value("statut_repartition_id").toInt()));
+            rep.setDateRepartition(query.value("date_repartition").toDate());
+            rep.setDateRetour(query.value("date_retour").toDate());
+            rep.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+            rep.setCreePar(QUuid(query.value("cree_par").toString()));
+            rep.setDateCreation(query.value("date_creation").toDateTime());
+            rep.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            reps.append(rep);
         }
     }
-
-    return repartitions;
+    return reps;
 }

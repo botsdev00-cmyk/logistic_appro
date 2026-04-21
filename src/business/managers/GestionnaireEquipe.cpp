@@ -10,8 +10,7 @@ QUuid GestionnaireEquipe::creerEquipe(const QString& nom, const QUuid& chefId, c
     equipe.setEquipeId(QUuid::createUuid());
     equipe.setNom(nom);
     equipe.setNomChef(chefId.toString()); // Utilisateur ID sous forme QString (à adapter si ta colonne attend autre chose)
-    equipe.setTelephoneChef(telephoneChef);
-    equipe.setEstActif(true);
+    // equipe.setEstActif(true);
 
     RepositoryEquipe repo;
     if (!repo.create(equipe)) {

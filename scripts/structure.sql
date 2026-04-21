@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict me5NZ0GsU2Sg4gchcQT6kZdSK0IFhsvDtN1ckF7NGhZ08P3xuoJGdX9PDBpcRY6
+\restrict HNEKyEs2Zd3R0VFdJaZTHcj62Np8kknUIgq8608U1ckDAjCe3EFv249UQBdnglp
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -411,32 +411,44 @@ ALTER FUNCTION public.fn_get_stock_by_location(p_produit_id uuid) OWNER TO postg
 CREATE FUNCTION public.fn_log_entree_stock_movement() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    v_source_nom text;
+    v_mvt_type text;
 BEGIN
-    -- Insérer mouvement seulement si l'entrée est approuvée
-    IF NEW.statut_validation IN ('APPROUVE', 'EN_ATTENTE') THEN
-        INSERT INTO public.stock_mouvements (
-            produit_id,
-            type_mouvement,
-            quantite_delta,
-            reference_id,
-            reference_type,
-            utilisateur_id,
-            location_id,
-            raison,
-            observations
-        ) VALUES (
-            NEW.produit_id,
-            'ENTREE',
-            NEW.quantite,
-            NEW.entree_stock_id,
-            'ENTREE_STOCK',
-            COALESCE(NEW.cree_par, NEW.approuve_par),
-            'WAREHOUSE',
-            'Production/Achat',
-            'Facture: ' || COALESCE(NEW.numero_facture, 'N/A')
-        );
-    END IF;
-    
+    -- 1. Récupérer le nom de la source pour décider du type
+    SELECT nom INTO v_source_nom 
+    FROM public.sources_entree 
+    WHERE source_entree_id = NEW.source_entree_id;
+
+    -- 2. Sélectionner UN SEUL type de mouvement (Logique exclusive)
+    CASE 
+        WHEN v_source_nom ILIKE '%Achat%' THEN v_mvt_type := 'ACHAT';
+        WHEN v_source_nom ILIKE '%Production%' THEN v_mvt_type := 'PRODUCTION';
+        WHEN v_source_nom ILIKE '%Retour%' THEN v_mvt_type := 'RETOUR';
+        ELSE v_mvt_type := 'AJUSTEMENT'; -- Valeur par défaut
+    END CASE;
+
+    -- 3. UNE SEULE insertion
+    INSERT INTO public.stock_mouvements (
+        produit_id, 
+        type_mouvement, 
+        quantite_delta, 
+        reference_id, 
+        reference_type, 
+        utilisateur_id, 
+        raison,
+        observations
+    ) VALUES (
+        NEW.produit_id, 
+        v_mvt_type, 
+        NEW.quantite, 
+        NEW.entree_stock_id, 
+        'ENTREE_STOCK', 
+        NEW.cree_par, 
+        'Approvisionnement via ' || v_source_nom,
+        'Facture: ' || COALESCE(NEW.numero_facture, 'N/A')
+    );
+
     RETURN NEW;
 END;
 $$;
@@ -1117,7 +1129,9 @@ ALTER TABLE public.roles OWNER TO postgres;
 
 CREATE TABLE public.routes (
     route_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    nom character varying(100) NOT NULL
+    nom character varying(100) NOT NULL,
+    description text,
+    est_actif boolean DEFAULT true
 );
 
 
@@ -1544,6 +1558,7 @@ e9ebe02c-d9ad-4f89-b029-02897b4f651b	857f7c59-4ff6-45af-81fc-81d534af18de	100	c6
 --
 
 COPY public.equipes (equipe_id, nom, nom_chef) FROM stdin;
+9a66d049-23a2-4db6-a271-10db9cc28ec0	Alpha	{78a24f11-9714-4014-ae40-f38318fef119}
 \.
 
 
@@ -1555,6 +1570,9 @@ COPY public.journaux_audit (journal_audit_id, utilisateur_id, action, type_entit
 7f93a79e-d6df-4df8-8754-3dc9b7244bb1	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "e9ebe02c-d9ad-4f89-b029-02897b4f651b", "quantite_delta": 100}	2026-04-16 13:38:58.619548
 55174608-3dbe-441e-b709-2bbb50ca7a9d	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	04267c8b-e20f-4e93-9117-066e7039277b	\N	{"type": "ENTREE", "raison": "Migration depuis entrees_stock", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "45f2d7cc-dd91-4e0f-b65b-1a20d796c584", "quantite_delta": 100}	2026-04-16 13:38:58.619548
 3a282db2-e000-477a-882b-b37c332bd0a5	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	87fdca57-c181-40fe-b396-afd9e0896dc1	\N	{"type": "ENTREE", "raison": "Approvisionnement", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "3fce8b76-ac27-4b7c-a1cc-852e20d98a7c", "quantite_delta": 100}	2026-04-20 09:29:46.256518
+147bf4ac-6061-44e0-8ec5-ae7ad6cfbff5	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	56979254-dff1-4f2e-8632-8077ab2eb400	\N	{"type": "ENTREE", "raison": "Approvisionnement", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "c269f712-b495-4797-9380-26cb52460c6b", "quantite_delta": 120}	2026-04-20 09:39:52.294
+6db5a3dc-1189-4f6a-9a23-f656c7329306	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	221660d3-4111-48f8-b959-b882740c40d0	\N	{"type": "ENTREE", "raison": "Approvisionnement", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "0cbde3a0-2dd5-4345-a957-1dbb43bb08ea", "quantite_delta": 200}	2026-04-20 09:47:50.093985
+275e2565-6525-4173-ad6a-4d826783d447	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	0dd0d2ba-4bfa-47e8-8300-cb3918178c3b	\N	{"type": "ENTREE", "raison": "Approvisionnement", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "b6684e40-3795-4d84-905a-39b0cf9b5c3b", "quantite_delta": 420}	2026-04-20 09:47:50.143678
 \.
 
 
@@ -1655,7 +1673,8 @@ COPY public.roles (role_id, code, nom) FROM stdin;
 -- Data for Name: routes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.routes (route_id, nom) FROM stdin;
+COPY public.routes (route_id, nom, description, est_actif) FROM stdin;
+99c124c9-2e02-40ba-a792-7494bc094fc3	KASAPA-MOISE		t
 \.
 
 
@@ -1724,6 +1743,9 @@ COPY public.stock_mouvements (mouvement_id, produit_id, type_mouvement, quantite
 bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	100	e9ebe02c-d9ad-4f89-b029-02897b4f651b	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:49:59.537	2026-04-16 13:38:58.619548
 04267c8b-e20f-4e93-9117-066e7039277b	03dc330a-6da1-41ca-86ba-60945244182a	ENTREE	100	45f2d7cc-dd91-4e0f-b65b-1a20d796c584	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Migration depuis entrees_stock	\N	2026-04-16 07:51:39.589	2026-04-16 13:38:58.619548
 87fdca57-c181-40fe-b396-afd9e0896dc1	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	100	3fce8b76-ac27-4b7c-a1cc-852e20d98a7c	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-20 09:29:46.256518	2026-04-20 09:29:46.256518
+56979254-dff1-4f2e-8632-8077ab2eb400	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	120	c269f712-b495-4797-9380-26cb52460c6b	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-20 09:39:52.294	2026-04-20 09:39:52.294
+221660d3-4111-48f8-b959-b882740c40d0	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	200	0cbde3a0-2dd5-4345-a957-1dbb43bb08ea	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-20 09:47:50.093985	2026-04-20 09:47:50.093985
+0dd0d2ba-4bfa-47e8-8300-cb3918178c3b	03dc330a-6da1-41ca-86ba-60945244182a	ENTREE	420	b6684e40-3795-4d84-905a-39b0cf9b5c3b	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-20 09:47:50.143678	2026-04-20 09:47:50.143678
 \.
 
 
@@ -1733,8 +1755,8 @@ bde91567-bacb-4cb6-bbe1-fcfc4c9233a2	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE
 
 COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at, location_id, location_historique, derniere_location_id) FROM stdin;
 3ff64cbc-a09a-4e5a-969b-8d19e3f02d78	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	\N	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
-5db1f7d3-6ed1-4878-9a64-d74cccb370c2	03dc330a-6da1-41ca-86ba-60945244182a	100	0	0.00	1000.00	2026-04-16 07:51:39.589	2026-04-16 13:38:58.641437	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
-1478a37b-4099-40ff-9664-115fe09d1bda	857f7c59-4ff6-45af-81fc-81d534af18de	200	0	0.00	1200.00	2026-04-20 09:29:46.256518	2026-04-20 09:29:46.256518	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+1478a37b-4099-40ff-9664-115fe09d1bda	857f7c59-4ff6-45af-81fc-81d534af18de	520	0	0.00	1200.00	2026-04-20 09:47:50.093985	2026-04-20 09:47:50.093985	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+5db1f7d3-6ed1-4878-9a64-d74cccb370c2	03dc330a-6da1-41ca-86ba-60945244182a	520	0	0.00	1000.00	2026-04-20 09:47:50.143678	2026-04-20 09:47:50.143678	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
 \.
 
 
@@ -3033,5 +3055,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict me5NZ0GsU2Sg4gchcQT6kZdSK0IFhsvDtN1ckF7NGhZ08P3xuoJGdX9PDBpcRY6
+\unrestrict HNEKyEs2Zd3R0VFdJaZTHcj62Np8kknUIgq8608U1ckDAjCe3EFv249UQBdnglp
 

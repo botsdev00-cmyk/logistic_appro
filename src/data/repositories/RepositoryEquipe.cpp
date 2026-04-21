@@ -13,15 +13,10 @@ bool RepositoryEquipe::create(const Equipe& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("INSERT INTO equipes "
-                  "(equipe_id, nom, nom_chef, telephone_chef, est_actif) "
-                  "VALUES (:id, :nom, :nom_chef, :tel, :actif)");
-
+    query.prepare("INSERT INTO equipes (equipe_id, nom, nom_chef) VALUES (:id, :nom, :nom_chef)");
     query.addBindValue(entity.getEquipeId().toString());
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
-    query.addBindValue(entity.getTelephoneChef());
-    query.addBindValue(entity.estActif());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création équipe : " + query.lastError().text();
@@ -44,8 +39,7 @@ Equipe RepositoryEquipe::getById(const QUuid& id)
         equipe.setEquipeId(QUuid(query.value("equipe_id").toString()));
         equipe.setNom(query.value("nom").toString());
         equipe.setNomChef(query.value("nom_chef").toString());
-        equipe.setTelephoneChef(query.value("telephone_chef").toString());
-        equipe.setEstActif(query.value("est_actif").toBool());
+        // Ajoute ici d'autres champs si tu en ajoutes à l'avenir
     } else {
         m_dernierErreur = "Équipe non trouvée";
     }
@@ -59,7 +53,7 @@ QList<Equipe> RepositoryEquipe::getAll()
     QSqlQuery query(bd.getDatabase());
     QList<Equipe> equipes;
 
-    query.prepare("SELECT * FROM equipes WHERE est_actif = true ORDER BY nom");
+    query.prepare("SELECT * FROM equipes ORDER BY nom");
 
     if (query.exec()) {
         while (query.next()) {
@@ -67,7 +61,6 @@ QList<Equipe> RepositoryEquipe::getAll()
             equipe.setEquipeId(QUuid(query.value("equipe_id").toString()));
             equipe.setNom(query.value("nom").toString());
             equipe.setNomChef(query.value("nom_chef").toString());
-            equipe.setTelephoneChef(query.value("telephone_chef").toString());
             equipes.append(equipe);
         }
     }
@@ -80,14 +73,9 @@ bool RepositoryEquipe::update(const Equipe& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE equipes SET "
-                  "nom = :nom, nom_chef = :nom_chef, telephone_chef = :tel, est_actif = :actif "
-                  "WHERE equipe_id = :id");
-
+    query.prepare("UPDATE equipes SET nom = :nom, nom_chef = :nom_chef WHERE equipe_id = :id");
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
-    query.addBindValue(entity.getTelephoneChef());
-    query.addBindValue(entity.estActif());
     query.addBindValue(entity.getEquipeId().toString());
 
     if (!query.exec()) {
@@ -103,7 +91,8 @@ bool RepositoryEquipe::remove(const QUuid& id)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE equipes SET est_actif = false WHERE equipe_id = :id");
+    // Suppression physique du membre - car pas de colonne est_actif (si tu veux un soft delete, ajoute la colonne !)
+    query.prepare("DELETE FROM equipes WHERE equipe_id = :id");
     query.addBindValue(id.toString());
 
     if (!query.exec()) {
@@ -128,6 +117,7 @@ QList<Equipe> RepositoryEquipe::search(const QString& criterion)
             Equipe equipe;
             equipe.setEquipeId(QUuid(query.value("equipe_id").toString()));
             equipe.setNom(query.value("nom").toString());
+            equipe.setNomChef(query.value("nom_chef").toString());
             equipes.append(equipe);
         }
     }
