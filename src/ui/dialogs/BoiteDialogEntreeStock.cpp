@@ -477,7 +477,7 @@ bool BoiteDialogEntreeStock::validerLignes()
         if (!comboProduit || comboProduit->currentText() == "-- Sélectionner --") continue;
 
         if (!validerLigne(row)) {
-            m_labelStatut->setText(QString("❌ Erreur ligne %1").arg(row + 1));
+            m_labelStatut->setText(QString(" Erreur ligne %1").arg(row + 1));
             m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
             return false;
         }
@@ -485,7 +485,7 @@ bool BoiteDialogEntreeStock::validerLignes()
     }
 
     if (lignesValides == 0) {
-        m_labelStatut->setText("❌ Aucune ligne à valider");
+        m_labelStatut->setText(" Aucune ligne à valider");
         m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
         return false;
     }
@@ -514,9 +514,9 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
     
     // Vérifier que l'utilisateur est valide
     if (m_utilisateurId.isNull()) {
-        m_labelStatut->setText("❌ Erreur: Utilisateur non défini");
+        m_labelStatut->setText(" Erreur: Utilisateur non défini");
         m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
-        QMessageBox::critical(this, "❌ Erreur", "L'ID utilisateur n'est pas valide");
+        QMessageBox::critical(this, " Erreur", "L'ID utilisateur n'est pas valide");
         return false;
     }
 
@@ -540,9 +540,9 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
 
         // Vérifier que la source est sélectionnée
         if (!comboSource || comboSource->currentText() == "-- Sélectionner --") {
-            m_labelStatut->setText(QString("❌ Erreur ligne %1: Source manquante").arg(row + 1));
+            m_labelStatut->setText(QString(" Erreur ligne %1: Source manquante").arg(row + 1));
             m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
-            QMessageBox::critical(this, "❌ Erreur",
+            QMessageBox::critical(this, " Erreur",
                 QString("Ligne %1: Vous devez sélectionner une source").arg(row + 1));
             return false;
         }
@@ -556,7 +556,7 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
         entree.setNumeroFacture(factureItem ? factureItem->text() : "");
         entree.setNumeroLot(lotItem ? lotItem->text() : "");
         entree.setDateExpiration(dateExp ? dateExp->date() : QDate::currentDate());
-        entree.setCreePar(m_utilisateurId);  // ✅ Utiliser l'UUID de l'utilisateur courant
+        entree.setCreePar(m_utilisateurId);  //  Utiliser l'UUID de l'utilisateur courant
         entree.setSourceEntreeId(m_sourcesMap[comboSource->currentText()]);
         entree.setStatutValidation("EN_ATTENTE");
         entree.setDate(QDateTime::currentDateTime());
@@ -572,12 +572,12 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
             qDebug() << "[ENTREE STOCK] ✓ Entrée" << count << "créée";
         } else {
             QString erreur = m_gestionnaire->obtenirDernierErreur();
-            qWarning() << "[ENTREE STOCK] ❌ Erreur:" << erreur;
+            qWarning() << "[ENTREE STOCK]  Erreur:" << erreur;
             
-            m_labelStatut->setText(QString("❌ Erreur création ligne %1").arg(row + 1));
+            m_labelStatut->setText(QString(" Erreur création ligne %1").arg(row + 1));
             m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
 
-            QMessageBox::critical(this, "❌ Erreur",
+            QMessageBox::critical(this, " Erreur",
                 QString("Erreur création entrée ligne %1:\n%2")
                 .arg(row + 1)
                 .arg(erreur));
@@ -586,7 +586,7 @@ bool BoiteDialogEntreeStock::sauvegarderEntrees()
     }
 
     if (count == 0) {
-        m_labelStatut->setText("❌ Aucune ligne complète n'a pu être sauvegardée");
+        m_labelStatut->setText(" Aucune ligne complète n'a pu être sauvegardée");
         m_labelStatut->setStyleSheet("color: #F44336; font-size: 11px; padding: 6px; background-color: #FFEBEE; border-radius: 3px;");
         QMessageBox::warning(this, "⚠️ Attention", "Aucune ligne n'a été complètement remplie");
         return false;

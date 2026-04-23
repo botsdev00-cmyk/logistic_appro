@@ -131,6 +131,7 @@ public:
     QList<RetourStock> obtenirHistoriqueRetours(const QUuid& produitId = QUuid(), int joursArriere = 30);
     RetourStock obtenirRetour(const QUuid& retourId);
     bool supprimerRetour(const QUuid& retourId);
+    bool creerRetourApresRepartition(const QUuid& produitId, int quantite, const QUuid& repartitionId, const QUuid& raisonRetourId, const QString& observations, const QUuid& utilisateurId);
 
     // ====== CONSULTATION STOCK ======
     int obtenirQuantiteDisponible(const QUuid& produitId);

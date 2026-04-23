@@ -46,7 +46,6 @@ bool RepositoryRepartition::create(const Repartition& entity)
     
     // C'EST ICI QUE LE NULL ARRIVAIT : On utilise le helper getStatutUuid
     query.bindValue(":statut", getStatutUuid(entity.getStatut()));
-    
     query.bindValue(":date", entity.getDateRepartition());
     query.bindValue(":montant", entity.getMontantCashAttendu());
     query.bindValue(":chef", entity.getCreePar().toString(QUuid::WithoutBraces));

@@ -1,3 +1,5 @@
+// BoiteDialogRetourStock.h
+
 #ifndef BOITEDIALOGRETOURSTOCK_H
 #define BOITEDIALOGRETOURSTOCK_H
 
@@ -18,12 +20,18 @@ public:
     explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, QWidget* parent = nullptr);
     ~BoiteDialogRetourStock();
 
+    // Pour forcer la répartition (optionnel, cf. TableauRepartition)
+    void setRepartitionPreselectionnee(const QUuid& repId);
+
 private slots:
     void onValider();
     void onAnnuler();
 
 private:
     void initializeUI();
+    void chargerProduits();
+    void chargerRaisons();
+    void chargerRepartitions();
 
     GestionnaireStock* m_gestionnaire;
     QUuid m_utilisateurId;

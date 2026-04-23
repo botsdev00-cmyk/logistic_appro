@@ -36,19 +36,25 @@ ResultatMouvement RepositoryStockMouvements::creerMouvementSecurise(
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
+    QString typed = typeMouvement.trimmed().toUpper();
+    if (typed != "ENTREE" && typed != "SORTIE" && typed != "RETOUR" && typed != "AJUSTEMENT") {
+        qWarning() << "[REPO-MVT] Type de mouvement INVALIDE =" << typeMouvement;
+        ResultatMouvement resultat{false, QUuid(), "Type de mouvement invalide: " + typeMouvement, 0, 0};
+        return resultat;
+    }
+
     qDebug() << "[REPO-MVT] Création mouvement sécurisée"
-             << "| Type:" << typeMouvement
+             << "| Type:" << typed
              << "| Produit:" << produitId.toString().mid(0, 8) << "..."
              << "| Qté:" << quantiteDelta;
 
-    // ✅ APPELER LA FONCTION BDD SÉCURISÉE
     query.prepare(
         "SELECT success, mouvement_id, message, current_stock, resulting_stock "
         "FROM fn_create_stock_movement(?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
     query.addBindValue(produitId.toString());
-    query.addBindValue(typeMouvement);
+    query.addBindValue(typed);
     query.addBindValue(quantiteDelta);
     query.addBindValue(referenceId.isNull() ? QVariant(QVariant::String) : referenceId.toString());
     query.addBindValue(referenceType.isEmpty() ? QVariant(QVariant::String) : referenceType);
@@ -68,21 +74,21 @@ ResultatMouvement RepositoryStockMouvements::creerMouvementSecurise(
             resultat.stockResultant = query.value("resulting_stock").toInt();
 
             if (resultat.success) {
-                qDebug() << "[REPO-MVT] ✓ Mouvement créé:" << resultat.mouvementId.toString().mid(0, 8) << "..."
+                qDebug() << "[REPO-MVT] Mouvement créé:" << resultat.mouvementId.toString().mid(0, 8) << "..."
                          << "| Stock:" << resultat.stockActuel << "→" << resultat.stockResultant
                          << "| Message:" << resultat.message;
             } else {
-                qDebug() << "[REPO-MVT] ❌ Mouvement refusé:" << resultat.message;
+                qDebug() << "[REPO-MVT] Mouvement refusé:" << resultat.message;
                 m_dernierErreur = resultat.message;
             }
         } else {
             resultat.message = "Pas de réponse du serveur";
-            qDebug() << "[REPO-MVT] ❌ Pas de réponse";
+            qDebug() << "[REPO-MVT] Pas de réponse";
             m_dernierErreur = resultat.message;
         }
     } else {
         resultat.message = query.lastError().text();
-        qDebug() << "[REPO-MVT] ❌ ERREUR SQL:" << resultat.message;
+        qDebug() << "[REPO-MVT] ERREUR SQL:" << resultat.message;
         m_dernierErreur = resultat.message;
     }
 
@@ -104,8 +110,6 @@ ResultatMouvement RepositoryStockMouvements::verifierOperationStock(
     qDebug() << "[REPO-MVT] Vérification opération stock"
              << "| Type:" << typeMouvement
              << "| Qté:" << quantiteDelta;
-
-    // ✅ APPELER LA FONCTION DE VÉRIFICATION BDD
     query.prepare(
         "SELECT can_proceed, current_stock, resulting_stock, message "
         "FROM fn_verify_stock_operation(?, ?, ?)"
@@ -128,13 +132,13 @@ ResultatMouvement RepositoryStockMouvements::verifierOperationStock(
                 qDebug() << "[REPO-MVT] ✓ Opération autorisée"
                          << "| Stock:" << resultat.stockActuel << "→" << resultat.stockResultant;
             } else {
-                qDebug() << "[REPO-MVT] ❌ Opération refusée:" << resultat.message;
+                qDebug() << "[REPO-MVT]  Opération refusée:" << resultat.message;
                 m_dernierErreur = resultat.message;
             }
         }
     } else {
         resultat.message = query.lastError().text();
-        qDebug() << "[REPO-MVT] ❌ ERREUR SQL:" << resultat.message;
+        qDebug() << "[REPO-MVT]  ERREUR SQL:" << resultat.message;
         m_dernierErreur = resultat.message;
     }
 

@@ -257,6 +257,8 @@ bool GestionnaireStock::repairerIntegriteStock()
 // GESTION DES ENTRÉES (Existant - Inchangé)
 // ============================================================================
 
+// Remplacez la fonction creerEntreeStock actuelle par celle-ci :
+
 bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
 {
     // 1. Vérifications de base
@@ -269,21 +271,25 @@ bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
         return false;
     }
 
-    // 2. Déterminer le type de mouvement réel basé sur la source
-    // Au lieu de "ENTREE", on va chercher si c'est ACHAT, PRODUCTION ou RETOUR
-    QString typeMvtReal = "AJUSTEMENT"; // Valeur par défaut
+    // 2. Déterminer le type de mouvement réel autorisé par la BDD
+    QString typeMvtReal = "ENTREE"; // Valeur par défaut pour un approvisionnement
+    QString nomSource = "INCONNUE"; 
     
     QSqlQuery queryType;
     queryType.prepare("SELECT nom FROM sources_entree WHERE source_entree_id = ?");
     queryType.addBindValue(entree.getSourceEntreeId().toString());
     
     if (queryType.exec() && queryType.next()) {
-        QString nomSource = queryType.value(0).toString().toUpper();
+        nomSource = queryType.value(0).toString().toUpper();
         
-        if (nomSource.contains("ACHAT")) typeMvtReal = "ACHAT";
-        else if (nomSource.contains("PRODUCTION")) typeMvtReal = "PRODUCTION";
-        else if (nomSource.contains("RETOUR")) typeMvtReal = "RETOUR";
-        // Si c'est une autre source, on reste sur AJUSTEMENT ou on peut ajouter d'autres cas
+        // Mappage correct : on traduit la source en un type de mouvement SQL valide
+        if (nomSource.contains("ACHAT") || nomSource.contains("PRODUCTION")) {
+            typeMvtReal = "ENTREE";
+        } else if (nomSource.contains("RETOUR")) {
+            typeMvtReal = "RETOUR";
+        } else {
+            typeMvtReal = "AJUSTEMENT";
+        }
     }
 
     // 3. Préparer les observations pour la traçabilité
@@ -292,22 +298,21 @@ bool GestionnaireStock::creerEntreeStock(const EntreeStock& entree)
                                .arg(entree.getNumeroLot().isEmpty() ? "N/A" : entree.getNumeroLot())
                                .arg(entree.getSourceEntreeId().toString());
 
-    // 4. Appeler le mouvement avec le type PRÉCIS (typeMvtReal)
-    // Cela évitera que le trigger SQL ne s'embrouille
+    // 4. Appeler le mouvement avec le type valide (ENTREE, RETOUR, ou AJUSTEMENT)
     ResultatMouvement resultat = m_repoMouvements->creerMouvementSecurise(
         entree.getProduitId(),
-        typeMvtReal,                    // <--- Utilisation du type dynamique ici
-        entree.getQuantite(),           // quantiteDelta
-        entree.getEntreeStockId(),      // referenceId
-        "ENTREE_STOCK",                 // referenceType
-        entree.getCreePar(),            // utilisateurId
-        "WAREHOUSE",                    // locationId
-        "Approvisionnement " + typeMvtReal, // raison précise
-        observations                    // observations
+        typeMvtReal,                    // <--- Sera "ENTREE", "RETOUR" ou "AJUSTEMENT"
+        entree.getQuantite(),           
+        entree.getEntreeStockId(),      
+        "ENTREE_STOCK",                 
+        entree.getCreePar(),            
+        "WAREHOUSE",                    
+        "Approvisionnement - " + nomSource, // <--- On garde la trace visuelle de la source ici (ex: "Approvisionnement - PRODUCTION")
+        observations                    
     );
 
     if (resultat.success) {
-        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée" << typeMvtReal << "créée:" << resultat.mouvementId;
+        qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée créée. Type SQL:" << typeMvtReal << "| Source:" << nomSource;
         return true;
     }
 
@@ -660,7 +665,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsRecents(const QUuid& produi
         "FROM stock_mouvements sm "
         "JOIN produits p ON sm.produit_id = p.produit_id "
         "JOIN utilisateurs u ON sm.utilisateur_id = u.utilisateur_id "
-        "LEFT JOIN sources_entree se ON sm.reference_type = 'ENTREE_STOCK' "
+        "LEFT JOIN sources_entree se ON sm.source_entree_id = se.source_entree_id "
         "WHERE sm.created_at >= CURRENT_TIMESTAMP - INTERVAL '" + QString::number(jours) + " days' ";
     
     if (!produitId.isNull()) {
@@ -779,7 +784,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParType(const QString& type
         "FROM stock_mouvements sm "
         "JOIN produits p ON sm.produit_id = p.produit_id "
         "JOIN utilisateurs u ON sm.utilisateur_id = u.utilisateur_id "
-        "LEFT JOIN sources_entree se ON sm.reference_type = 'ENTREE_STOCK' "
+        "LEFT JOIN sources_entree se ON sm.source_entree_id = se.source_entree_id "
         "WHERE sm.type_mouvement = '" + type + "' "
         "ORDER BY sm.created_at DESC LIMIT 500";
     
@@ -817,7 +822,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsParDateRange(const QDate& d
         "FROM stock_mouvements sm "
         "JOIN produits p ON sm.produit_id = p.produit_id "
         "JOIN utilisateurs u ON sm.utilisateur_id = u.utilisateur_id "
-        "LEFT JOIN sources_entree se ON sm.reference_type = 'ENTREE_STOCK' "
+        "LEFT JOIN sources_entree se ON sm.source_entree_id = se.source_entree_id "
         "WHERE DATE(sm.created_at) >= '%1' AND DATE(sm.created_at) <= '%2' "
         "ORDER BY sm.created_at DESC LIMIT 500"
     ).arg(dateDebut.toString("yyyy-MM-dd"), dateFin.toString("yyyy-MM-dd"));
@@ -1313,4 +1318,28 @@ QString GestionnaireStock::genererRecommandation(const Alerte& alerte)
     if (alerte.severite == "RUPTURE") return "URGENT: Commander immédiatement";
     if (alerte.severite == "CRITICAL") return "Commander en priorité";
     return "Prévoir réapprovisionnement";
+}
+
+// GestionnaireStock.cpp
+bool GestionnaireStock::creerRetourApresRepartition(const QUuid& produitId,
+                                                   int quantite,
+                                                   const QUuid& repartitionId,
+                                                   const QUuid& raisonRetourId,
+                                                   const QString& observations,
+                                                   const QUuid& utilisateurId)
+{
+    RetourStock retour;
+    retour.setRetourStockId(QUuid::createUuid());
+    retour.setProduitId(produitId);
+    retour.setQuantite(quantite);
+    retour.setRepartitionId(repartitionId);
+    retour.setRaisonRetourId(raisonRetourId);
+    retour.setCreePar(utilisateurId);
+    retour.setObservations(observations);
+    retour.setStatutValidation("EN_ATTENTE");
+    // Optionnel : retour.setDate(QDateTime::currentDateTime());
+
+    if (!m_repoRetours)
+        return false;
+    return m_repoRetours->create(retour);
 }
