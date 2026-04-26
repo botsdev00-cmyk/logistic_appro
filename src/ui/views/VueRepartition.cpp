@@ -6,6 +6,7 @@
 #include "../../business/managers/GestionnaireCredit.h"
 #include "../../business/managers/GestionnaireStock.h"
 #include "../../business/managers/GestionnaireRepartition.h"
+#include "../../core/entities/ArticleRepartition.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -19,6 +20,7 @@ extern GestionnaireSales* g_venteMgr;
 extern GestionnaireCredit* g_creditMgr;
 extern GestionnaireStock* g_stockMgr;
 extern QUuid g_utilisateurId;
+extern ArticleRepartition* art;
 
 
 VueRepartition::VueRepartition(QWidget* parent)
@@ -112,7 +114,7 @@ void VueRepartition::verifierStatut()
     txt += "Date  : " + repartition.getDateRepartition().toString("dd/MM/yyyy") + "\n";
     txt += "Articles sortis :\n";
     for(const auto& art : repartition.getArticles())
-        txt += QString("— %1 : %2\n").arg(art.getNomProduit()).arg(art.getQuantiteTotale());
+    txt += QString("— %1 : %2\n").arg(getNomProduitDepuisId(art.getProduitId())).arg(art.getQuantiteTotale());
     QMessageBox::information(this, "Info Statut Répartition", txt);
 }
 
@@ -130,7 +132,7 @@ void VueRepartition::chargerRetours()
     QList<LigneRetourRepartition> lignes;
     for(const auto& art : repartition.getArticles()) {
         LigneRetourRepartition ligne;
-        ligne.produitNom = art.getNomProduit(); // Ou méthode équivalente
+        ligne.produitNom = getNomProduitDepuisId(art.getProduitId());
         ligne.produitId  = art.getProduitId();
         ligne.quantiteSortie = art.getQuantiteTotale();
         ligne.quantiteVenduCash = 0;

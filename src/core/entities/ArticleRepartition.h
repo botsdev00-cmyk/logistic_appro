@@ -3,6 +3,7 @@
 
 #include <QUuid>
 #include <QString>
+#include "../../data/repositories/RepositoryProduit.h"
 
 class ArticleRepartition
 {
