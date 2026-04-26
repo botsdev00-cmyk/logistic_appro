@@ -1,5 +1,3 @@
-// BoiteDialogRetourStock.h
-
 #ifndef BOITEDIALOGRETOURSTOCK_H
 #define BOITEDIALOGRETOURSTOCK_H
 
@@ -7,6 +5,8 @@
 #include <QUuid>
 
 class GestionnaireStock;
+class GestionnaireRaisonsRetour;
+class GestionnaireRepartition;
 class QComboBox;
 class QSpinBox;
 class QTextEdit;
@@ -17,10 +17,12 @@ class BoiteDialogRetourStock : public QDialog
     Q_OBJECT
 
 public:
-    explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, QWidget* parent = nullptr);
+    explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
+                                    GestionnaireRaisonsRetour* gestionnaireRaisons,
+                                    GestionnaireRepartition* gestionnaireRepartition,
+                                    const QUuid& utilisateurId, QWidget* parent = nullptr);
     ~BoiteDialogRetourStock();
 
-    // Pour forcer la répartition (optionnel, cf. TableauRepartition)
     void setRepartitionPreselectionnee(const QUuid& repId);
 
 private slots:
@@ -34,6 +36,8 @@ private:
     void chargerRepartitions();
 
     GestionnaireStock* m_gestionnaire;
+    GestionnaireRaisonsRetour* m_gestionnaireRaisons;
+    GestionnaireRepartition* m_gestionnaireRepartition;
     QUuid m_utilisateurId;
 
     QComboBox* m_comboProduit;

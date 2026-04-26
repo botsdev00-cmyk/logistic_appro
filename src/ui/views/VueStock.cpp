@@ -9,6 +9,8 @@
 #include "../dialogs/BoiteDialogRetourStock.h"
 #include "../../core/entities/EntreeStock.h"
 #include "../../core/entities/RetourStock.h"
+#include "../../business/managers/GestionnaireRaisonsRetour.h"
+#include "../../business/managers/GestionnaireRepartition.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTabWidget>
@@ -453,9 +455,11 @@ void VueStock::onAjouterEntree()
 
 void VueStock::onAjouterRetour()
 {
+    GestionnaireRaisonsRetour raisonsMgr;
+    GestionnaireRepartition repartitionMgr;
     qDebug() << "[VUE STOCK] Ouverture dialog nouveau retour";
 
-    BoiteDialogRetourStock dialog(m_gestionnaire, m_utilisateurId, this);
+    BoiteDialogRetourStock dialog(m_gestionnaire, &raisonsMgr, &repartitionMgr, m_utilisateurId, this);
     if (dialog.exec() == QDialog::Accepted) {
         chargerDonnees();
         afficherAlertes();

@@ -658,6 +658,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireCredit.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.h \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRaisonsRetour.cpp \
+	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRaisonsRetour.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.cpp \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.h \
 	/home/bots/semuliki_logistic/src/business/managers/GestionnaireRepartition.cpp \

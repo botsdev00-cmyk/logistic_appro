@@ -864,6 +864,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRaisonsRetour.h",
+			"MU",
+			"5RRB5FJU4K/moc_GestionnaireRaisonsRetour.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRapport.h",
 			"MU",
 			"5RRB5FJU4K/moc_GestionnaireRapport.cpp",
@@ -1456,6 +1462,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/business/managers/GestionnaireRaisonsRetour.cpp",
 			"MU",
 			null
 		],

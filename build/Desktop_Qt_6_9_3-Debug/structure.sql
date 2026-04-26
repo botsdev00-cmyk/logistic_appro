@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict BACf1dA57qQRa0F7dAVkD1ExVUYyvJV7ZDc9ZPYCZ02coNFcsjQgWwZVU7NWFcq
+\restrict gnKejpvFLZMPLD4OlYcibItaWrP0fNP3XcZEOnv9neEaOH6JXPfwYd2Y5MwdMht
 
 -- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
 -- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
@@ -165,7 +165,18 @@ ALTER FUNCTION public.fn_check_stock_availability(p_produit_id uuid, p_quantite_
 CREATE FUNCTION public.fn_create_retour_on_retour_stock() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    v_location_destination TEXT := 'RETURNED'; -- Par défaut pour les avaries/pertes
+    v_code_raison TEXT;
 BEGIN
+    -- Récupérer le code de la raison pour décider de la destination
+    SELECT code INTO v_code_raison FROM raisons_retour WHERE raison_retour_id = NEW.raison_retour_id;
+
+    -- Si la raison n'est pas une avarie (ex: SURPLUS, NON_VENDU), on remet en stock global
+    IF v_code_raison NOT IN ('AVARIE', 'PERTE', 'ENDOMMAGE') THEN
+        v_location_destination := 'WAREHOUSE';
+    END IF;
+
     IF NEW.statut_validation IN ('APPROUVE', 'EN_ATTENTE') THEN
         INSERT INTO public.stock_mouvements (
             produit_id, type_mouvement, quantite_delta,
@@ -174,8 +185,8 @@ BEGIN
         ) VALUES (
             NEW.produit_id, 'RETOUR', NEW.quantite,
             NEW.retour_stock_id, 'RETOUR_STOCK',
-            NEW.cree_par, 'RETURNED',
-            'Retour',
+            NEW.cree_par, v_location_destination,
+            'Retour ' || v_code_raison,
             NEW.observations
         );
     END IF;
@@ -1517,6 +1528,9 @@ ALTER TABLE public.ventes OWNER TO postgres;
 --
 
 COPY public.articles_repartition (article_repartition_id, repartition_id, produit_id, quantite_vente, quantite_cadeau, observation, quantite_degustation) FROM stdin;
+d6df6513-d313-454b-8804-ceb8dd9c7845	ed8bf7e0-8fb6-42c9-9faa-0b50a7ef659e	857f7c59-4ff6-45af-81fc-81d534af18de	25	5	\N	2
+ab56adec-069a-45ad-86d4-e5d0201e75d0	72a8c388-3d8d-448e-8d4e-6e7e999dce9b	857f7c59-4ff6-45af-81fc-81d534af18de	50	25	\N	7
+e1df0a80-b697-46f8-ba17-80896d82158b	72a8c388-3d8d-448e-8d4e-6e7e999dce9b	03dc330a-6da1-41ca-86ba-60945244182a	65	7	\N	3
 \.
 
 
@@ -1599,6 +1613,10 @@ f02c14b4-005e-402c-b181-c5f0f1c4ca20	78a24f11-9714-4014-ae40-f38318fef119	MOUVEM
 ad502dc7-86b8-42ce-8c24-9a5ef67294d8	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_AJUSTEMENT	STOCK_MOUVEMENT	a6c8c3ac-0043-4455-9399-37148b8e8752	\N	{"type": "AJUSTEMENT", "raison": "Approvisionnement AJUSTEMENT", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "87d4019b-504e-4842-8ebd-e99a833f9718", "quantite_delta": 1000}	2026-04-21 13:08:41.51868
 3b33d83f-8100-4391-9d91-b35b1762190c	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_AJUSTEMENT	STOCK_MOUVEMENT	243bd881-20fc-4f27-b7ee-7d70d33b3037	\N	{"type": "AJUSTEMENT", "raison": "Approvisionnement AJUSTEMENT", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "16b1169c-4934-493e-94f6-0929d3375182", "quantite_delta": 1000}	2026-04-22 15:51:37.850362
 a0ad2d8d-f74c-4989-a5bc-51d0c71267c3	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_AJUSTEMENT	STOCK_MOUVEMENT	1733e0c5-13ce-440c-b375-80424ef04fc2	\N	{"type": "AJUSTEMENT", "raison": "Approvisionnement AJUSTEMENT", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "ae214634-f241-4719-9bdb-0e624a9f2cca", "quantite_delta": 120}	2026-04-22 16:32:18.437632
+1482b6ea-686d-4aa5-9a0d-27528826c250	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	e3e80593-fa5b-466d-8cf7-e02b56494e9b	\N	{"type": "ENTREE", "raison": "Approvisionnement - PRODUCTION", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "e2e97d80-3cb3-45d4-aa4c-cae5a8cde149", "quantite_delta": 300}	2026-04-23 06:39:54.917792
+d84710a1-712f-48a4-9bb6-a8f1adef909d	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	44bde859-72ab-4582-8ebf-cb42e3e3b8b7	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "d6df6513-d313-454b-8804-ceb8dd9c7845", "quantite_delta": -32}	2026-04-23 06:55:02.132014
+46caf4a4-068c-44df-8370-f49802fde96e	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	e3ad00ec-bbd2-44ce-b2e2-2c5c540c010f	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "ab56adec-069a-45ad-86d4-e5d0201e75d0", "quantite_delta": -82}	2026-04-23 06:56:53.555885
+b1a09e54-a77c-4bbb-b07f-e1edfc56c0ac	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	011d4f02-fbf6-4da5-8620-9598c07ec29e	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "e1df0a80-b697-46f8-ba17-80896d82158b", "quantite_delta": -75}	2026-04-23 06:56:53.567043
 \.
 
 
@@ -1623,9 +1641,9 @@ ab845788-0800-489a-9129-9be7e29d7c55	CAISSE_VALIDER	Valider la caisse	Caisse
 
 COPY public.produits (produit_id, categorie_produit_id, type_produit_id, nom, code_sku, prix_unitaire, stock_minimum, est_actif, date_mise_a_jour, description) FROM stdin;
 6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	50	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque
-03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	50	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
-857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	50	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
 5058c2e2-506f-42bf-aa45-9105b435f4dc	31fbd8a3-ed3e-4f76-939a-fffd58fda88f	372480eb-993e-4ac0-862f-39466beb1863	Chapeau	CHP	12.00	10	f	2026-04-21 12:32:13.769856	Couleur:\nBlanc\nNoir\nRouge
+857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	1500	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque
+03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	1500	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif
 \.
 
 
@@ -1662,6 +1680,8 @@ COPY public.repartition_audit (repartition_audit_id, repartition_id, utilisateur
 --
 
 COPY public.repartitions (repartition_id, equipe_id, route_id, statut_repartition_id, date_repartition, montant_cash_attendu, date_mise_a_jour, chef_id, annule, mouvements_generes) FROM stdin;
+ed8bf7e0-8fb6-42c9-9faa-0b50a7ef659e	9a66d049-23a2-4db6-a271-10db9cc28ec0	4465ed8d-443d-4ac2-a13f-468a885367d0	e0059987-5a9f-44bd-b806-18434792491d	2026-04-23	30000.00	2026-04-23 06:55:02.105	78a24f11-9714-4014-ae40-f38318fef119	f	f
+72a8c388-3d8d-448e-8d4e-6e7e999dce9b	614554c2-9d3d-4165-8092-10b1fe4cc816	99c124c9-2e02-40ba-a792-7494bc094fc3	e0059987-5a9f-44bd-b806-18434792491d	2026-04-23	125000.00	2026-04-23 06:56:53.529	78a24f11-9714-4014-ae40-f38318fef119	f	f
 \.
 
 
@@ -1774,6 +1794,10 @@ b0c87cc5-1a70-4d52-b83d-03c7cdf678c8	03dc330a-6da1-41ca-86ba-60945244182a	AJUSTE
 a6c8c3ac-0043-4455-9399-37148b8e8752	857f7c59-4ff6-45af-81fc-81d534af18de	AJUSTEMENT	1000	87d4019b-504e-4842-8ebd-e99a833f9718	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement AJUSTEMENT	Facture: N/A | Lot: N/A | Source: {b2f4f9fb-3eab-4e38-a389-4b40e71cefb6}	2026-04-21 13:08:41.51868	2026-04-21 13:08:41.51868	\N
 243bd881-20fc-4f27-b7ee-7d70d33b3037	857f7c59-4ff6-45af-81fc-81d534af18de	AJUSTEMENT	1000	16b1169c-4934-493e-94f6-0929d3375182	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement AJUSTEMENT	Facture: N/A | Lot: N/A | Source: {b2f4f9fb-3eab-4e38-a389-4b40e71cefb6}	2026-04-22 15:51:37.850362	2026-04-22 15:51:37.850362	\N
 1733e0c5-13ce-440c-b375-80424ef04fc2	03dc330a-6da1-41ca-86ba-60945244182a	AJUSTEMENT	120	ae214634-f241-4719-9bdb-0e624a9f2cca	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement AJUSTEMENT	Facture: N/A | Lot: N/A | Source: {b2f4f9fb-3eab-4e38-a389-4b40e71cefb6}	2026-04-22 16:32:18.437632	2026-04-22 16:32:18.437632	\N
+e3e80593-fa5b-466d-8cf7-e02b56494e9b	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	300	e2e97d80-3cb3-45d4-aa4c-cae5a8cde149	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement - PRODUCTION	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-04-23 06:39:54.917792	2026-04-23 06:39:54.917792	\N
+44bde859-72ab-4582-8ebf-cb42e3e3b8b7	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE	-32	d6df6513-d313-454b-8804-ceb8dd9c7845	ARTICLE_REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Repartition équipe	\N	2026-04-23 06:55:02.132014	2026-04-23 06:55:02.132014	\N
+e3ad00ec-bbd2-44ce-b2e2-2c5c540c010f	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE	-82	ab56adec-069a-45ad-86d4-e5d0201e75d0	ARTICLE_REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Repartition équipe	\N	2026-04-23 06:56:53.555885	2026-04-23 06:56:53.555885	\N
+011d4f02-fbf6-4da5-8620-9598c07ec29e	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-75	e1df0a80-b697-46f8-ba17-80896d82158b	ARTICLE_REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Repartition équipe	\N	2026-04-23 06:56:53.567043	2026-04-23 06:56:53.567043	\N
 \.
 
 
@@ -1783,8 +1807,8 @@ a6c8c3ac-0043-4455-9399-37148b8e8752	857f7c59-4ff6-45af-81fc-81d534af18de	AJUSTE
 
 COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at, location_id, location_historique, derniere_location_id) FROM stdin;
 9673da95-9ee8-4266-9380-33a5d6823375	5058c2e2-506f-42bf-aa45-9105b435f4dc	100	0	0.00	\N	2026-04-21 12:43:15.444513	2026-04-21 12:43:15.444513	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
-368115a0-0644-44a4-95c2-8b5168d68cc4	857f7c59-4ff6-45af-81fc-81d534af18de	3000	0	0.00	\N	2026-04-22 15:51:37.850362	2026-04-22 15:51:37.850362	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
-f93fabda-4860-4e2b-a644-ce4dc98b7688	03dc330a-6da1-41ca-86ba-60945244182a	1120	0	0.00	\N	2026-04-22 16:32:18.437632	2026-04-22 16:32:18.437632	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+368115a0-0644-44a4-95c2-8b5168d68cc4	857f7c59-4ff6-45af-81fc-81d534af18de	3186	0	0.00	\N	2026-04-23 06:56:53.555885	2026-04-23 06:56:53.555885	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
+f93fabda-4860-4e2b-a644-ce4dc98b7688	03dc330a-6da1-41ca-86ba-60945244182a	1045	0	0.00	\N	2026-04-23 06:56:53.567043	2026-04-23 06:56:53.567043	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE
 \.
 
 
@@ -2391,13 +2415,6 @@ CREATE INDEX idx_ventes_repartition ON public.ventes USING btree (repartition_id
 
 
 --
--- Name: articles_repartition trg_articles_repartition_sync; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_articles_repartition_sync AFTER INSERT OR DELETE OR UPDATE ON public.articles_repartition FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
-
-
---
 -- Name: repartitions trg_audit_repartition_statut; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -2444,13 +2461,6 @@ CREATE TRIGGER trg_prevent_stock_movements_delete BEFORE DELETE ON public.stock_
 --
 
 CREATE TRIGGER trg_retour_on_retour_stock AFTER INSERT OR UPDATE ON public.retours_stock FOR EACH ROW EXECUTE FUNCTION public.fn_create_retour_on_retour_stock();
-
-
---
--- Name: retours_stock trg_retours_stock_sync; Type: TRIGGER; Schema: public; Owner: postgres
---
-
-CREATE TRIGGER trg_retours_stock_sync AFTER INSERT OR UPDATE ON public.retours_stock FOR EACH ROW EXECUTE FUNCTION public.trg_sync_stock_soldes();
 
 
 --
@@ -3091,5 +3101,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BACf1dA57qQRa0F7dAVkD1ExVUYyvJV7ZDc9ZPYCZ02coNFcsjQgWwZVU7NWFcq
+\unrestrict gnKejpvFLZMPLD4OlYcibItaWrP0fNP3XcZEOnv9neEaOH6JXPfwYd2Y5MwdMht
 

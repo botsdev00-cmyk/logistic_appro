@@ -171,3 +171,5 @@ je veux une structure complete pour tous ces modules:
 
 6. Module RH et Gestion des equipes: pour administrer le personnel implique dans tous les processus de la production a la distribution. gerer les profils: fiches des employes, roles et permissions dans le systeme, pointage et performance: suivi des heures au travail et des commissions pour les agents commerciaux.
 que la base de donnees soient performantes selon les standards industriels favorisant notre systeme hybride et des calculs rapides, optimisees avec des vues, triggers, et functions pour manipuler les donnees et alleger le cote backend C++.
+
++ CONFUSION ENTRE TYPE_MVT ET SOURCES_ENTREE

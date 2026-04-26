@@ -18,7 +18,7 @@ public:
     int getQuantiteDegustation() const { return m_quantiteDegustation; }
     int getQuantiteTotale() const { return m_quantiteVente + m_quantiteCadeau + m_quantiteDegustation; }
     QString getObservation() const { return m_observation; }
-
+    QString getNomProduitDepuisId(const QUuid& id) { return RepositoryProduit().getById(id).getNom(); }
     void setArticleRepartitionId(const QUuid& id) { m_articleRepartitionId = id; }
     void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
     void setProduitId(const QUuid& id) { m_produitId = id; }

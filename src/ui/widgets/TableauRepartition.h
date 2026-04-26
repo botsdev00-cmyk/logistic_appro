@@ -13,7 +13,7 @@ class TableauRepartition : public QTableWidget
 public:
     explicit TableauRepartition(QWidget* parent = nullptr);
     ~TableauRepartition();
-
+    QUuid repartitionIdFromRow(int row) const;
     void chargerDonnees();
     void rafraichir();
     void filtrerParStatut(const QString& statut);
@@ -22,14 +22,13 @@ private slots:
     void afficherDetailsRepartition();
     void changerStatut();
     void afficherArticles();
-    void imprimerBon(); // BONUS : génération PDF
+    void imprimerBon();
 
 private:
     void creerContextMenu();
     void initialiserColonnes();
     void remplirTableau();
     void mettreEnEvidence();
-    QUuid repartitionIdFromRow(int row) const;
 
     std::unique_ptr<GestionnaireRepartition> m_gestionnaire;
 };

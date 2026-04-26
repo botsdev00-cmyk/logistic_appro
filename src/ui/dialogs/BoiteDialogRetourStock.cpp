@@ -1,7 +1,12 @@
-// BoiteDialogRetourStock.cpp
-
 #include "BoiteDialogRetourStock.h"
+#include "../../core/entities/RetourStock.h"
 #include "../../business/managers/GestionnaireStock.h"
+#include "../../business/managers/GestionnaireRepartition.h"
+#include "../../business/managers/GestionnaireRaisonsRetour.h"
+#include "../../data/repositories/RepositoryEquipe.h"
+#include "../../data/repositories/RepositoryRoute.h"
+#include "../../data/repositories/RepositoryEquipe.h"
+#include "../../data/repositories/RepositoryRoute.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -12,9 +17,15 @@
 #include <QMessageBox>
 #include <QDebug>
 
-BoiteDialogRetourStock::BoiteDialogRetourStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, QWidget* parent)
+BoiteDialogRetourStock::BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
+                                               GestionnaireRaisonsRetour* gestionnaireRaisons,
+                                               GestionnaireRepartition* gestionnaireRepartition,
+                                               const QUuid& utilisateurId,
+                                               QWidget* parent)
     : QDialog(parent),
       m_gestionnaire(gestionnaire),
+      m_gestionnaireRaisons(gestionnaireRaisons),
+      m_gestionnaireRepartition(gestionnaireRepartition),
       m_utilisateurId(utilisateurId)
 {
     setWindowTitle("Nouveau Retour de Stock");
@@ -30,7 +41,6 @@ BoiteDialogRetourStock::~BoiteDialogRetourStock()
 void BoiteDialogRetourStock::initializeUI()
 {
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
-
     QFormLayout* form = new QFormLayout();
 
     // Produit
@@ -41,7 +51,7 @@ void BoiteDialogRetourStock::initializeUI()
     m_comboRaison = new QComboBox();
     form->addRow("Raison du retour:", m_comboRaison);
 
-    // Répartition
+    // Répartition d'origine
     m_comboRepartition = new QComboBox();
     form->addRow("Répartition d'origine :", m_comboRepartition);
 
@@ -72,7 +82,7 @@ void BoiteDialogRetourStock::initializeUI()
     layoutPrincipal->addLayout(boutonsLayout);
     setLayout(layoutPrincipal);
 
-    // Peuplement des combos
+    // Peuplement
     chargerProduits();
     chargerRaisons();
     chargerRepartitions();
@@ -90,31 +100,44 @@ void BoiteDialogRetourStock::chargerProduits()
 void BoiteDialogRetourStock::chargerRaisons()
 {
     m_comboRaison->clear();
-    // TODO: À adapter si tu as une table des raisons de retour dynamique.
-    m_comboRaison->addItem("Invendu", QVariant(/*raisonId*/ QUuid::createUuid())); // ou un UUID constant par type
-    m_comboRaison->addItem("Endommagé", QVariant(QUuid::createUuid()));
-    m_comboRaison->addItem("Expiré", QVariant(QUuid::createUuid()));
-    m_comboRaison->addItem("Erreur", QVariant(QUuid::createUuid()));
+    if (m_gestionnaireRaisons) {
+        for (const auto& raison : m_gestionnaireRaisons->obtenirRaisons()) {
+            m_comboRaison->addItem(raison.nom, QVariant(raison.raisonId));
+        }
+    }
 }
 
 void BoiteDialogRetourStock::chargerRepartitions()
 {
     m_comboRepartition->clear();
     m_comboRepartition->addItem("--Aucune répartition--", QVariant());
-    // À remplacer par ton gestionnaire de répartition si plusieurs disponibles
-    // ex : auto gestionnaireRepartition = ...;
-    // for (auto& rep : gestionnaireRepartition->obtenirRepartitionsEnCours()) {
-    //     m_comboRepartition->addItem(rep.getTitreOuResume(), QVariant(rep.getRepartitionId()));
-    // }
+    if (m_gestionnaireRepartition) {
+        for (const auto& rep : m_gestionnaireRepartition->obtenirRepartitionsEnCours()) {
+            QString nomEquipe;
+            QString nomRoute;
+
+            RepositoryEquipe repoEquipe;
+            RepositoryRoute repoRoute;
+
+            // Récupère le nom depuis l’ID
+            nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+            nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
+
+            QString label = QString("Équipe: %1 | Route: %2 | %3")
+                                .arg(nomEquipe)
+                                .arg(nomRoute)
+                                .arg(rep.getDateRepartition().toString("dd/MM/yy"));
+            m_comboRepartition->addItem(label, QVariant(rep.getRepartitionId()));
+        }
+    }
 }
 
 void BoiteDialogRetourStock::setRepartitionPreselectionnee(const QUuid& repId)
 {
-    // Recherche dans le combo et sélectionne la répartition fournie
     for (int i=0; i < m_comboRepartition->count(); ++i) {
         if (m_comboRepartition->itemData(i).toUuid() == repId) {
             m_comboRepartition->setCurrentIndex(i);
-            m_comboRepartition->setEnabled(false); // Évite de changer si retour imposé
+            m_comboRepartition->setEnabled(false);
             break;
         }
     }
@@ -122,8 +145,6 @@ void BoiteDialogRetourStock::setRepartitionPreselectionnee(const QUuid& repId)
 
 void BoiteDialogRetourStock::onValider()
 {
-    qDebug() << "[DIALOG RETOUR] Validation";
-
     if (m_comboProduit->currentIndex() <= 0) {
         QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un produit.");
         return;
@@ -144,7 +165,7 @@ void BoiteDialogRetourStock::onValider()
     QString observations = m_editObservations->toPlainText();
 
     bool ok = false;
-    // Priorité à méthode dédiée “retour après répartition”
+    // Si répartition renseignée, utilise la méthode dédiée
     if (!repartitionId.isNull()) {
         ok = m_gestionnaire->creerRetourApresRepartition(
             produitId, quantite, repartitionId, raisonId, observations, m_utilisateurId
@@ -160,12 +181,11 @@ void BoiteDialogRetourStock::onValider()
         retour.setStatutValidation("EN_ATTENTE");
         ok = m_gestionnaire->creerRetourStock(retour);
     }
-
     if (ok) {
-        QMessageBox::information(this, QString::fromUtf8("Succès"), QString::fromUtf8("Retour de stock créé avec succès"));
+        QMessageBox::information(this, "Succès", "Retour de stock créé avec succès");
         accept();
     } else {
-        QMessageBox::critical(this, QString::fromUtf8("Erreur"), QString::fromUtf8("Erreur lors de la création: ") + m_gestionnaire->obtenirDernierErreur());
+        QMessageBox::critical(this, "Erreur", "Erreur lors de la création: " + m_gestionnaire->obtenirDernierErreur());
     }
 }
 

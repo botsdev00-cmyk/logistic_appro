@@ -154,6 +154,7 @@ set(BUSINESS_MANAGERS
     ${SRC_DIR}/business/managers/GestionnaireRapport.cpp
     ${SRC_DIR}/business/managers/GestionnaireEquipe.cpp
     ${SRC_DIR}/business/managers/GestionnaireRoute.cpp
+    ${SRC_DIR}/business/managers/GestionnaireRaisonsRetour.cpp
 
 )
 
