@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QUuid>
+#include <QLabel>
 
 class GestionnaireStock;
 class GestionnaireRaisonsRetour;
@@ -20,10 +21,14 @@ public:
     explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
                                     GestionnaireRaisonsRetour* gestionnaireRaisons,
                                     GestionnaireRepartition* gestionnaireRepartition,
-                                    const QUuid& utilisateurId, QWidget* parent = nullptr);
+                                    const QUuid& utilisateurId,
+                                    QWidget* parent = nullptr);
     ~BoiteDialogRetourStock();
 
     void setRepartitionPreselectionnee(const QUuid& repId);
+    void setEquipe(const QString& nomEquipe);
+    void setProduit(const QUuid& produitId, const QString& nomProduit);
+    void setQuantite(int quantite);
 
 private slots:
     void onValider();
@@ -45,6 +50,7 @@ private:
     QComboBox* m_comboRepartition;
     QSpinBox* m_spinQuantite;
     QTextEdit* m_editObservations;
+    QLabel* m_labelEquipe;
     QPushButton* m_btnValider;
     QPushButton* m_btnAnnuler;
 };

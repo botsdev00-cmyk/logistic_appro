@@ -5,8 +5,6 @@
 #include "../../business/managers/GestionnaireRaisonsRetour.h"
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryRoute.h"
-#include "../../data/repositories/RepositoryEquipe.h"
-#include "../../data/repositories/RepositoryRoute.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -54,6 +52,10 @@ void BoiteDialogRetourStock::initializeUI()
     // Répartition d'origine
     m_comboRepartition = new QComboBox();
     form->addRow("Répartition d'origine :", m_comboRepartition);
+
+    // Équipe
+    m_labelEquipe = new QLabel("(Non renseignée)", this);
+    form->addRow("Équipe :", m_labelEquipe);
 
     // Quantité
     m_spinQuantite = new QSpinBox();
@@ -119,7 +121,6 @@ void BoiteDialogRetourStock::chargerRepartitions()
             RepositoryEquipe repoEquipe;
             RepositoryRoute repoRoute;
 
-            // Récupère le nom depuis l’ID
             nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
             nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
 
@@ -141,6 +142,30 @@ void BoiteDialogRetourStock::setRepartitionPreselectionnee(const QUuid& repId)
             break;
         }
     }
+}
+
+void BoiteDialogRetourStock::setEquipe(const QString& nomEquipe)
+{
+    if (m_labelEquipe)
+        m_labelEquipe->setText(nomEquipe);
+}
+
+void BoiteDialogRetourStock::setProduit(const QUuid& produitId, const QString& nomProduit)
+{
+    for (int i = 0; i < m_comboProduit->count(); ++i) {
+        if (m_comboProduit->itemData(i).toUuid() == produitId) {
+            m_comboProduit->setCurrentIndex(i);
+            m_comboProduit->setEnabled(false);
+            break;
+        }
+    }
+    m_comboProduit->setCurrentText(nomProduit);
+}
+
+void BoiteDialogRetourStock::setQuantite(int quantite)
+{
+    m_spinQuantite->setValue(quantite);
+    m_spinQuantite->setReadOnly(true);
 }
 
 void BoiteDialogRetourStock::onValider()

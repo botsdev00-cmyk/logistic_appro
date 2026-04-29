@@ -1296,6 +1296,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauRetoursEnAttente.h",
+			"MU",
+			"JCA2YNWUYB/moc_TableauRetoursEnAttente.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.h",
 			"MU",
 			"JCA2YNWUYB/moc_TableauStock.cpp",
@@ -1809,6 +1815,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/widgets/TableauRetoursEnAttente.cpp",
 			"MU",
 			null
 		],

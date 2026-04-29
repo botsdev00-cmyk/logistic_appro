@@ -1,16 +1,19 @@
 #include "VueStock.h"
-#include "../../business/managers/GestionnaireStock.h"
 #include "../widgets/TableauStock.h"
 #include "../widgets/TableauHistoriqueStock.h"
 #include "../widgets/PanelAlertes.h"
 #include "../widgets/TableauStockLocation.h"
 #include "../widgets/TableauReconciliation.h"
+#include "../widgets/TableauRetoursEnAttente.h"
 #include "../dialogs/BoiteDialogEntreeStock.h"
 #include "../dialogs/BoiteDialogRetourStock.h"
 #include "../../core/entities/EntreeStock.h"
 #include "../../core/entities/RetourStock.h"
 #include "../../business/managers/GestionnaireRaisonsRetour.h"
 #include "../../business/managers/GestionnaireRepartition.h"
+#include "../../data/repositories/RepositoryProduit.h"
+#include "../../data/repositories/RepositoryEquipe.h"
+#include "../../data/repositories/RepositoryRepartition.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTabWidget>
@@ -27,7 +30,8 @@ VueStock::VueStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, 
       m_gestionnaire(gestionnaire),
       m_utilisateurId(utilisateurId),
       m_tableauStockLocation(nullptr),
-      m_tableauReconciliation(nullptr)
+      m_tableauReconciliation(nullptr),
+      m_tableauRetoursEnAttente(nullptr)
 {
     qDebug() << "[VUE STOCK] ═══════════════════════════════════════════════";
     qDebug() << "[VUE STOCK] Initialisation pour utilisateur:" << utilisateurId;
@@ -48,13 +52,10 @@ VueStock::~VueStock()
 
 void VueStock::initializeUI()
 {
-    qDebug() << "[VUE STOCK] Initialisation UI";
-    
     QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
     layoutPrincipal->setSpacing(10);
     layoutPrincipal->setContentsMargins(10, 10, 10, 10);
 
-    // ====== TITRE ======
     QLabel* titleLabel = new QLabel("📦 GESTION DU STOCK");
     titleLabel->setStyleSheet(
         "font-size: 16px; font-weight: bold; color: #1976D2; padding: 10px; "
@@ -68,13 +69,11 @@ void VueStock::initializeUI()
     initializeAdvancedTools();
 
     setLayout(layoutPrincipal);
-    qDebug() << "[VUE STOCK] ✓ UI initialisée";
 }
 
 void VueStock::initializeToolbar()
 {
     QVBoxLayout* layoutPrincipal = (QVBoxLayout*)layout();
-    
     QHBoxLayout* toolbar = new QHBoxLayout();
     toolbar->setSpacing(8);
 
@@ -128,7 +127,6 @@ void VueStock::initializeToolbar()
 void VueStock::initializeSearchBar()
 {
     QVBoxLayout* layoutPrincipal = (QVBoxLayout*)layout();
-    
     QHBoxLayout* searchLayout = new QHBoxLayout();
     searchLayout->setSpacing(10);
 
@@ -162,7 +160,6 @@ void VueStock::initializeSearchBar()
         "background-color: #E3F2FD; padding: 6px 12px; border-radius: 4px;"
     );
 
-    // ✅ NOUVEAU: Label statistiques
     m_labelStatistiques = new QLabel("📊 0 produits");
     m_labelStatistiques->setStyleSheet(
         "font-size: 11px; color: #666; padding: 4px 8px;"
@@ -191,25 +188,23 @@ void VueStock::initializeTabs()
         "QTabBar::tab:selected { background-color: white; color: #1976D2; font-weight: bold; }"
     );
 
-    // Tab 1: Stock actuel
     m_tableauStock = new TableauStock(m_gestionnaire);
     m_tabWidget->addTab(m_tableauStock, "📦 Stock Actuel");
 
-    // Tab 2: Historique des mouvements
     m_tableauHistorique = new TableauHistoriqueStock(m_gestionnaire);
     m_tabWidget->addTab(m_tableauHistorique, "📋 Historique");
 
-    // Tab 3: Alertes
     m_panelAlertes = new PanelAlertes(m_gestionnaire);
     m_tabWidget->addTab(m_panelAlertes, "⚠️ Alertes");
 
-    // ✅ Tab 4: Stock par Location
     m_tableauStockLocation = new TableauStockLocation(m_gestionnaire);
     m_tabWidget->addTab(m_tableauStockLocation, "🌍 Stock par Location");
 
-    // ✅ Tab 5: Réconciliation
     m_tableauReconciliation = new TableauReconciliation(m_gestionnaire);
     m_tabWidget->addTab(m_tableauReconciliation, "✓ Réconciliation");
+
+    m_tableauRetoursEnAttente = new TableauRetoursEnAttente();
+    m_tabWidget->addTab(m_tableauRetoursEnAttente, "⏳ Retours en attente");
 
     layoutPrincipal->addWidget(m_tabWidget, 1);
 }
@@ -217,13 +212,11 @@ void VueStock::initializeTabs()
 void VueStock::initializeAdvancedTools()
 {
     QVBoxLayout* layoutPrincipal = (QVBoxLayout*)layout();
-    
     QGroupBox* groupTools = new QGroupBox("🛠️ Outils Avancés");
     groupTools->setMaximumHeight(60);
     groupTools->setStyleSheet(
         "QGroupBox { font-weight: bold; padding-top: 8px; }"
     );
-    
     QHBoxLayout* toolsLayout = new QHBoxLayout(groupTools);
     toolsLayout->setSpacing(10);
 
@@ -252,72 +245,51 @@ void VueStock::initializeAdvancedTools()
 
 void VueStock::connectSignals()
 {
-    qDebug() << "[VUE STOCK] Connexion des signaux";
-
-    // Entrées/Retours
     connect(m_btnAjouterEntree, &QPushButton::clicked, this, &VueStock::onAjouterEntree);
     connect(m_btnAjouterRetour, &QPushButton::clicked, this, &VueStock::onAjouterRetour);
     connect(m_btnEntreesEnAttente, &QPushButton::clicked, this, &VueStock::onEntreesEnAttente);
-    connect(m_btnRetoursEnAttente, &QPushButton::clicked, this, &VueStock::onRetoursEnAttente);
+    connect(m_btnRetoursEnAttente, &QPushButton::clicked, [this](){
+        m_tabWidget->setCurrentWidget(m_tableauRetoursEnAttente);
+    });
 
-    // Actions principales
     connect(m_btnActualiser, &QPushButton::clicked, this, &VueStock::onActualiser);
     connect(m_btnExporter, &QPushButton::clicked, this, &VueStock::onExporterStock);
     connect(m_btnSynchroniser, &QPushButton::clicked, this, &VueStock::onSynchroniser);
 
-    // ✅ NOUVEAU: Outils avancés
     connect(m_btnVerifierIntegrite, &QPushButton::clicked, this, &VueStock::onVerifierIntegrite);
     connect(m_btnReparerStock, &QPushButton::clicked, this, &VueStock::onReparerStock);
     connect(m_btnStockLocation, &QPushButton::clicked, this, &VueStock::onAfficherStockParLocation);
 
-    // Recherche/Filtres
     connect(m_searchBox, &QLineEdit::textChanged, this, &VueStock::onRechercherStock);
     connect(m_filterStatus, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &VueStock::onFiltrerParStatut);
 
-    qDebug() << "[VUE STOCK] ✓ Signaux connectés";
+    connect(m_tableauRetoursEnAttente, &TableauRetoursEnAttente::ligneRetourClicked,
+            this, &VueStock::onLigneRetourClicked);
 }
+
 
 void VueStock::chargerDonnees()
 {
-    qDebug() << "[VUE STOCK] Chargement des données...";
-    
-    if (!m_gestionnaire) {
-        qWarning() << "[VUE STOCK] Gestionnaire non initialisé!";
-        return;
+    if (!m_gestionnaire) return;
+
+    if (m_tableauStock) m_tableauStock->chargerDonnees();
+    if (m_tableauHistorique) m_tableauHistorique->chargerDonnees();
+    if (m_tableauStockLocation) m_tableauStockLocation->chargerDonnees();
+    if (m_tableauReconciliation) m_tableauReconciliation->chargerDonnees();
+
+    // Remplit le tableau des retours en attente
+    if (m_tableauRetoursEnAttente) {
+        auto retours = m_gestionnaire->obtenirRetoursEnAttente();
+        m_tableauRetoursEnAttente->setRetoursEnAttente(retours);
     }
 
-    if (m_tableauStock) {
-        m_tableauStock->chargerDonnees();
-        qDebug() << "[VUE STOCK] ✓ Tableau stock chargé";
-    }
-
-    if (m_tableauHistorique) {
-        m_tableauHistorique->chargerDonnees();
-        qDebug() << "[VUE STOCK] ✓ Tableau historique chargé";
-    }
-
-    // ✅ NOUVEAU: Charger stock par location
-    if (m_tableauStockLocation) {
-        m_tableauStockLocation->chargerDonnees();
-        qDebug() << "[VUE STOCK] ✓ Tableau stock location chargé";
-    }
-
-    // ✅ NOUVEAU: Charger réconciliation
-    if (m_tableauReconciliation) {
-        m_tableauReconciliation->chargerDonnees();
-        qDebug() << "[VUE STOCK] ✓ Tableau réconciliation chargé";
-    }
-
-    // Mise à jour statistiques
     auto stats = m_gestionnaire->obtenirStatistiques();
     m_labelValeurTotal->setText(QString::number(stats.valeurTotalStock, 'f', 2) + " €");
     m_labelStatistiques->setText(QString("📊 %1 produits | %2 ruptures")
         .arg(stats.nombreProduitsTotal)
         .arg(stats.nombreProduitsEnRupture)
     );
-
-    qDebug() << "[VUE STOCK] ✓ Statistiques mises à jour";
 }
 
 void VueStock::afficherAlertes()
@@ -443,8 +415,6 @@ void VueStock::onAfficherStockParLocation()
 
 void VueStock::onAjouterEntree()
 {
-    qDebug() << "[VUE STOCK] Ouverture dialog approvisionnement";
-
     BoiteDialogEntreeStock dialog(m_gestionnaire, m_utilisateurId, this);
     if (dialog.exec() == QDialog::Accepted) {
         chargerDonnees();
@@ -457,8 +427,6 @@ void VueStock::onAjouterRetour()
 {
     GestionnaireRaisonsRetour raisonsMgr;
     GestionnaireRepartition repartitionMgr;
-    qDebug() << "[VUE STOCK] Ouverture dialog nouveau retour";
-
     BoiteDialogRetourStock dialog(m_gestionnaire, &raisonsMgr, &repartitionMgr, m_utilisateurId, this);
     if (dialog.exec() == QDialog::Accepted) {
         chargerDonnees();
@@ -469,57 +437,82 @@ void VueStock::onAjouterRetour()
 
 void VueStock::onEntreesEnAttente()
 {
-    qDebug() << "[VUE STOCK] Afficher entrées en attente";
-
     auto entrees = m_gestionnaire->obtenirEntreesEnAttente();
-    
     if (entrees.isEmpty()) {
         QMessageBox::information(this, "📥 Entrées en Attente", "Aucune entrée en attente");
         return;
     }
-
     QString message = QString("📥 ENTRÉES EN ATTENTE (%1)\n\n").arg(entrees.count());
-    
     for (int i = 0; i < std::min(10, (int)entrees.count()); ++i) {
         const auto& entree = entrees[i];
         message += QString("• Quantité: %1 unités\n  Créée: %2\n\n")
             .arg(entree.getQuantite())
             .arg(entree.getDate().toString("dd/MM/yyyy HH:mm"));
     }
-
     if (entrees.count() > 10) {
         message += QString("... et %1 autre(s)").arg(entrees.count() - 10);
     }
-
     QMessageBox::information(this, "📥 Entrées en Attente", message);
 }
 
-void VueStock::onRetoursEnAttente()
+void VueStock::onLigneRetourClicked(const RetourStock& retour)
 {
-    qDebug() << "[VUE STOCK] Afficher retours en attente";
-
-    auto retours = m_gestionnaire->obtenirRetoursEnAttente();
-    
-    if (retours.isEmpty()) {
-        QMessageBox::information(this, "↩️ Retours en Attente", "Aucun retour en attente");
-        return;
+    // -- Récupération du nom équipe
+    QString nomEquipe = "(Aucune)";
+    QUuid repId = retour.getRepartitionId();
+    if (!repId.isNull()) {
+        RepositoryRepartition repoRep;
+        auto rep = repoRep.getById(repId);
+        if (!rep.getEquipeId().isNull()) {
+            RepositoryEquipe repoEquipe;
+            nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+        }
     }
+    // -- Récupération du nom produit
+    RepositoryProduit repoProduit;
+    QString nomProduit = repoProduit.getById(retour.getProduitId()).getNom();
 
-    QString message = QString("↩️ RETOURS EN ATTENTE (%1)\n\n").arg(retours.count());
-    
-    for (int i = 0; i < std::min(10, (int)retours.count()); ++i) {
-        const auto& retour = retours[i];
-        message += QString("• Quantité: %1 unités\n  Créé: %2\n\n")
-            .arg(retour.getQuantite())
-            .arg(retour.getDate().toString("dd/MM/yyyy HH:mm"));
+    // Ouvre le dialog prérenseigné
+    GestionnaireRaisonsRetour raisonsMgr;
+    GestionnaireRepartition repartitionMgr;
+    BoiteDialogRetourStock dialog(m_gestionnaire, &raisonsMgr, &repartitionMgr, m_utilisateurId, this);
+    dialog.setEquipe(nomEquipe);
+    dialog.setProduit(retour.getProduitId(), nomProduit);
+    dialog.setQuantite(retour.getQuantite());
+
+    if (dialog.exec() == QDialog::Accepted) {
+        chargerDonnees();
+        afficherAlertes();
+        QMessageBox::information(this, "✓ Succès", "Retour de stock modifié/traité avec succès");
     }
-
-    if (retours.count() > 10) {
-        message += QString("... et %1 autre(s)").arg(retours.count() - 10);
-    }
-
-    QMessageBox::information(this, "↩️ Retours en Attente", message);
 }
+
+// void VueStock::onRetoursEnAttente()
+// {
+//     qDebug() << "[VUE STOCK] Afficher retours en attente";
+
+//     auto retours = m_gestionnaire->obtenirRetoursEnAttente();
+    
+//     if (retours.isEmpty()) {
+//         QMessageBox::information(this, "↩️ Retours en Attente", "Aucun retour en attente");
+//         return;
+//     }
+
+//     QString message = QString("↩️ RETOURS EN ATTENTE (%1)\n\n").arg(retours.count());
+    
+//     for (int i = 0; i < std::min(10, (int)retours.count()); ++i) {
+//         const auto& retour = retours[i];
+//         message += QString("• Quantité: %1 unités\n  Créé: %2\n\n")
+//             .arg(retour.getQuantite())
+//             .arg(retour.getDate().toString("dd/MM/yyyy HH:mm"));
+//     }
+
+//     if (retours.count() > 10) {
+//         message += QString("... et %1 autre(s)").arg(retours.count() - 10);
+//     }
+
+//     QMessageBox::information(this, "↩️ Retours en Attente", message);
+// }
 
 void VueStock::onRechercherStock()
 {

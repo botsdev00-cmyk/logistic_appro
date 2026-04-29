@@ -203,6 +203,7 @@ set(UI_WIDGETS
     ${SRC_DIR}/ui/widgets/TableauCatalogue.cpp
     ${SRC_DIR}/ui/widgets/TableauStockLocation.cpp
     ${SRC_DIR}/ui/widgets/TableauReconciliation.cpp
+    ${SRC_DIR}/ui/widgets/TableauRetoursEnAttente.cpp
 )
 
 # ============================================================================

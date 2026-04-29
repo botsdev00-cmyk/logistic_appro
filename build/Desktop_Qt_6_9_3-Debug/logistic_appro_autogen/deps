@@ -806,6 +806,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauReconciliation.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauRepartition.h \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauRetoursEnAttente.cpp \
+	/home/bots/semuliki_logistic/src/ui/widgets/TableauRetoursEnAttente.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStock.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.cpp \

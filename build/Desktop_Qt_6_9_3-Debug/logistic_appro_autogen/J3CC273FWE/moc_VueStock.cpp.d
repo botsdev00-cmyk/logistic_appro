@@ -1,6 +1,5 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/J3CC273FWE/moc_VueStock.cpp: /home/bots/semuliki_logistic/src/ui/views/VueStock.h \
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \

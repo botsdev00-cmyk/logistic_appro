@@ -3,7 +3,6 @@
 
 #include <QWidget>
 #include <QUuid>
-#include <QList>
 
 class GestionnaireStock;
 class QTabWidget;
@@ -16,6 +15,7 @@ class TableauHistoriqueStock;
 class PanelAlertes;
 class TableauStockLocation;
 class TableauReconciliation;
+class TableauRetoursEnAttente; // Ajout pour le tableau de retours en attente
 class EntreeStock;
 class RetourStock;
 
@@ -35,8 +35,9 @@ private slots:
     void onAjouterEntree();
     void onAjouterRetour();
     void onEntreesEnAttente();
-    void onRetoursEnAttente();
-    
+    //void onRetoursEnAttente(); // Remplacé par tableau interactif
+    void onLigneRetourClicked(const RetourStock& retour); // NOUVEAU
+
     // Recherche/Filtres
     void onRechercherStock();
     void onFiltrerParStatut(int index);
@@ -46,7 +47,7 @@ private slots:
     void onExporterStock();
     void onSynchroniser();
     
-    // ✅ NOUVEAU: Outils avancés
+    // Outils avancés
     void onVerifierIntegrite();
     void onReparerStock();
     void onAfficherStockParLocation();
@@ -71,8 +72,8 @@ private:
     PanelAlertes* m_panelAlertes;
     TableauStockLocation* m_tableauStockLocation;
     TableauReconciliation* m_tableauReconciliation;
+    TableauRetoursEnAttente* m_tableauRetoursEnAttente; // NOUVEAU
 
-    // Toolbar
     QPushButton* m_btnAjouterEntree;
     QPushButton* m_btnAjouterRetour;
     QPushButton* m_btnEntreesEnAttente;
@@ -81,7 +82,7 @@ private:
     QPushButton* m_btnExporter;
     QPushButton* m_btnSynchroniser;
     
-    // ✅ NOUVEAU: Boutons avancés
+    // Outils avancés
     QPushButton* m_btnVerifierIntegrite;
     QPushButton* m_btnReparerStock;
     QPushButton* m_btnStockLocation;
@@ -89,7 +90,7 @@ private:
     QLineEdit* m_searchBox;
     QComboBox* m_filterStatus;
     QLabel* m_labelValeurTotal;
-    QLabel* m_labelStatistiques;  // ✅ NOUVEAU
+    QLabel* m_labelStatistiques;
 };
 
 #endif // VUE_STOCK_H

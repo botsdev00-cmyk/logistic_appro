@@ -43,7 +43,9 @@ template <> constexpr inline auto VueStock::qt_create_metaobjectdata<qt_meta_tag
         "",
         "onAjouterRetour",
         "onEntreesEnAttente",
-        "onRetoursEnAttente",
+        "onLigneRetourClicked",
+        "RetourStock",
+        "retour",
         "onRechercherStock",
         "onFiltrerParStatut",
         "index",
@@ -62,26 +64,28 @@ template <> constexpr inline auto VueStock::qt_create_metaobjectdata<qt_meta_tag
         QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onEntreesEnAttente'
         QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onRetoursEnAttente'
-        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onLigneRetourClicked'
+        QtMocHelpers::SlotData<void(const RetourStock &)>(5, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { 0x80000000 | 6, 7 },
+        }}),
         // Slot 'onRechercherStock'
-        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onFiltrerParStatut'
-        QtMocHelpers::SlotData<void(int)>(7, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 8 },
+        QtMocHelpers::SlotData<void(int)>(9, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 10 },
         }}),
         // Slot 'onActualiser'
-        QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onExporterStock'
-        QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onSynchroniser'
         QtMocHelpers::SlotData<void()>(11, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onVerifierIntegrite'
+        // Slot 'onExporterStock'
         QtMocHelpers::SlotData<void()>(12, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onReparerStock'
+        // Slot 'onSynchroniser'
         QtMocHelpers::SlotData<void()>(13, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onAfficherStockParLocation'
+        // Slot 'onVerifierIntegrite'
         QtMocHelpers::SlotData<void()>(14, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onReparerStock'
+        QtMocHelpers::SlotData<void()>(15, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onAfficherStockParLocation'
+        QtMocHelpers::SlotData<void()>(16, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -108,7 +112,7 @@ void VueStock::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, vo
         case 0: _t->onAjouterEntree(); break;
         case 1: _t->onAjouterRetour(); break;
         case 2: _t->onEntreesEnAttente(); break;
-        case 3: _t->onRetoursEnAttente(); break;
+        case 3: _t->onLigneRetourClicked((*reinterpret_cast< std::add_pointer_t<RetourStock>>(_a[1]))); break;
         case 4: _t->onRechercherStock(); break;
         case 5: _t->onFiltrerParStatut((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
         case 6: _t->onActualiser(); break;
