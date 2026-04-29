@@ -7,6 +7,7 @@
 #include "../../business/managers/GestionnaireStock.h"
 #include "../../business/managers/GestionnaireRepartition.h"
 #include "../../core/entities/ArticleRepartition.h"
+#include "../../data/repositories/RepositoryProduit.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -114,7 +115,7 @@ void VueRepartition::verifierStatut()
     txt += "Date  : " + repartition.getDateRepartition().toString("dd/MM/yyyy") + "\n";
     txt += "Articles sortis :\n";
     for(const auto& art : repartition.getArticles())
-    txt += QString("— %1 : %2\n").arg(getNomProduitDepuisId(art.getProduitId())).arg(art.getQuantiteTotale());
+    txt += QString("— %1 : %2\n").arg(ArticleRepartition::getNomProduitDepuisId(art.getProduitId())).arg(art.getQuantiteTotale());
     QMessageBox::information(this, "Info Statut Répartition", txt);
 }
 
@@ -132,9 +133,10 @@ void VueRepartition::chargerRetours()
     QList<LigneRetourRepartition> lignes;
     for(const auto& art : repartition.getArticles()) {
         LigneRetourRepartition ligne;
-        ligne.produitNom = getNomProduitDepuisId(art.getProduitId());
+        ligne.produitNom = ArticleRepartition::getNomProduitDepuisId(art.getProduitId());
         ligne.produitId  = art.getProduitId();
         ligne.quantiteSortie = art.getQuantiteTotale();
+        ligne.prixUnitaire = 0.0;
         ligne.quantiteVenduCash = 0;
         ligne.quantiteVenduCredit = 0;
         ligne.quantiteInvendu = 0;
@@ -144,18 +146,44 @@ void VueRepartition::chargerRetours()
     BoiteDialogRetourRepartition boite(lignes, this);
     if (boite.exec() == QDialog::Accepted) {
         const auto retours = boite.resultats();
-        for(const auto& ligne : retours){
-            if(ligne.quantiteVenduCash > 0)
-                g_venteMgr->creerVente(repId, ligne.produitId, ligne.quantiteVenduCash, "CASH", g_utilisateurId);
-            if(ligne.quantiteVenduCredit > 0)
-                g_creditMgr->ajouterCreditClient(repId, ligne.produitId, ligne.quantiteVenduCredit, g_utilisateurId);
-            if(ligne.quantiteInvendu > 0)
+
+        for(const auto& ligne : retours) {
+            qDebug() << "TRAITEMENT Ligne produitId=" << ligne.produitId;
+
+            // Vérifie les managers globaux
+            Q_ASSERT(g_venteMgr); Q_ASSERT(g_creditMgr); Q_ASSERT(g_stockMgr);
+
+            // Vérifie la validité du produit
+            auto prodRepo = RepositoryProduit();
+            auto produit = prodRepo.getById(ligne.produitId);
+            if (produit.getNom().isEmpty()) {
+                qDebug() << "Produit introuvable pour l'id" << ligne.produitId;
+                QMessageBox::warning(this, "Erreur", "Le produit est introuvable.");
+                continue;
+            }
+            double vraiPrixUnitaire = produit.getPrixUnitaire();
+            qDebug() << "Prix récupéré:" << vraiPrixUnitaire;
+
+            if (ligne.quantiteVenduCash > 0) {
+                qDebug() << "Enregistrer vente CASH";
+                g_venteMgr->enregistrerVente(repId, ligne.produitId, g_utilisateurId, ligne.quantiteVenduCash, "CASH", vraiPrixUnitaire);
+            }
+            if (ligne.quantiteVenduCredit > 0) {
+                qDebug() << "Enregistrer vente CREDIT";
+                QUuid venteId = g_venteMgr->enregistrerVente(repId, ligne.produitId, g_utilisateurId, ligne.quantiteVenduCredit, "CREDIT", vraiPrixUnitaire);
+                if (!venteId.isNull()) {
+                    g_creditMgr->creerCredit(venteId, g_utilisateurId, ligne.quantiteVenduCredit * vraiPrixUnitaire, QDate::currentDate().addDays(30));
+                }
+            }
+            if (ligne.quantiteInvendu > 0) {
+                qDebug() << "Créer retour stock";
                 g_stockMgr->creerRetourApresRepartition(ligne.produitId, ligne.quantiteInvendu, repId, QUuid(), "Retour invendus répartition", g_utilisateurId);
-            // Bonus management ici si tu as une logique ajoutée...
+            }
         }
         QMessageBox::information(this, "Clôture répartition", "Ventes, crédits et retours générés !");
     }
 }
+
 
 void VueRepartition::filtrerParStatut()
 {

@@ -13,6 +13,7 @@ class QPushButton;
 struct LigneRetourRepartition {
     QString produitNom;
     QUuid produitId;
+    double prixUnitaire;
     int quantiteSortie;
     int quantiteVenduCash;
     int quantiteVenduCredit;

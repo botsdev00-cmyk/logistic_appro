@@ -81,10 +81,13 @@ void BoiteDialogRetourRepartition::validerRetour()
     QList<LigneRetourRepartition> retourValide;
     for (int row = 0; row < m_table->rowCount(); ++row) {
         LigneRetourRepartition lig = m_lignes[row];
+        
+        // On ne tente plus de lire le prixUnitaire ici, il sera géré par VueRepartition
         lig.quantiteVenduCash   = static_cast<QSpinBox*>(m_table->cellWidget(row, 2))->value();
         lig.quantiteVenduCredit = static_cast<QSpinBox*>(m_table->cellWidget(row, 3))->value();
         lig.quantiteInvendu     = static_cast<QSpinBox*>(m_table->cellWidget(row, 4))->value();
         lig.quantiteBonus       = static_cast<QSpinBox*>(m_table->cellWidget(row, 5))->value();
+        
         retourValide.append(lig);
     }
     m_lignes = retourValide;
@@ -100,14 +103,17 @@ bool BoiteDialogRetourRepartition::controleCohérence(QString* msgErreur)
 {
     for (int row = 0; row < m_table->rowCount(); ++row) {
         int sortie = m_table->item(row, 1)->text().toInt();
+        
+        // Nouveaux index corrigés : 2 à 5
         int cash   = static_cast<QSpinBox*>(m_table->cellWidget(row, 2))->value();
         int credit = static_cast<QSpinBox*>(m_table->cellWidget(row, 3))->value();
         int invendu= static_cast<QSpinBox*>(m_table->cellWidget(row, 4))->value();
         int bonus  = static_cast<QSpinBox*>(m_table->cellWidget(row, 5))->value();
+        
         int somme  = cash + credit + invendu + bonus;
         if (sortie != somme) {
             if (msgErreur) {
-                *msgErreur = QString("Produit : %1\nQuantité sortie = %2 ≠ %3 (cash + crédit + invendus + bonus)")
+                *msgErreur = QString("Produit : %1\nQuantité sortie = %2 ≠ %3 (cash + crédit + invendus + bonus)")
                              .arg(m_table->item(row,0)->text()).arg(sortie).arg(somme);
             }
             return false;

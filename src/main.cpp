@@ -11,12 +11,26 @@
 #include "data/database/ConnexionBaseDonnees.h"
 #include "core/entities/Utilisateur.h"
 
+#include "business/managers/GestionnaireRepartition.h"
+#include "business/managers/GestionnaireSales.h"
+#include "business/managers/GestionnaireCredit.h"
+#include "business/managers/GestionnaireStock.h"
+#include "core/entities/ArticleRepartition.h"
+
+// Définition réelle des variables globales externes
+GestionnaireRepartition* g_repartitionMgr = nullptr;
+GestionnaireSales* g_venteMgr = nullptr;
+GestionnaireCredit* g_creditMgr = nullptr;
+GestionnaireStock* g_stockMgr = nullptr;
+QUuid g_utilisateurId;
+ArticleRepartition* art = nullptr;
+
 class SplashScreen
 {
 public:
     static void show()
     {
-        QPixmap pixmap(":/ images/splash.png");
+        QPixmap pixmap(":/images/splash.png");
         QSplashScreen splash(pixmap);
         splash.show();
         splash.showMessage("Chargement de SEMULIKI ERP...", Qt::AlignBottom | Qt::AlignCenter, Qt::white);
@@ -28,25 +42,34 @@ public:
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
-    
+
     // Configuration de l'application
     app.setApplicationName("SEMULIKI ERP");
     app.setApplicationVersion("1.0.0");
     app.setOrganizationName("SEMULIKI");
-    
+
     // Style par défaut
     app.setStyle("Fusion");
-    
+
     qDebug() << "═══════════════════════════════════════════════════════";
     qDebug() << "  SEMULIKI ERP - Système de Gestion Logistique";
     qDebug() << "  Version: 1.0.0";
     qDebug() << "  Date: 2026-04-10";
     qDebug() << "═══════════════════════════════════════════════════════";
-    
+
+    // Instanciation des managers globaux et objets externes
+    g_repartitionMgr = new GestionnaireRepartition();
+    g_venteMgr = new GestionnaireSales();
+    g_creditMgr = new GestionnaireCredit();
+    g_stockMgr = new GestionnaireStock();
+    art = new ArticleRepartition();
+
+    int result = 1; // Valeur de retour par défaut
+
     try {
         // 1. Initialiser la connexion à la base de données
         qDebug() << "\n[INFO] Connexion à la base de données...";
-        
+
         auto& db = ConnexionBaseDonnees::getInstance();
         if (!db.initialiser("localhost", "5432", "semuliki", "postgres", "postgresql")) {
             qCritical() << "[ERREUR] Impossible de se connecter à la base de données";
@@ -55,54 +78,68 @@ int main(int argc, char* argv[])
                 "Vérifiez votre configuration PostgreSQL.");
             return 1;
         }
-        
+
         qDebug() << "[OK] Base de données connectée";
-        
+
         // 2. Afficher l'écran de connexion
         qDebug() << "\n[INFO] Affichage de la fenêtre de connexion...";
         BoiteDialogConnexion dlgConnexion;
-        
+
         if (dlgConnexion.exec() != QDialog::Accepted) {
             qDebug() << "[INFO] Connexion annulée par l'utilisateur";
-            return 0;
+            // Libère la mémoire avant de sortir
+            goto cleanup;
         }
-        
+
         qDebug() << "[OK] Utilisateur connecté";
-        
+
         // 3. Récupérer l'utilisateur connecté
         qDebug() << "\n[INFO] Récupération des données utilisateur...";
         Utilisateur utilisateurConnecte = dlgConnexion.getUtilisateurConnecte();
-        
+
         if (utilisateurConnecte.getUtilisateurId().isNull()) {
             qCritical() << "[ERREUR] L'ID utilisateur n'a pas pu être récupéré";
             QMessageBox::critical(nullptr, "Erreur authentification",
                 "Impossible de récupérer les données utilisateur.\n"
                 "Veuillez vous reconnecter.");
-            return 1;
+            goto cleanup;
         }
-        
+
         qDebug() << "[OK] Utilisateur:" << utilisateurConnecte.getNomUtilisateur();
         qDebug() << "[OK] UUID:" << utilisateurConnecte.getUtilisateurId().toString();
-        
+
+        // Mise à jour de la variable globale utilisateur
+        g_utilisateurId = utilisateurConnecte.getUtilisateurId();
+
         // 4. Créer et afficher la fenêtre principale
         qDebug() << "\n[INFO] Création de la fenêtre principale...";
         FenetreMain window(utilisateurConnecte);
         window.show();
-        
+
         qDebug() << "[OK] Application démarrée avec succès\n";
-        
+
         // 5. Lancer la boucle d'événements
-        return app.exec();
-        
+        result = app.exec();
+
     } catch (const std::exception& e) {
         qCritical() << "[ERREUR FATALE]" << e.what();
         QMessageBox::critical(nullptr, "Erreur fatale",
             QString("Une erreur fatale s'est produite:\n%1").arg(e.what()));
-        return 1;
+        result = 1;
     } catch (...) {
         qCritical() << "[ERREUR INCONNUE] Une erreur inconnue s'est produite";
         QMessageBox::critical(nullptr, "Erreur inconnue",
             "Une erreur inconnue s'est produite.");
-        return 1;
+        result = 1;
     }
+
+cleanup:
+    // Nettoyage mémoire managers et pointeur d'article si besoin
+    delete g_repartitionMgr; g_repartitionMgr = nullptr;
+    delete g_venteMgr;       g_venteMgr = nullptr;
+    delete g_creditMgr;      g_creditMgr = nullptr;
+    delete g_stockMgr;       g_stockMgr = nullptr;
+    delete art;              art = nullptr;
+
+    return result;
 }

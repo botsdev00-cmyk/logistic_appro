@@ -184,6 +184,7 @@ set(UI_DIALOGS
     ${SRC_DIR}/ui/dialogs/BoiteDialogProduit.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogNouvelleEquipe.cpp
     ${SRC_DIR}/ui/dialogs/BoiteDialogNouvelleRoute.cpp
+    ${SRC_DIR}/ui/dialogs/BoiteDialogRetourRepartition.cpp
 
 )
 

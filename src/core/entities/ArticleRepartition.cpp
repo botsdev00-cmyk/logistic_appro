@@ -8,3 +8,7 @@ ArticleRepartition::ArticleRepartition()
 {
 }
 ArticleRepartition::~ArticleRepartition() {}
+
+QString ArticleRepartition::getNomProduitDepuisId(const QUuid& id) {
+    return RepositoryProduit().getById(id).getNom();
+}

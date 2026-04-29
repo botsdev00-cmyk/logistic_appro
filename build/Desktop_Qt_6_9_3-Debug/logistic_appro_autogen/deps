@@ -6,6 +6,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QSortFilterProxyModel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QVector \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20iterator.h \
@@ -140,6 +141,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/quuid.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvariant.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvarlengtharray.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvector.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qversiontagging.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qxptype_traits.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qyieldcpu.h \
@@ -766,6 +768,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogReceptionCaisse.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.h \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourRepartition.cpp \
+	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourRepartition.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.cpp \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.h \
 	/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogVente.cpp \

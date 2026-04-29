@@ -1182,6 +1182,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourRepartition.h",
+			"MU",
+			"IYECXEJARV/moc_BoiteDialogRetourRepartition.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourStock.h",
 			"MU",
 			"IYECXEJARV/moc_BoiteDialogRetourStock.cpp",
@@ -1728,6 +1734,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRepartition.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/ui/dialogs/BoiteDialogRetourRepartition.cpp",
 			"MU",
 			null
 		],

@@ -8,6 +8,7 @@
 #include "IYECXEJARV/moc_BoiteDialogProduit.cpp"
 #include "IYECXEJARV/moc_BoiteDialogReceptionCaisse.cpp"
 #include "IYECXEJARV/moc_BoiteDialogRepartition.cpp"
+#include "IYECXEJARV/moc_BoiteDialogRetourRepartition.cpp"
 #include "IYECXEJARV/moc_BoiteDialogRetourStock.cpp"
 #include "IYECXEJARV/moc_BoiteDialogVente.cpp"
 #include "5JNLWHHEIF/moc_FenetreMain.cpp"
