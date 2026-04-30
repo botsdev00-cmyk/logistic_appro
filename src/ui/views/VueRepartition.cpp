@@ -180,7 +180,12 @@ void VueRepartition::chargerRetours()
                 g_stockMgr->creerRetourApresRepartition(ligne.produitId, ligne.quantiteInvendu, repId, QUuid(), "Retour invendus répartition", g_utilisateurId);
             }
         }
-        QMessageBox::information(this, "Clôture répartition", "Ventes, crédits et retours générés !");
+        if (!g_repartitionMgr->marquerCompletee(repId)) {
+            QMessageBox::warning(this, "Erreur", "Impossible de clôturer la répartition :\n" + g_repartitionMgr->getDernierErreur());
+        } else {
+            QMessageBox::information(this, "Clôture répartition", "Ventes, crédits et retours générés !\nRépartition clôturée.");
+            m_tableauRepartition->rafraichir();
+        }
     }
 }
 

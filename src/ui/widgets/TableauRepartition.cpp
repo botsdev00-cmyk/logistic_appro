@@ -69,7 +69,21 @@ void TableauRepartition::rafraichir()
 
 void TableauRepartition::remplirTableau()
 {
-    QList<Repartition> repartitions = m_gestionnaire->obtenirRepartitionsEnCours();
+    QList<Repartition> repartitionsRaw = m_gestionnaire->obtenirRepartitionsEnCours();
+    QDate today = QDate::currentDate();
+    QList<Repartition> repartitions;
+
+    // Filtrage: on ne garde pas les répartitions complétées dont la dateRetour < aujourd'hui
+    for (const auto& rep : repartitionsRaw) {
+        if (rep.getStatut() == Repartition::Statut::Completee &&
+            rep.getDateRetour().isValid() &&
+            rep.getDateRetour() < today)
+        {
+            continue; // saute la ligne
+        }
+        repartitions.append(rep);
+    }
+    // Suite du code inchangée :
     setRowCount(repartitions.size());
     int row = 0;
     for (const auto& rep : repartitions) {

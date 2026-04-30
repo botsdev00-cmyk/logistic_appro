@@ -66,7 +66,7 @@ void GestionnaireStock::setServicePermissions(ServicePermissions* service)
 }
 
 // ============================================================================
-// ✅ NOUVEAU: STOCKS PAR LOCATION
+// NOUVEAU: STOCKS PAR LOCATION
 // ============================================================================
 
 StockParLocation GestionnaireStock::obtenirStockParLocation(const QUuid& produitId)
@@ -145,7 +145,7 @@ QList<StockParLocation> GestionnaireStock::obtenirTousStocksParLocation()
             stocks.append(stock);
             count++;
         }
-        qDebug() << "[STOCK LOCATION] ✅ Tous stocks:" << count << "produits";
+        qDebug() << "[STOCK LOCATION]  Tous stocks:" << count << "produits";
     } else {
         qDebug() << "[STOCK LOCATION] Erreur:" << query.lastError().text();
     }
@@ -188,7 +188,7 @@ QList<ReconciliationResult> GestionnaireStock::verifierIntegriteStock()
                          << "- DISCREPANCY:" << res.difference;
             }
         }
-        qDebug() << "[RÉCONCILIATION] ✅ Vérification terminée:" << count << "produits";
+        qDebug() << "[RÉCONCILIATION]  Vérification terminée:" << count << "produits";
     } else {
         qDebug() << "[RÉCONCILIATION] Erreur SQL:" << query.lastError().text();
     }
@@ -244,7 +244,7 @@ bool GestionnaireStock::repairerIntegriteStock()
     query.prepare("SELECT fn_repair_stock_integrity()");
 
     if (query.exec()) {
-        qDebug() << "[RÉPARATION STOCK] ✅ Intégrité réparée";
+        qDebug() << "[RÉPARATION STOCK]  Intégrité réparée";
         return true;
     } else {
         m_dernierErreur = query.lastError().text();
@@ -433,7 +433,7 @@ bool GestionnaireStock::supprimerEntree(const QUuid& entreeId)
 }
 
 // ============================================================================
-// GESTION DES RETOURS (Existant - Inchangé)
+// GESTION DES RETOURS
 // ============================================================================
 
 bool GestionnaireStock::creerRetourStock(const RetourStock& retour)
@@ -562,7 +562,7 @@ bool GestionnaireStock::supprimerRetour(const QUuid& retourId)
 }
 
 // ============================================================================
-// CONSULTATION STOCK (Existant - Simplifié)
+// CONSULTATION STOCK
 // ============================================================================
 
 int GestionnaireStock::obtenirQuantiteDisponible(const QUuid& produitId)
@@ -612,7 +612,7 @@ QList<StockInfo> GestionnaireStock::obtenirTousLesStocks()
     QList<StockInfo> stocks;
     
     if (!m_repoSoldes) {
-        qWarning() << "[GESTIONNAIRE STOCK] ❌ Repository soldes non initialisé!";
+        qWarning() << "[GESTIONNAIRE STOCK]  Repository soldes non initialisé!";
         return stocks;
     }
     
@@ -692,7 +692,7 @@ QList<Mouvement> GestionnaireStock::obtenirMouvementsRecents(const QUuid& produi
         }
         qDebug() << "[GESTIONNAIRE STOCK] ✓ Mouvements:" << count;
     } else {
-        qDebug() << "[GESTIONNAIRE STOCK] ❌ Erreur SQL:" << query.lastError().text();
+        qDebug() << "[GESTIONNAIRE STOCK]  Erreur SQL:" << query.lastError().text();
         m_dernierErreur = query.lastError().text();
     }
     
@@ -761,7 +761,7 @@ QList<StockInfo> GestionnaireStock::filtrerStocksParCategorie(const QUuid& categ
 }
 
 // ============================================================================
-// MOUVEMENTS (Existant - Simplifié)
+// MOUVEMENTS
 // ============================================================================
 
 QList<Mouvement> GestionnaireStock::obtenirHistoriqueProduit(const QUuid& produitId)
@@ -854,7 +854,7 @@ int GestionnaireStock::obtenirNombreMouvements(const QUuid& produitId)
 }
 
 // ============================================================================
-// ALERTES (Existant - Inchangé)
+// ALERTES
 // ============================================================================
 
 QList<Alerte> GestionnaireStock::obtenirAlertes()
@@ -973,7 +973,7 @@ int GestionnaireStock::obtenirNombreAlertesComme(const QString& severite)
 }
 
 // ============================================================================
-// VALIDATION (Existant - Inchangé)
+// VALIDATION
 // ============================================================================
 
 bool GestionnaireStock::validerDisponibilite(const QUuid& produitId, int quantiteRequise)
@@ -1036,7 +1036,7 @@ QString GestionnaireStock::obtenirErreurValidation()
 }
 
 // ============================================================================
-// TRANSACTIONS (Existant - Inchangé)
+// TRANSACTIONS
 // ============================================================================
 
 bool GestionnaireStock::reserverStock(const QUuid& repartitionId, const QUuid& produitId, int quantite)
@@ -1081,7 +1081,7 @@ bool GestionnaireStock::synchroniserStockSoldes()
 }
 
 // ============================================================================
-// STATISTIQUES (Existant - Inchangé)
+// STATISTIQUES
 // ============================================================================
 
 StatistiquesStock GestionnaireStock::obtenirStatistiques()
@@ -1177,7 +1177,7 @@ int GestionnaireStock::obtenirRotationStock(const QUuid& produitId, int jours)
 }
 
 // ============================================================================
-// ✅ NOUVEAU: RAPPORT RÉCONCILIATION
+//  RAPPORT RÉCONCILIATION
 // ============================================================================
 
 QString GestionnaireStock::genererRapportReconciliation()
@@ -1200,7 +1200,7 @@ QString GestionnaireStock::genererRapportReconciliation()
     
     rapport += QString("Produits vérifiés: %1\n").arg(resultats.count());
     rapport += QString("Stocks valides: %1 ✓\n").arg(ok);
-    rapport += QString("Stocks invalides: %1 ❌\n\n").arg(erreurs);
+    rapport += QString("Stocks invalides: %1 \n\n").arg(erreurs);
     
     if (erreurs > 0) {
         rapport += "DISCREPANCIES DÉTECTÉES:\n";
@@ -1287,7 +1287,7 @@ QString GestionnaireStock::genererRapportMouvements(const QDate& dateDebut, cons
 }
 
 // ============================================================================
-// MÉTHODES INTERNES (Existant - Inchangé)
+// MÉTHODES INTERNES
 // ============================================================================
 
 bool GestionnaireStock::validerQuantite(int quantite)
@@ -1320,26 +1320,30 @@ QString GestionnaireStock::genererRecommandation(const Alerte& alerte)
     return "Prévoir réapprovisionnement";
 }
 
-// GestionnaireStock.cpp
-bool GestionnaireStock::creerRetourApresRepartition(const QUuid& produitId,
-                                                   int quantite,
-                                                   const QUuid& repartitionId,
-                                                   const QUuid& raisonRetourId,
-                                                   const QString& observations,
-                                                   const QUuid& utilisateurId)
+bool GestionnaireStock::creerRetourApresRepartition(
+    const QUuid& produitId,
+    int quantite,
+    const QUuid& repartitionId,
+    const QUuid& raisonRetourId,
+    const QString& observations,
+    const QUuid& utilisateurId)
 {
+    // Création d’un objet RetourStock
     RetourStock retour;
     retour.setRetourStockId(QUuid::createUuid());
     retour.setProduitId(produitId);
     retour.setQuantite(quantite);
     retour.setRepartitionId(repartitionId);
     retour.setRaisonRetourId(raisonRetourId);
-    retour.setCreePar(utilisateurId);
     retour.setObservations(observations);
+    retour.setCreePar(utilisateurId);
     retour.setStatutValidation("EN_ATTENTE");
-    // Optionnel : retour.setDate(QDateTime::currentDateTime());
+    //retour.setDateCreation(QDateTime::currentDateTime());
 
-    if (!m_repoRetours)
+    // Utilise le repo pour créer l'entrée en base
+    if (!m_repoRetours->create(retour)) {
+        m_dernierErreur = m_repoRetours->getLastError();
         return false;
-    return m_repoRetours->create(retour);
+    }
+    return true;
 }
