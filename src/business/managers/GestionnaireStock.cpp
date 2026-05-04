@@ -1287,7 +1287,7 @@ QString GestionnaireStock::genererRapportMouvements(const QDate& dateDebut, cons
 }
 
 // ============================================================================
-// MÉTHODES INTERNES
+// MÉTHODES INTERNES 
 // ============================================================================
 
 bool GestionnaireStock::validerQuantite(int quantite)
@@ -1320,30 +1320,26 @@ QString GestionnaireStock::genererRecommandation(const Alerte& alerte)
     return "Prévoir réapprovisionnement";
 }
 
-bool GestionnaireStock::creerRetourApresRepartition(
-    const QUuid& produitId,
-    int quantite,
-    const QUuid& repartitionId,
-    const QUuid& raisonRetourId,
-    const QString& observations,
-    const QUuid& utilisateurId)
+// GestionnaireStock.cpp
+bool GestionnaireStock::creerRetourApresRepartition(const QUuid& produitId,
+                                                   int quantite,
+                                                   const QUuid& repartitionId,
+                                                   const QUuid& raisonRetourId,
+                                                   const QString& observations,
+                                                   const QUuid& utilisateurId)
 {
-    // Création d’un objet RetourStock
     RetourStock retour;
     retour.setRetourStockId(QUuid::createUuid());
     retour.setProduitId(produitId);
     retour.setQuantite(quantite);
     retour.setRepartitionId(repartitionId);
     retour.setRaisonRetourId(raisonRetourId);
-    retour.setObservations(observations);
     retour.setCreePar(utilisateurId);
+    retour.setObservations(observations);
     retour.setStatutValidation("EN_ATTENTE");
-    //retour.setDateCreation(QDateTime::currentDateTime());
+    // Optionnel : retour.setDate(QDateTime::currentDateTime());
 
-    // Utilise le repo pour créer l'entrée en base
-    if (!m_repoRetours->create(retour)) {
-        m_dernierErreur = m_repoRetours->getLastError();
+    if (!m_repoRetours)
         return false;
-    }
-    return true;
+    return m_repoRetours->create(retour);
 }

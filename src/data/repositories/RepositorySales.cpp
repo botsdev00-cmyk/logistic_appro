@@ -14,7 +14,7 @@ bool RepositorySales::create(const Vente& entity)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("INSERT INTO ventes "
-                  "(vente_id, repartition_id, produit_id, client_id, quantite, type_vente, prix_unitaire, notes, cree_par) "
+                  "(vente_id, repartition_id, produit_id, client_id, quantite, type_vente_id, prix_unitaire, notes, cree_par) "
                   "VALUES (:id, :rep_id, :prod_id, :client_id, :qty, :type, :prix, :notes, :cree_par)");
 
     query.addBindValue(entity.getVenteId().toString());
@@ -90,7 +90,7 @@ bool RepositorySales::update(const Vente& entity)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare("UPDATE ventes SET "
-                  "quantite = :qty, type_vente = :type, prix_unitaire = :prix, notes = :notes "
+                  "quantite = :qty, type_vente_id = :type, prix_unitaire = :prix, notes = :notes "
                   "WHERE vente_id = :id");
 
     query.addBindValue(entity.getQuantite());

@@ -72,7 +72,6 @@ struct StatistiquesStock {
     int quantiteDisponibleUnites;
 };
 
-// ✅ NOUVEAU: Structure pour stocks par location
 struct StockParLocation {
     QUuid produitId;
     QString produitNom;
@@ -82,7 +81,6 @@ struct StockParLocation {
     int total;
 };
 
-// ✅ NOUVEAU: Structure pour réconciliation
 struct ReconciliationResult {
     QUuid produitId;
     QString produitNom;
