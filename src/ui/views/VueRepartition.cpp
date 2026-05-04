@@ -6,8 +6,10 @@
 #include "../../business/managers/GestionnaireCredit.h"
 #include "../../business/managers/GestionnaireStock.h"
 #include "../../business/managers/GestionnaireRepartition.h"
+#include "../../business/managers/GestionnaireRaisonsRetour.h"
 #include "../../core/entities/ArticleRepartition.h"
 #include "../../data/repositories/RepositoryProduit.h"
+#include "../../data/repositories/RepositoryStockMouvements.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -121,17 +123,15 @@ void VueRepartition::verifierStatut()
 
 void VueRepartition::chargerRetours()
 {
-    int row = m_tableauRepartition->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(this, "Sélection requise", "Sélectionnez une répartition à clôturer.");
-        return;
-    }
-    QUuid repId = m_tableauRepartition->repartitionIdFromRow(row);
-    if (repId.isNull()) return;
+    // 1. Récupération de la répartition actuellement sélectionnée dans le tableau
+    int rowSelectionne = m_tableauRepartition->currentRow();
+    if (rowSelectionne < 0) return;
+    QUuid repId = m_tableauRepartition->repartitionIdFromRow(rowSelectionne);
 
-    auto repartition = g_repartitionMgr->obtenirRepartition(repId, true);
-    QList<LigneRetourRepartition> lignes;
-    for(const auto& art : repartition.getArticles()) {
+    // 2. Récupérer la liste des articles concernés (à adapter selon ton flux)
+    Repartition repartition = g_repartitionMgr->obtenirRepartition(repId, true);
+    QList<LigneRetourRepartition> lignesProduits;
+    for (const auto& art : repartition.getArticles()) {
         LigneRetourRepartition ligne;
         ligne.produitNom = ArticleRepartition::getNomProduitDepuisId(art.getProduitId());
         ligne.produitId  = art.getProduitId();
@@ -141,52 +141,87 @@ void VueRepartition::chargerRetours()
         ligne.quantiteVenduCredit = 0;
         ligne.quantiteInvendu = 0;
         ligne.quantiteBonus = 0;
-        lignes.append(ligne);
+        lignesProduits.append(ligne);
     }
-    BoiteDialogRetourRepartition boite(lignes, this);
-    if (boite.exec() == QDialog::Accepted) {
-        const auto retours = boite.resultats();
 
-        for(const auto& ligne : retours) {
-            qDebug() << "TRAITEMENT Ligne produitId=" << ligne.produitId;
+    // récupère la liste des produits/articles de la répartition !
+    // Si tu ouvres une boîte de dialogue, fais plutôt :
+    BoiteDialogRetourRepartition boiteDialogue(lignesProduits, this);
+    if (boiteDialogue.exec() != QDialog::Accepted)
+        return;
+    QList<LigneRetourRepartition> retours = boiteDialogue.resultats();
 
-            // Vérifie les managers globaux
-            Q_ASSERT(g_venteMgr); Q_ASSERT(g_creditMgr); Q_ASSERT(g_stockMgr);
-
-            // Vérifie la validité du produit
-            auto prodRepo = RepositoryProduit();
-            auto produit = prodRepo.getById(ligne.produitId);
-            if (produit.getNom().isEmpty()) {
-                qDebug() << "Produit introuvable pour l'id" << ligne.produitId;
-                QMessageBox::warning(this, "Erreur", "Le produit est introuvable.");
-                continue;
-            }
-            double vraiPrixUnitaire = produit.getPrixUnitaire();
-            qDebug() << "Prix récupéré:" << vraiPrixUnitaire;
-
-            if (ligne.quantiteVenduCash > 0) {
-                qDebug() << "Enregistrer vente CASH";
-                g_venteMgr->enregistrerVente(repId, ligne.produitId, g_utilisateurId, ligne.quantiteVenduCash, "CASH", vraiPrixUnitaire);
-            }
-            if (ligne.quantiteVenduCredit > 0) {
-                qDebug() << "Enregistrer vente CREDIT";
-                QUuid venteId = g_venteMgr->enregistrerVente(repId, ligne.produitId, g_utilisateurId, ligne.quantiteVenduCredit, "CREDIT", vraiPrixUnitaire);
-                if (!venteId.isNull()) {
-                    g_creditMgr->creerCredit(venteId, g_utilisateurId, ligne.quantiteVenduCredit * vraiPrixUnitaire, QDate::currentDate().addDays(30));
-                }
-            }
-            if (ligne.quantiteInvendu > 0) {
-                qDebug() << "Créer retour stock";
-                g_stockMgr->creerRetourApresRepartition(ligne.produitId, ligne.quantiteInvendu, repId, QUuid(), "Retour invendus répartition", g_utilisateurId);
-            }
-        }
-        if (!g_repartitionMgr->marquerCompletee(repId)) {
-            QMessageBox::warning(this, "Erreur", "Impossible de clôturer la répartition :\n" + g_repartitionMgr->getDernierErreur());
-        } else {
-            QMessageBox::information(this, "Clôture répartition", "Ventes, crédits et retours générés !\nRépartition clôturée.");
-            m_tableauRepartition->rafraichir();
+    // 3. Chercher la raison "invendu"
+    GestionnaireRaisonsRetour raisonsMgr;
+    QUuid raisonInvenduId;
+    for (const auto& raison : raisonsMgr.obtenirRaisons()) {
+        if (raison.nom.contains("inven", Qt::CaseInsensitive)) {
+            raisonInvenduId = raison.raisonId;
+            break;
         }
     }
+    if (raisonInvenduId.isNull()) {
+        QMessageBox::warning(this, "Erreur", "Aucune raison « invendu » trouvée. Impossible de continuer !");
+        return;
+    }
+
+    // 4. Traitement de chaque ligne de retour
+    bool erreurRetour = false;
+    QStringList erreursRetour;
+
+    for (const auto& ligne : retours) {
+        // Création du retour invendu
+        if (ligne.quantiteInvendu > 0) {
+            bool okInvendu = g_stockMgr->creerRetourApresRepartition(
+                ligne.produitId,
+                ligne.quantiteInvendu,
+                repId,
+                raisonInvenduId,
+                "Retour invendus répartition",
+                g_utilisateurId
+                );
+            if (!okInvendu) {
+                erreurRetour = true;
+                erreursRetour << QString("Produit %1 : %2")
+                                     .arg(ligne.produitNom)
+                                     .arg(g_stockMgr->obtenirDernierErreur());
+            }
+        }
+
+        // Mouvement pour vider le IN_TRANSIT
+        if (ligne.quantiteSortie > 0) {
+            RepositoryStockMouvements repoMvt;
+            ResultatMouvement resMvt = repoMvt.creerMouvementSecurise(
+                ligne.produitId,
+                "SORTIE",
+                -ligne.quantiteSortie,
+                repId,
+                "REPARTITION",
+                g_utilisateurId,
+                "IN_TRANSIT",
+                "Clôture répartition : purge transit",
+                ""
+                );
+            if (!resMvt.success) {
+                qWarning() << "Erreur purge IN_TRANSIT pour" << ligne.produitNom << ":" << resMvt.message;
+            }
+        }
+    }
+
+    // 5. Statut de la répartition
+    if (!g_repartitionMgr->marquerCompletee(repId)) {
+        QMessageBox::warning(this, "Erreur", "Impossible de clôturer la répartition :\n" + g_repartitionMgr->getDernierErreur());
+        return;
+    }
+
+    // 6. Notifications utilisateur
+    if (erreurRetour) {
+        QMessageBox::warning(this, "Retour(s) non créés", "Certains retours invendus n'ont pas pu être créés :\n" + erreursRetour.join("\n"));
+    } else {
+        QMessageBox::information(this, "Clôture répartition", "Ventes, crédits et retours générés !\nRépartition clôturée et synchronisée.");
+    }
+
+    m_tableauRepartition->rafraichir();
 }
 
 
