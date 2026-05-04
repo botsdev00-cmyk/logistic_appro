@@ -21,7 +21,7 @@ public:
 
 private slots:
     void afficherDetailsCredit();
-    void marquerCommePayé();
+    void marquerCommePaye();
     void envoyerRappel();
     void exporterEnCSV();
 

@@ -111,7 +111,7 @@ void TableauCredit::creerContextMenu()
     connect(this, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
         QMenu menu;
         menu.addAction("Afficher détails", this, &TableauCredit::afficherDetailsCredit);
-        menu.addAction("Marquer comme payé", this, &TableauCredit::marquerCommePayé);
+        menu.addAction("Marquer comme payé", this, &TableauCredit::marquerCommePaye);
         menu.addAction("Envoyer rappel", this, &TableauCredit::envoyerRappel);
         menu.addSeparator();
         menu.addAction("Exporter CSV", this, &TableauCredit::exporterEnCSV);
@@ -127,7 +127,7 @@ void TableauCredit::afficherDetailsCredit()
     }
 }
 
-void TableauCredit::marquerCommePayé()
+void TableauCredit::marquerCommePaye()
 {
     if (currentRow() >= 0) {
         item(currentRow(), 4)->setText("Payé");

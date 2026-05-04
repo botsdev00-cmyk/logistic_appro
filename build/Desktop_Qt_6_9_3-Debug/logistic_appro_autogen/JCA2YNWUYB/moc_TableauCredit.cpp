@@ -41,7 +41,7 @@ template <> constexpr inline auto TableauCredit::qt_create_metaobjectdata<qt_met
         "TableauCredit",
         "afficherDetailsCredit",
         "",
-        "marquerCommePay",
+        "marquerCommePaye",
         "envoyerRappel",
         "exporterEnCSV"
     };
@@ -49,7 +49,7 @@ template <> constexpr inline auto TableauCredit::qt_create_metaobjectdata<qt_met
     QtMocHelpers::UintData qt_methods {
         // Slot 'afficherDetailsCredit'
         QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'marquerCommePay'
+        // Slot 'marquerCommePaye'
         QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'envoyerRappel'
         QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
@@ -79,7 +79,7 @@ void TableauCredit::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->afficherDetailsCredit(); break;
-        case 1: _t->marquerCommePayé(); break;
+        case 1: _t->marquerCommePaye(); break;
         case 2: _t->envoyerRappel(); break;
         case 3: _t->exporterEnCSV(); break;
         default: ;

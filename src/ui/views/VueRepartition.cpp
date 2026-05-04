@@ -10,6 +10,7 @@
 #include "../../core/entities/ArticleRepartition.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryStockMouvements.h"
+#include "../../utils/globals/globals.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -17,14 +18,6 @@
 #include <QPushButton>
 #include <QGroupBox>
 #include <QMessageBox>
-
-extern GestionnaireRepartition* g_repartitionMgr;
-extern GestionnaireSales* g_venteMgr;
-extern GestionnaireCredit* g_creditMgr;
-extern GestionnaireStock* g_stockMgr;
-extern QUuid g_utilisateurId;
-extern ArticleRepartition* art;
-
 
 VueRepartition::VueRepartition(QWidget* parent)
     : QWidget(parent)

@@ -1321,6 +1321,7 @@ QString GestionnaireStock::genererRecommandation(const Alerte& alerte)
 }
 
 // GestionnaireStock.cpp
+// GestionnaireStock.cpp
 bool GestionnaireStock::creerRetourApresRepartition(const QUuid& produitId,
                                                    int quantite,
                                                    const QUuid& repartitionId,
@@ -1337,9 +1338,22 @@ bool GestionnaireStock::creerRetourApresRepartition(const QUuid& produitId,
     retour.setCreePar(utilisateurId);
     retour.setObservations(observations);
     retour.setStatutValidation("EN_ATTENTE");
-    // Optionnel : retour.setDate(QDateTime::currentDateTime());
+    
+    // CORRECTION 1 : Initialisation des dates (obligatoire pour PostgreSQL via Qt)
+    // retour.setDate(QDateTime::currentDateTime());
+    // retour.setDateMiseAJour(QDateTime::currentDateTime());
 
-    if (!m_repoRetours)
+    if (!m_repoRetours) {
+        m_dernierErreur = "Repository retours non initialisé.";
         return false;
-    return m_repoRetours->create(retour);
+    }
+    
+    // CORRECTION 2 : Tentative de création et propagation de l'erreur en cas d'échec
+    if (!m_repoRetours->create(retour)) {
+        m_dernierErreur = m_repoRetours->getLastError();
+        qWarning() << "[GESTIONNAIRE STOCK] Échec de la création du retour:" << m_dernierErreur;
+        return false;
+    }
+    
+    return true;
 }

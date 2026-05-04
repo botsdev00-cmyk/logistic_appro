@@ -13,21 +13,20 @@ bool RepositoryRetourStock::create(const RetourStock& entity)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
+    // On retire "date" et "date_mise_a_jour" de la requête. PostgreSQL mettra la date actuelle tout seul.
     query.prepare("INSERT INTO retours_stock "
                   "(retour_stock_id, produit_id, quantite, raison_retour_id, "
-                  "repartition_id, observations, cree_par, statut_validation, date, date_mise_a_jour) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                  "repartition_id, observations, cree_par, statut_validation) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     
-    query.addBindValue(entity.getRetourStockId().toString());
-    query.addBindValue(entity.getProduitId().toString());
+    query.addBindValue(entity.getRetourStockId().toString(QUuid::WithoutBraces));
+    query.addBindValue(entity.getProduitId().toString(QUuid::WithoutBraces));
     query.addBindValue(entity.getQuantite());
-    query.addBindValue(entity.getRaisonRetourId().toString());
-    query.addBindValue(entity.getRepartitionId().toString());
+    query.addBindValue(entity.getRaisonRetourId().toString(QUuid::WithoutBraces));
+    query.addBindValue(entity.getRepartitionId().toString(QUuid::WithoutBraces));
     query.addBindValue(entity.getObservations());
-    query.addBindValue(entity.getCreePar().toString());
+    query.addBindValue(entity.getCreePar().toString(QUuid::WithoutBraces));
     query.addBindValue(entity.getStatutValidation());
-    query.addBindValue(entity.getDate());
-    query.addBindValue(entity.getDateMiseAJour());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création retour stock: " + query.lastError().text();

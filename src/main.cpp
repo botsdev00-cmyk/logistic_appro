@@ -4,7 +4,7 @@
 #include <QThread>
 #include <QMessageBox>
 #include <QDebug>
-
+#include "utils/globals/globals.h"
 #include "ui/main_window/FenetreMain.h"
 #include "ui/dialogs/BoiteDialogConnexion.h"
 #include "business/services/ServiceAuthentification.h"
@@ -17,13 +17,11 @@
 #include "business/managers/GestionnaireStock.h"
 #include "core/entities/ArticleRepartition.h"
 
-// Définition réelle des variables globales externes
-GestionnaireRepartition* g_repartitionMgr = nullptr;
-GestionnaireSales* g_venteMgr = nullptr;
-GestionnaireCredit* g_creditMgr = nullptr;
-GestionnaireStock* g_stockMgr = nullptr;
-QUuid g_utilisateurId;
-ArticleRepartition* art = nullptr;
+// Inclure les repositories stock !
+#include "data/repositories/RepositoryRetourStock.h"
+#include "data/repositories/RepositoryEntreeStock.h"
+#include "data/repositories/RepositoryStockSoldes.h"
+#include "data/repositories/RepositoryStockMouvements.h"
 
 class SplashScreen
 {
@@ -43,12 +41,10 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    // Configuration de l'application
     app.setApplicationName("SEMULIKI ERP");
     app.setApplicationVersion("1.0.0");
     app.setOrganizationName("SEMULIKI");
 
-    // Style par défaut
     app.setStyle("Fusion");
 
     qDebug() << "═══════════════════════════════════════════════════════";
@@ -57,14 +53,26 @@ int main(int argc, char* argv[])
     qDebug() << "  Date: 2026-04-10";
     qDebug() << "═══════════════════════════════════════════════════════";
 
-    // Instanciation des managers globaux et objets externes
+    // ----------------------- INITIALISATION DES MANAGERS GLOBAUX ----------------------
     g_repartitionMgr = new GestionnaireRepartition();
     g_venteMgr = new GestionnaireSales();
     g_creditMgr = new GestionnaireCredit();
     g_stockMgr = new GestionnaireStock();
     art = new ArticleRepartition();
 
-    int result = 1; // Valeur de retour par défaut
+    // ----------------------- INITIALISE LES REPOSITORIES DU STOCK ----------------------
+    auto repoRetours   = new RepositoryRetourStock();
+    auto repoEntrees   = new RepositoryEntreeStock();
+    auto repoSoldes    = new RepositoryStockSoldes();
+    auto repoMouvements= new RepositoryStockMouvements();
+
+    // ----------------------- INJECTION DANS LE GESTIONNAIRE STOCK GLOBAL ----------------
+    g_stockMgr->setRepositoryRetourStock(repoRetours);
+    g_stockMgr->setRepositoryEntreeStock(repoEntrees);
+    g_stockMgr->setRepositoryStockSoldes(repoSoldes);
+    g_stockMgr->setRepositoryStockMouvements(repoMouvements);
+
+    int result = 1;
 
     try {
         // 1. Initialiser la connexion à la base de données
@@ -87,7 +95,6 @@ int main(int argc, char* argv[])
 
         if (dlgConnexion.exec() != QDialog::Accepted) {
             qDebug() << "[INFO] Connexion annulée par l'utilisateur";
-            // Libère la mémoire avant de sortir
             goto cleanup;
         }
 
@@ -108,17 +115,15 @@ int main(int argc, char* argv[])
         qDebug() << "[OK] Utilisateur:" << utilisateurConnecte.getNomUtilisateur();
         qDebug() << "[OK] UUID:" << utilisateurConnecte.getUtilisateurId().toString();
 
-        // Mise à jour de la variable globale utilisateur
         g_utilisateurId = utilisateurConnecte.getUtilisateurId();
 
         // 4. Créer et afficher la fenêtre principale
         qDebug() << "\n[INFO] Création de la fenêtre principale...";
-        FenetreMain window(utilisateurConnecte);
+        FenetreMain window(utilisateurConnecte); // note: on passe l'utilisateur, le gestionnaire est global
         window.show();
 
         qDebug() << "[OK] Application démarrée avec succès\n";
 
-        // 5. Lancer la boucle d'événements
         result = app.exec();
 
     } catch (const std::exception& e) {
@@ -140,6 +145,10 @@ cleanup:
     delete g_creditMgr;      g_creditMgr = nullptr;
     delete g_stockMgr;       g_stockMgr = nullptr;
     delete art;              art = nullptr;
+    delete repoRetours;
+    delete repoEntrees;
+    delete repoSoldes;
+    delete repoMouvements;
 
     return result;
 }
