@@ -235,13 +235,17 @@ set(UTIL_VALIDATORS
     ${SRC_DIR}/utils/validators/ValidateurEntrees.cpp
 )
 
+set(UTIL_GLOBALS
+    ${SRC_DIR}/utils/globals/globals.cpp
+)
+
 set(UTIL_HELPERS
     ${SRC_DIR}/utils/helpers/AideDateTime.cpp
     ${SRC_DIR}/utils/helpers/GenerateurRapport.cpp
     ${SRC_DIR}/utils/helpers/GenerateurPDF.cpp
 )
 
-set(UTIL_SOURCES ${UTIL_LOGGER} ${UTIL_VALIDATORS} ${UTIL_HELPERS})
+set(UTIL_SOURCES ${UTIL_LOGGER} ${UTIL_VALIDATORS} ${UTIL_HELPERS} ${UTIL_GLOBALS})
 
 # ============================================================================
 # RESOURCES & MAIN

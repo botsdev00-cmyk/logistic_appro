@@ -173,3 +173,200 @@ je veux une structure complete pour tous ces modules:
 que la base de donnees soient performantes selon les standards industriels favorisant notre systeme hybride et des calculs rapides, optimisees avec des vues, triggers, et functions pour manipuler les donnees et alleger le cote backend C++.
 
 + CONFUSION ENTRE TYPE_MVT ET SOURCES_ENTREE
+
+
+C'est une excellente base de travail. En analysant vos scripts SQL (le schéma initial et le dump de la base de données), je constate que l'architecture technique est particulièrement robuste et parfaitement alignée avec l'approche hybride C++/PostgreSQL que vous visez pour SEMULIKI. 
+
+L'idée de déporter la logique métier (calculs de stocks, audits, intégrité) directement dans le moteur PostgreSQL via des fonctions, vues et triggers est brillamment exécutée. Cela va considérablement alléger votre backend en C++ et garantir des performances industrielles.
+
+Cependant, par rapport aux Termes de Référence (TDR) que nous avons élaborés pour les 6 modules du projet, **le schéma actuel est incomplet**. Il couvre excellemment bien la Logistique et la Distribution, mais il manque des piliers entiers, notamment le cœur du métier : la Production.
+
+Voici une analyse détaillée et mes propositions d'améliorations pour finaliser cette base de données.
+
+---
+
+### 🟢 1. Les Points Forts de votre Structure Actuelle
+
+* **Intelligence Base de Données :** L'utilisation de `fn_sync_stock_after_movement` pour gérer les stocks via une approche "Delta" (additions/soustractions sur les mouvements) garantit une intégrité absolue. Votre backend Qt/C++ n'aura qu'à insérer des mouvements, PostgreSQL fait le reste.
+* **Architecture Offline-First :** L'inclusion des champs `sync_status` (Enum 'PENDING', 'SYNCED', 'CONFLICT') et `version` sur presque toutes les tables transactionnelles est parfaite pour les équipes de distribution sur le terrain à Lubumbashi, qui peuvent faire face à des coupures réseau.
+* **Sécurité et Audit :** La table `journaux_audit` couplée aux triggers (ex: `fn_audit_stock_movements`) est une excellente pratique industrielle. On sait exactement qui a modifié quoi.
+* **Vues Matérialisées :** `mv_stock_cache` est une très bonne initiative pour des accès en lecture quasi-instantanés sur les tableaux de bord.
+
+---
+
+### 🔴 2. Analyse des Écarts (Ce qui manque par rapport au TDR)
+
+#### A. Le Module de Production & Vinification (Totalement absent)
+Actuellement, la production n'est gérée que comme une simple chaîne de texte ou une source d'entrée (`sources_entree.nom = 'Production'`). Le système ne sait pas comment le vin est fabriqué.
+* **Manquant :** Gestion des matières premières (intrants), gestion des cuves, traçabilité des lots de fermentation, et analyses de laboratoire.
+
+#### B. Module Achats & Approvisionnements (Absent)
+* **Manquant :** Il n'y a aucune table pour gérer les `fournisseurs`, ni pour émettre des `commandes_achats` basées sur les seuils d'alerte (bien que `stock_minimum` existe dans `produits`).
+
+#### C. Module CRM & Ventes (Incomplet)
+La prise de commande de base (`ventes`) est là, de même que le suivi des crédits (`credits`).
+* **Manquant :** Les grilles tarifaires dynamiques. Actuellement, `ventes` utilise le `prix_unitaire` fixe du produit. En B2B, il faut pouvoir appliquer des remises par volume ou par type de client (Grossiste vs Détaillant).
+
+#### D. Traçabilité des Lots (Partielle)
+Bien que la table `stock_mouvements` possède un champ `lot_id` (dans le dump), il n'y a pas de table `lots` maître pour suivre la date de fabrication, la date de péremption réelle, et l'historique d'un lot spécifique de la cuve à la bouteille.
+
+---
+
+### 🛠️ 3. Propositions d'Améliorations (Scripts SQL à intégrer)
+
+Voici les structures SQL que je vous conseille d'ajouter pour combler ces lacunes et respecter les standards industriels "Clean Code".
+
+#### Étape 1 : Créer le Module de Production (Vinification)
+Il faut modéliser l'usine physique.
+
+```sql
+-- Gestion des Cuves de l'usine
+CREATE TABLE public.cuves (
+    cuve_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    code_cuve character varying(20) UNIQUE NOT NULL,
+    capacite_litres numeric(10,2) NOT NULL,
+    statut character varying(20) DEFAULT 'VIDE' CHECK (statut IN ('VIDE', 'EN_FERMENTATION', 'EN_REPOS', 'MAINTENANCE')),
+    date_mise_a_jour timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Traçabilité des Lots de Production
+CREATE TABLE public.lots_production (
+    lot_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    code_lot character varying(50) UNIQUE NOT NULL,
+    produit_id uuid REFERENCES public.produits(produit_id) NOT NULL,
+    cuve_id uuid REFERENCES public.cuves(cuve_id),
+    volume_produit numeric(10,2),
+    date_debut timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    date_fin timestamp without time zone, -- Date d'embouteillage
+    statut_lot character varying(20) DEFAULT 'EN_COURS' CHECK (statut_lot IN ('EN_COURS', 'EMBOUTEILLE', 'ANNULE')),
+    notes_vinification text
+);
+
+-- Suivi des Analyses Laboratoire par Lot
+CREATE TABLE public.analyses_labo (
+    analyse_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    lot_id uuid REFERENCES public.lots_production(lot_id) NOT NULL,
+    taux_alcool numeric(5,2),
+    ph numeric(4,2),
+    taux_sucre numeric(5,2),
+    conforme_normes boolean DEFAULT false,
+    date_analyse timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    technicien_id uuid REFERENCES public.utilisateurs(utilisateur_id)
+);
+```
+
+#### Étape 2 : Relier la Production aux Stocks
+Modifiez votre table `stock_mouvements` pour que le champ `lot_id` soit une clé étrangère officielle liée à la nouvelle table `lots_production`.
+```sql
+ALTER TABLE public.stock_mouvements 
+ADD CONSTRAINT fk_stock_mvt_lot FOREIGN KEY (lot_id) REFERENCES public.lots_production(lot_id);
+```
+
+#### Étape 3 : Créer le Module Achats
+Pour garantir que l'usine ne manque de rien.
+
+```sql
+CREATE TABLE public.fournisseurs (
+    fournisseur_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    nom_entreprise character varying(100) NOT NULL,
+    contact_nom character varying(100),
+    telephone character varying(50),
+    email character varying(100),
+    adresse text,
+    est_actif boolean DEFAULT true
+);
+
+CREATE TABLE public.commandes_achats (
+    commande_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    fournisseur_id uuid REFERENCES public.fournisseurs(fournisseur_id) NOT NULL,
+    date_commande timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    statut character varying(20) DEFAULT 'BROUILLON' CHECK (statut IN ('BROUILLON', 'ENVOYEE', 'RECEPTION_PARTIELLE', 'CLOTUREE')),
+    cree_par uuid REFERENCES public.utilisateurs(utilisateur_id)
+);
+```
+
+#### Étape 4 : Gérer les Grilles Tarifaires (CRM)
+Pour éviter de vendre toujours au `prix_unitaire` de base.
+
+```sql
+CREATE TABLE public.grilles_tarifaires (
+    grille_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    nom character varying(50) NOT NULL, -- Ex: 'GROSSISTE', 'REVENDEUR', 'B2C'
+    est_actif boolean DEFAULT true
+);
+
+CREATE TABLE public.tarifs_produits (
+    tarif_id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    grille_id uuid REFERENCES public.grilles_tarifaires(grille_id) ON DELETE CASCADE,
+    produit_id uuid REFERENCES public.produits(produit_id) ON DELETE CASCADE,
+    prix_personnalise numeric(12,2) NOT NULL,
+    UNIQUE (grille_id, produit_id)
+);
+
+-- Et on ajoute la référence de la grille au client
+ALTER TABLE public.clients ADD COLUMN grille_id uuid REFERENCES public.grilles_tarifaires(grille_id);
+```
+
+### Conclusion
+Votre structure est extrêmement solide sur la partie Logistique/Routing. La fondation (types personnalisés, gestion des UUIDs, triggers d'intégrité) est impeccable. En ajoutant les modules de Production (Cuves/Lots) et de CRM avancé (Grilles tarifaires), vous aurez une base de données d'un ERP industriel de bout en bout prête à être couplée à votre backend C++.
+
+Que pensez-vous d'implémenter les Triggers sur la table `lots_production` pour que le statut de la `cuve` passe automatiquement de 'EN_FERMENTATION' à 'VIDE' lorsque le lot passe en statut 'EMBOUTEILLE' ?
+
+REATE TABLE public.categories_produits (
+    categorie_produit_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+semuliki=# ALTER TABLE public.ventes
+    ADD COLUMN IF NOT EXISTS sync_status public.sync_state DEFAULT 'PENDING',
+semuliki=# CREATE INDEX IF NOT EXISTS idx_produits_sync_status ON produits(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_categories_produits_sync_status ON categories_produits(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_types_produits_sync_status ON types_produits(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_equipes_sync_status ON equipes(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_routes_sync_status ON routes(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_clients_sync_status ON clients(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_stock_mouvements_sync_status ON stock_mouvements(sync_status) WHERE sync_status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_stock_soldes_sync_status ON stock_soldes(sync_status) WHERE sync_status = 'PENDING';
+semuliki=# CREATE OR REPLACE FUNCTION trg_maj_sync_version() RETURNS trigger AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    IF (TG_OP = 'UPDATE') THEN
+        NEW.version = OLD.version + 1;
+        NEW.sync_status = 'PENDING';
+    END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+-- Exemples :
+CREATE TRIGGER trg_sync_version_produits BEFORE UPDATE ON produits FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_categories_produits BEFORE UPDATE ON categories_produits FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_types_produits BEFORE UPDATE ON types_produits FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_equipes BEFORE UPDATE ON equipes FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_routes BEFORE UPDATE ON routes FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_clients BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_conditions_paiement BEFORE UPDATE ON conditions_paiement FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_raisons_retour BEFORE UPDATE ON raisons_retour FOR EACH ROW EXECUTE FUNCTION trg_maj_sync_version();
+CREATE TRIGGER trg_sync_version_sources_entree BEFORE UPDATE ON sources_entree FOR EACH ROW EXECUTE FUNCTION tFOR EACH ROW EXECUTE FUNCTION forbid_delete_physical();N stock_mouvements;t!';caisse FOR EACH ROW EXECUTE FUNC
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+NOTICE:  trigger "trg_no_delete_stock_mouvements" for relation "stock_mouvements" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER

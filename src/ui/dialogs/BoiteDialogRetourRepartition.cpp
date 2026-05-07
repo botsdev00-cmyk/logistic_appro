@@ -8,9 +8,10 @@
 #include <QLabel>
 #include <QMessageBox>
 
-BoiteDialogRetourRepartition::BoiteDialogRetourRepartition(const QList<LigneRetourRepartition>& donneesProduits, QWidget* parent)
+BoiteDialogRetourRepartition::BoiteDialogRetourRepartition(const QList<LigneRetourRepartition>& donneesProduits, const QUuid &repId, QWidget* parent)
     : QDialog(parent),
-      m_lignes(donneesProduits)
+      m_lignes(donneesProduits),
+    m_repartitionId(repId)
 {
     setWindowTitle("Clôture de répartition - Saisie des Retours");
     setModal(true);

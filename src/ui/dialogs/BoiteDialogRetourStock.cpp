@@ -15,21 +15,25 @@
 #include <QMessageBox>
 #include <QDebug>
 
-BoiteDialogRetourStock::BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
-                                               GestionnaireRaisonsRetour* gestionnaireRaisons,
-                                               GestionnaireRepartition* gestionnaireRepartition,
-                                               const QUuid& utilisateurId,
-                                               QWidget* parent)
-    : QDialog(parent),
-      m_gestionnaire(gestionnaire),
-      m_gestionnaireRaisons(gestionnaireRaisons),
-      m_gestionnaireRepartition(gestionnaireRepartition),
-      m_utilisateurId(utilisateurId)
+BoiteDialogRetourStock::BoiteDialogRetourStock(
+    GestionnaireStock* gestionnaire,
+    GestionnaireRaisonsRetour* gestionnaireRaisons,
+    GestionnaireRepartition* gestionnaireRepartition,
+    const QUuid& utilisateurId,
+    QWidget* parent,
+    QUuid repartitionPreselectionnee
+) : QDialog(parent),
+    m_gestionnaire(gestionnaire),
+    m_gestionnaireRaisons(gestionnaireRaisons),
+    m_gestionnaireRepartition(gestionnaireRepartition),
+    m_utilisateurId(utilisateurId)
 {
     setWindowTitle("Nouveau Retour de Stock");
     setModal(true);
     setMinimumWidth(500);
     initializeUI();
+    if (!repartitionPreselectionnee.isNull())
+        setRepartitionPreselectionnee(repartitionPreselectionnee);
 }
 
 BoiteDialogRetourStock::~BoiteDialogRetourStock()
@@ -138,7 +142,14 @@ void BoiteDialogRetourStock::setRepartitionPreselectionnee(const QUuid& repId)
     for (int i=0; i < m_comboRepartition->count(); ++i) {
         if (m_comboRepartition->itemData(i).toUuid() == repId) {
             m_comboRepartition->setCurrentIndex(i);
-            m_comboRepartition->setEnabled(false);
+            m_comboRepartition->setEnabled(false); // optionnel : désactive si contexte imposé
+            // Remplit équipe associée automatiquement
+            auto rep = m_gestionnaireRepartition->obtenirRepartition(repId, false);
+            if (!rep.getEquipeId().isNull()) {
+                RepositoryEquipe repoEquipe;
+                QString nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+                setEquipe(nomEquipe);
+            }
             break;
         }
     }

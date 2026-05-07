@@ -814,6 +814,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauStockLocation.h \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauVentes.cpp \
 	/home/bots/semuliki_logistic/src/ui/widgets/TableauVentes.h \
+	/home/bots/semuliki_logistic/src/utils/globals/globals.cpp \
+	/home/bots/semuliki_logistic/src/utils/globals/globals.h \
 	/home/bots/semuliki_logistic/src/utils/helpers/AideDateTime.cpp \
 	/home/bots/semuliki_logistic/src/utils/helpers/AideDateTime.h \
 	/home/bots/semuliki_logistic/src/utils/helpers/GenerateurPDF.cpp \

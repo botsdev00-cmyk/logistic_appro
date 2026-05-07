@@ -1320,6 +1320,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/utils/globals/globals.h",
+			"MU",
+			"KFDSOTCCNE/moc_globals.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/utils/helpers/AideDateTime.h",
 			"MU",
 			"CQ4GH2WS4O/moc_AideDateTime.cpp",
@@ -1835,6 +1841,11 @@
 		],
 		[
 			"/home/bots/semuliki_logistic/src/ui/widgets/TableauVentes.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/utils/globals/globals.cpp",
 			"MU",
 			null
 		],

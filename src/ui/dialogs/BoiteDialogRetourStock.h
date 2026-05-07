@@ -19,10 +19,11 @@ class BoiteDialogRetourStock : public QDialog
 
 public:
     explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
-                                    GestionnaireRaisonsRetour* gestionnaireRaisons,
-                                    GestionnaireRepartition* gestionnaireRepartition,
-                                    const QUuid& utilisateurId,
-                                    QWidget* parent = nullptr);
+                                GestionnaireRaisonsRetour* gestionnaireRaisons,
+                                GestionnaireRepartition* gestionnaireRepartition,
+                                const QUuid& utilisateurId,
+                                QWidget* parent = nullptr,
+                                QUuid repartitionPreselectionnee = QUuid());
     ~BoiteDialogRetourStock();
 
     void setRepartitionPreselectionnee(const QUuid& repId);

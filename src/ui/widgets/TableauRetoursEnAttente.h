@@ -11,7 +11,6 @@ class TableauRetoursEnAttente : public QTableWidget
 
 public:
     explicit TableauRetoursEnAttente(QWidget* parent = nullptr);
-
     void setRetoursEnAttente(const QList<RetourStock>& retours);
 
 signals:

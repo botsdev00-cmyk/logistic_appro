@@ -21,6 +21,7 @@ TableauRetoursEnAttente::TableauRetoursEnAttente(QWidget* parent)
 
     connect(this, &QTableWidget::cellDoubleClicked, [this](int row, int){
         if (row < 0 || row >= rowCount()) return;
+        // ⬇️ Récupère instantanément tout le RetourStock de la ligne double-cliquée, incluant son repId
         RetourStock retour = item(row, 0)->data(Qt::UserRole).value<RetourStock>();
         emit ligneRetourClicked(retour);
     });
@@ -31,7 +32,6 @@ void TableauRetoursEnAttente::setRetoursEnAttente(const QList<RetourStock>& reto
     clearContents();
     setRowCount(retours.size());
 
-    // Instances partagées pour éviter de recréer à chaque ligne
     RepositoryProduit repoProduit;
     RepositoryRepartition repoRep;
     RepositoryEquipe repoEquipe;
@@ -64,7 +64,7 @@ void TableauRetoursEnAttente::setRetoursEnAttente(const QList<RetourStock>& reto
         setItem(i, 2, itemDate);
         setItem(i, 3, itemEquipe);
 
-        // Stocke l'objet RetourStock dans le premier item pour l'accès rapide
+        // ⬇️ Stocke l'objet RetourStock (avec son repId) dans la ligne !
         itemArt->setData(Qt::UserRole, QVariant::fromValue(r));
     }
 }

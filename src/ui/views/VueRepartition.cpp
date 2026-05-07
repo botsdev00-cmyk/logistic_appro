@@ -139,7 +139,7 @@ void VueRepartition::chargerRetours()
 
     // récupère la liste des produits/articles de la répartition !
     // Si tu ouvres une boîte de dialogue, fais plutôt :
-    BoiteDialogRetourRepartition boiteDialogue(lignesProduits, this);
+    BoiteDialogRetourRepartition boiteDialogue(lignesProduits, repId, this);
     if (boiteDialogue.exec() != QDialog::Accepted)
         return;
     QList<LigneRetourRepartition> retours = boiteDialogue.resultats();

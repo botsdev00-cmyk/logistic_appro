@@ -25,7 +25,7 @@ class BoiteDialogRetourRepartition : public QDialog
 {
     Q_OBJECT
 public:
-    BoiteDialogRetourRepartition(const QList<LigneRetourRepartition>& donneesProduits, QWidget* parent = nullptr);
+    BoiteDialogRetourRepartition(const QList<LigneRetourRepartition>& donneesProduits, const QUuid& repId, QWidget* parent = nullptr);
     QList<LigneRetourRepartition> resultats() const;
 
 private slots:
@@ -36,7 +36,7 @@ private:
     void setupUI();
     void remplirTableau();
     bool controleCohérence(QString* msgErreur);
-
+    QUuid m_repartitionId;
     QList<LigneRetourRepartition> m_lignes;
     QTableWidget* m_table;
     QPushButton* m_btnValider;
