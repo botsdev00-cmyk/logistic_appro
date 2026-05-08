@@ -1,34 +1,37 @@
 #ifndef REPOSITORYCREDIT_H
 #define REPOSITORYCREDIT_H
 
-#include "IRepository.h"
 #include "../../core/entities/Credit.h"
 #include <QList>
 #include <QString>
 #include <QUuid>
+#include <optional>
 
-class RepositoryCredit : public IRepository<Credit>
+class RepositoryCredit
 {
 public:
     RepositoryCredit();
 
-    bool create(const Credit& entity) override;
-    Credit getById(const QUuid& id) override;
-    QList<Credit> getAll() override;
-    bool update(const Credit& entity) override;
-    bool remove(const QUuid& id) override;
+    // CRUD & gestion de cycle de vie
+    bool create(const Credit& entity);
+    bool update(const Credit& entity);
+    bool logicalDelete(const QUuid& id);
+    std::optional<Credit> getById(const QUuid& id) const;
+    QList<Credit> getAll() const;
 
-    QList<Credit> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
+    // Recherche/filtrage métier
+    QList<Credit> search(const QString& criterion) const;
+    bool exists(const QUuid& id) const;
+    QList<Credit> getByClient(const QUuid& clientId) const;
+    QList<Credit> getOverdueCredits() const;
+    QList<Credit> getByStatut(const Credit::Statut& statut) const;
+    double getTotalAmount(const Credit::Statut& statut) const;
 
-    QString getLastError() const override { return m_dernierErreur; }
+    // OFFLINE-FIRST / API/MOBILE
+    QList<Credit> getPendingSync() const;
+    QList<Credit> getSinceVersion(int minVersion) const;
 
-    // Méthodes spécifiques
-    QList<Credit> getByClient(const QUuid& clientId);
-    QList<Credit> getOverdueCredits();
-    QList<Credit> getByStatut(const Credit::Statut& statut);
-    double getTotalAmount(const Credit::Statut& statut);
-
+    QString getLastError() const { return m_dernierErreur; }
 private:
     QString m_dernierErreur;
 };

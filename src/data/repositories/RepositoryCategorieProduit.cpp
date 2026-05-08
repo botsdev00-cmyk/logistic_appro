@@ -2,21 +2,22 @@
 #include "../database/ConnexionBaseDonnees.h"
 #include <QSqlQuery>
 #include <QSqlError>
-#include <QDebug>
 #include <QVariant>
+#include <QDebug>
 
-RepositoryCategorieProduit::RepositoryCategorieProduit()
-{
-}
+RepositoryCategorieProduit::RepositoryCategorieProduit() {}
 
 bool RepositoryCategorieProduit::create(const CategorieProduit& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("INSERT INTO categories_produits "
-                  "(categorie_produit_id, nom, description, code_categorie, est_actif, ordre_affichage) "
-                  "VALUES (?, ?, ?, ?, ?, ?)");
+    query.prepare(R"(
+        INSERT INTO categories_produits 
+        (categorie_produit_id, nom, description, code_categorie, est_actif, ordre_affichage, 
+         sync_status, version, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 1, NOW(), NOW())
+    )");
     query.addBindValue(entity.getCategorieProduitId().toString());
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getDescription());
@@ -26,195 +27,195 @@ bool RepositoryCategorieProduit::create(const CategorieProduit& entity)
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création catégorie : " + query.lastError().text();
-        qDebug() << "[DEBUG-REPO-CAT] CREATE ERROR:" << m_dernierErreur;
         return false;
     }
-    qDebug() << "[DEBUG-REPO-CAT] CREATE SUCCESS: categorie_id=" << entity.getCategorieProduitId();
     return true;
-}
-
-CategorieProduit RepositoryCategorieProduit::getById(const QUuid& id)
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare("SELECT * FROM categories_produits WHERE categorie_produit_id = ?");
-    query.addBindValue(id.toString());
-
-    CategorieProduit categorie;
-    
-    // CORRECTION : Forcer l'ID à Null pour indiquer "Non trouvé" par défaut
-    categorie.setCategorieProduitId(QUuid());
-
-    if (query.exec() && query.next()) {
-        categorie.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
-        categorie.setNom(query.value("nom").toString());
-        categorie.setDescription(query.value("description").toString());
-        categorie.setCodeCategorie(query.value("code_categorie").toString());
-        categorie.setEstActif(query.value("est_actif").toBool());
-        categorie.setOrdreAffichage(query.value("ordre_affichage").toInt());
-    } else {
-        m_dernierErreur = "Catégorie non trouvée";
-        qDebug() << "[DEBUG-REPO-CAT] getById: ID not found:" << id.toString();
-    }
-
-    return categorie;
-}
-
-QList<CategorieProduit> RepositoryCategorieProduit::getAll()
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<CategorieProduit> categories;
-
-    query.prepare("SELECT * FROM categories_produits WHERE est_actif = true ORDER BY ordre_affichage");
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            CategorieProduit categorie;
-            categorie.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
-            categorie.setNom(query.value("nom").toString());
-            categorie.setDescription(query.value("description").toString());
-            categorie.setCodeCategorie(query.value("code_categorie").toString());
-            categorie.setEstActif(query.value("est_actif").toBool());
-            categorie.setOrdreAffichage(query.value("ordre_affichage").toInt());
-            categories.append(categorie);
-            count++;
-        }
-        qDebug() << "[DEBUG-REPO-CAT] getAll: returned" << count << "categories";
-    } else {
-        m_dernierErreur = "Erreur lecture catégories : " + query.lastError().text();
-        qDebug() << "[DEBUG-REPO-CAT] getAll ERROR:" << query.lastError().text();
-    }
-
-    return categories;
 }
 
 bool RepositoryCategorieProduit::update(const CategorieProduit& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-
-    query.prepare("UPDATE categories_produits SET "
-                  "nom = ?, description = ?, ordre_affichage = ?, est_actif = ? "
-                  "WHERE categorie_produit_id = ?");
+    query.prepare(R"(
+        UPDATE categories_produits SET
+            nom = ?, description = ?, code_categorie = ?,
+            ordre_affichage = ?, est_actif = ?,
+            updated_at = NOW(), version = version + 1, sync_status = 'PENDING'
+        WHERE categorie_produit_id = ? AND deleted_at IS NULL
+    )");
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getDescription());
+    query.addBindValue(entity.getCodeCategorie());
     query.addBindValue(entity.getOrdreAffichage());
     query.addBindValue(entity.estActif());
     query.addBindValue(entity.getCategorieProduitId().toString());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur mise à jour catégorie : " + query.lastError().text();
-        qDebug() << "[DEBUG-REPO-CAT] UPDATE ERROR:" << m_dernierErreur;
         return false;
     }
-    int affected = query.numRowsAffected();
-    qDebug() << "[DEBUG-REPO-CAT] UPDATE: rows affected=" << affected;
-    return affected > 0;
+    return query.numRowsAffected() > 0;
 }
 
-bool RepositoryCategorieProduit::remove(const QUuid& id)
+bool RepositoryCategorieProduit::logicalDelete(const QUuid& id)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE categories_produits SET est_actif = false WHERE categorie_produit_id = ?");
+    query.prepare(R"(
+        UPDATE categories_produits 
+        SET deleted_at = NOW(), sync_status = 'PENDING', version = version + 1
+        WHERE categorie_produit_id = ? AND deleted_at IS NULL
+    )");
     query.addBindValue(id.toString());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur suppression catégorie : " + query.lastError().text();
-        qDebug() << "[DEBUG-REPO-CAT] REMOVE ERROR:" << m_dernierErreur;
         return false;
     }
-    int affected = query.numRowsAffected();
-    qDebug() << "[DEBUG-REPO-CAT] REMOVE: rows affected=" << affected;
-    return affected > 0;
+    return query.numRowsAffected() > 0;
 }
 
-QList<CategorieProduit> RepositoryCategorieProduit::search(const QString& criterion)
+std::optional<CategorieProduit> RepositoryCategorieProduit::getById(const QUuid& id) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+
+    query.prepare("SELECT * FROM categories_produits WHERE categorie_produit_id = ? AND deleted_at IS NULL");
+    query.addBindValue(id.toString());
+
+    if (query.exec() && query.next()) {
+        CategorieProduit c;
+        c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+        c.setNom(query.value("nom").toString());
+        c.setDescription(query.value("description").toString());
+        c.setCodeCategorie(query.value("code_categorie").toString());
+        c.setEstActif(query.value("est_actif").toBool());
+        c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+        return c;
+    }
+    return std::nullopt;
+}
+
+QList<CategorieProduit> RepositoryCategorieProduit::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     QList<CategorieProduit> categories;
 
-    query.prepare("SELECT * FROM categories_produits WHERE nom ILIKE ? AND est_actif = true ORDER BY nom");
-    query.addBindValue("%" + criterion + "%");
-
-    if (query.exec()) {
-        int count = 0;
+    if (query.exec("SELECT * FROM categories_produits WHERE deleted_at IS NULL ORDER BY ordre_affichage")) {
         while (query.next()) {
-            CategorieProduit categorie;
-            categorie.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
-            categorie.setNom(query.value("nom").toString());
-            categorie.setDescription(query.value("description").toString());
-            categorie.setCodeCategorie(query.value("code_categorie").toString());
-            categorie.setEstActif(query.value("est_actif").toBool());
-            categorie.setOrdreAffichage(query.value("ordre_affichage").toInt());
-            categories.append(categorie);
-            count++;
+            CategorieProduit c;
+            c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+            c.setNom(query.value("nom").toString());
+            c.setDescription(query.value("description").toString());
+            c.setCodeCategorie(query.value("code_categorie").toString());
+            c.setEstActif(query.value("est_actif").toBool());
+            c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+            categories.append(c);
         }
-        qDebug() << "[DEBUG-REPO-CAT] search: criterion='" << criterion << "' returned" << count << "results";
-    } else {
-        qDebug() << "[DEBUG-REPO-CAT] search ERROR:" << query.lastError().text();
     }
-
     return categories;
 }
 
-bool RepositoryCategorieProduit::exists(const QUuid& id)
+QList<CategorieProduit> RepositoryCategorieProduit::search(const QString& criterion) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<CategorieProduit> categories;
+
+    query.prepare("SELECT * FROM categories_produits WHERE nom ILIKE ? AND deleted_at IS NULL ORDER BY nom");
+    query.addBindValue("%" + criterion + "%");
+
+    if (query.exec()) {
+        while (query.next()) {
+            CategorieProduit c;
+            c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+            c.setNom(query.value("nom").toString());
+            c.setDescription(query.value("description").toString());
+            c.setCodeCategorie(query.value("code_categorie").toString());
+            c.setEstActif(query.value("est_actif").toBool());
+            c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+            categories.append(c);
+        }
+    }
+    return categories;
+}
+
+bool RepositoryCategorieProduit::exists(const QUuid& id) const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("SELECT 1 FROM categories_produits WHERE categorie_produit_id = ?");
+    query.prepare("SELECT 1 FROM categories_produits WHERE categorie_produit_id = ? AND deleted_at IS NULL");
     query.addBindValue(id.toString());
 
-    bool result = query.exec() && query.next();
-    qDebug() << "[DEBUG-REPO-CAT] exists: id=" << id.toString() << "result=" << result;
-    return result;
+    return query.exec() && query.next();
 }
 
-CategorieProduit RepositoryCategorieProduit::getByCode(const QString& code)
+std::optional<CategorieProduit> RepositoryCategorieProduit::getByCode(const QString& code) const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
     QString codeTrim = code.trimmed();
-    qDebug() << "\n[DEBUG-REPO-CAT] ========== getByCode START ==========";
-    qDebug() << "[DEBUG-REPO-CAT] Input code:" << codeTrim;
-
-    query.prepare("SELECT * FROM categories_produits WHERE code_categorie ILIKE ? AND est_actif = true LIMIT 1");
+    query.prepare("SELECT * FROM categories_produits WHERE code_categorie ILIKE ? AND deleted_at IS NULL LIMIT 1");
     query.addBindValue(codeTrim);
 
-    CategorieProduit categorie;
-    
-    // CORRECTION : Forcer l'ID à Null pour indiquer "Non trouvé" par défaut
-    categorie.setCategorieProduitId(QUuid()); 
-
-    if (!query.exec()) {
-        qDebug() << "[DEBUG-REPO-CAT] ❌ SQL EXECUTION FAILED";
-        qDebug() << "[DEBUG-REPO-CAT] Error:" << query.lastError().text();
-        return categorie;
+    if (query.exec() && query.next()) {
+        CategorieProduit c;
+        c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+        c.setNom(query.value("nom").toString());
+        c.setDescription(query.value("description").toString());
+        c.setCodeCategorie(query.value("code_categorie").toString());
+        c.setEstActif(query.value("est_actif").toBool());
+        c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+        return c;
     }
+    return std::nullopt;
+}
 
-    if (query.next()) {
-        QString codeDb = query.value("code_categorie").toString();
-        QString idDb = query.value("categorie_produit_id").toString();
-        
-        categorie.setCategorieProduitId(QUuid(idDb)); // Écrase le Null par l'ID réel
-        categorie.setNom(query.value("nom").toString());
-        categorie.setDescription(query.value("description").toString());
-        categorie.setCodeCategorie(codeDb);
-        categorie.setEstActif(query.value("est_actif").toBool());
-        categorie.setOrdreAffichage(query.value("ordre_affichage").toInt());
-        
-        qDebug() << "[DEBUG-REPO-CAT] ✓ FOUND IN DATABASE, id_db:" << idDb;
-    } else {
-        qDebug() << "[DEBUG-REPO-CAT] ❌ NO ROWS RETURNED from database";
+QList<CategorieProduit> RepositoryCategorieProduit::getPendingSync() const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<CategorieProduit> categories;
+
+    if (query.exec("SELECT * FROM categories_produits WHERE sync_status = 'PENDING' AND deleted_at IS NULL")) {
+        while (query.next()) {
+            CategorieProduit c;
+            c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+            c.setNom(query.value("nom").toString());
+            c.setDescription(query.value("description").toString());
+            c.setCodeCategorie(query.value("code_categorie").toString());
+            c.setEstActif(query.value("est_actif").toBool());
+            c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+            categories.append(c);
+        }
     }
-    
-    qDebug() << "[DEBUG-REPO-CAT] ========== getByCode END ==========\n";
-    return categorie;
+    return categories;
+}
+
+QList<CategorieProduit> RepositoryCategorieProduit::getSinceVersion(int minVersion) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<CategorieProduit> categories;
+
+    query.prepare("SELECT * FROM categories_produits WHERE version >= ? AND deleted_at IS NULL");
+    query.addBindValue(minVersion);
+
+    if (query.exec()) {
+        while (query.next()) {
+            CategorieProduit c;
+            c.setCategorieProduitId(QUuid(query.value("categorie_produit_id").toString()));
+            c.setNom(query.value("nom").toString());
+            c.setDescription(query.value("description").toString());
+            c.setCodeCategorie(query.value("code_categorie").toString());
+            c.setEstActif(query.value("est_actif").toBool());
+            c.setOrdreAffichage(query.value("ordre_affichage").toInt());
+            categories.append(c);
+        }
+    }
+    return categories;
 }

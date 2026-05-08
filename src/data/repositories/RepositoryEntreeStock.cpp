@@ -3,22 +3,23 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QVariant>
 
-RepositoryEntreeStock::RepositoryEntreeStock()
-{
-}
+RepositoryEntreeStock::RepositoryEntreeStock() {}
 
 bool RepositoryEntreeStock::create(const EntreeStock& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("INSERT INTO entrees_stock "
-                  "(entree_stock_id, produit_id, quantite, source_entree_id, "
-                  "numero_facture, prix_unitaire, numero_lot, date_expiration, "
-                  "cree_par, statut_validation, date, date_mise_a_jour) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    
+    query.prepare(R"(
+        INSERT INTO entrees_stock
+          (entree_stock_id, produit_id, quantite, source_entree_id, numero_facture,
+           prix_unitaire, numero_lot, date_expiration, cree_par, statut_validation,
+           date, date_mise_a_jour,
+           sync_status, version, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, NOW(), NOW())
+    )");
     query.addBindValue(entity.getEntreeStockId().toString());
     query.addBindValue(entity.getProduitId().toString());
     query.addBindValue(entity.getQuantite());
@@ -34,23 +35,69 @@ bool RepositoryEntreeStock::create(const EntreeStock& entity)
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur création entrée stock: " + query.lastError().text();
-        qDebug() << "[REPO-ENTREE] CREATE ERROR:" << m_dernierErreur;
         return false;
     }
-    qDebug() << "[REPO-ENTREE] CREATE SUCCESS: entree_id=" << entity.getEntreeStockId();
     return true;
 }
 
-EntreeStock RepositoryEntreeStock::getById(const QUuid& id)
+bool RepositoryEntreeStock::update(const EntreeStock& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("SELECT * FROM entrees_stock WHERE entree_stock_id = ?");
+    query.prepare(R"(
+        UPDATE entrees_stock SET
+           quantite = ?, prix_unitaire = ?, numero_lot = ?,
+           date_expiration = ?, approuve_par = ?, statut_validation = ?,
+           date_mise_a_jour = CURRENT_TIMESTAMP,
+           updated_at = NOW(), version = version + 1, sync_status = 'PENDING'
+        WHERE entree_stock_id = ? AND deleted_at IS NULL
+    )");
+
+    query.addBindValue(entity.getQuantite());
+    query.addBindValue(entity.getPrixUnitaire());
+    query.addBindValue(entity.getNumeroLot());
+    query.addBindValue(entity.getDateExpiration());
+    query.addBindValue(entity.getApprouvePar().toString());
+    query.addBindValue(entity.getStatutValidation());
+    query.addBindValue(entity.getEntreeStockId().toString());
+
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur mise à jour entrée stock: " + query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+
+bool RepositoryEntreeStock::logicalDelete(const QUuid& id)
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+
+    query.prepare(R"(
+        UPDATE entrees_stock
+        SET deleted_at = NOW(), sync_status = 'PENDING', version = version + 1
+        WHERE entree_stock_id = ? AND deleted_at IS NULL
+    )");
     query.addBindValue(id.toString());
 
-    EntreeStock entree;
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur suppression entrée stock: " + query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+
+std::optional<EntreeStock> RepositoryEntreeStock::getById(const QUuid& id) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+
+    query.prepare("SELECT * FROM entrees_stock WHERE entree_stock_id = ? AND deleted_at IS NULL");
+    query.addBindValue(id.toString());
+
     if (query.exec() && query.next()) {
+        EntreeStock entree;
         entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
         entree.setProduitId(QUuid(query.value("produit_id").toString()));
         entree.setQuantite(query.value("quantite").toInt());
@@ -62,24 +109,20 @@ EntreeStock RepositoryEntreeStock::getById(const QUuid& id)
         entree.setCreePar(QUuid(query.value("cree_par").toString()));
         entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
         entree.setStatutValidation(query.value("statut_validation").toString());
-    } else {
-        m_dernierErreur = "Entrée stock non trouvée";
-        qDebug() << "[REPO-ENTREE] getById: ID not found:" << id.toString();
+        entree.setDate(query.value("date").toDateTime());
+        entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+        return entree;
     }
-
-    return entree;
+    return std::nullopt;
 }
 
-QList<EntreeStock> RepositoryEntreeStock::getAll()
+QList<EntreeStock> RepositoryEntreeStock::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     QList<EntreeStock> entrees;
 
-    query.prepare("SELECT * FROM entrees_stock ORDER BY date DESC");
-
-    if (query.exec()) {
-        int count = 0;
+    if (query.exec("SELECT * FROM entrees_stock WHERE deleted_at IS NULL ORDER BY date DESC")) {
         while (query.next()) {
             EntreeStock entree;
             entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
@@ -93,124 +136,115 @@ QList<EntreeStock> RepositoryEntreeStock::getAll()
             entree.setCreePar(QUuid(query.value("cree_par").toString()));
             entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
             entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
             entrees.append(entree);
-            count++;
         }
-        qDebug() << "[REPO-ENTREE] getAll: returned" << count << "entries";
-    } else {
-        m_dernierErreur = "Erreur lecture entrées stock: " + query.lastError().text();
-        qDebug() << "[REPO-ENTREE] getAll ERROR:" << query.lastError().text();
     }
-
     return entrees;
 }
 
-bool RepositoryEntreeStock::update(const EntreeStock& entity)
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare("UPDATE entrees_stock SET "
-                  "quantite = ?, prix_unitaire = ?, numero_lot = ?, "
-                  "date_expiration = ?, approuve_par = ?, statut_validation = ?, "
-                  "date_mise_a_jour = CURRENT_TIMESTAMP "
-                  "WHERE entree_stock_id = ?");
-    
-    query.addBindValue(entity.getQuantite());
-    query.addBindValue(entity.getPrixUnitaire());
-    query.addBindValue(entity.getNumeroLot());
-    query.addBindValue(entity.getDateExpiration());
-    query.addBindValue(entity.getApprouvePar().toString());
-    query.addBindValue(entity.getStatutValidation());
-    query.addBindValue(entity.getEntreeStockId().toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur mise à jour entrée stock: " + query.lastError().text();
-        qDebug() << "[REPO-ENTREE] UPDATE ERROR:" << m_dernierErreur;
-        return false;
-    }
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-ENTREE] UPDATE: rows affected=" << affected;
-    return affected > 0;
-}
-
-bool RepositoryEntreeStock::remove(const QUuid& id)
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare("DELETE FROM entrees_stock WHERE entree_stock_id = ?");
-    query.addBindValue(id.toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur suppression entrée stock: " + query.lastError().text();
-        qDebug() << "[REPO-ENTREE] REMOVE ERROR:" << m_dernierErreur;
-        return false;
-    }
-    int affected = query.numRowsAffected();
-    qDebug() << "[REPO-ENTREE] REMOVE: rows affected=" << affected;
-    return affected > 0;
-}
-
-QList<EntreeStock> RepositoryEntreeStock::search(const QString& criterion)
-{
-    QList<EntreeStock> all = getAll();
-    QList<EntreeStock> filtered;
-    
-    for (const auto& entree : all) {
-        if (entree.getNumeroFacture().contains(criterion, Qt::CaseInsensitive) ||
-            entree.getNumeroLot().contains(criterion, Qt::CaseInsensitive)) {
-            filtered.append(entree);
-        }
-    }
-    
-    return filtered;
-}
-
-bool RepositoryEntreeStock::exists(const QUuid& id)
-{
-    return !getById(id).getEntreeStockId().isNull();
-}
-
-QList<EntreeStock> RepositoryEntreeStock::getByStatut(const QString& statut)
+QList<EntreeStock> RepositoryEntreeStock::search(const QString& criterion) const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     QList<EntreeStock> entrees;
 
-    query.prepare("SELECT * FROM entrees_stock WHERE statut_validation = ? ORDER BY date DESC");
+    query.prepare("SELECT * FROM entrees_stock WHERE deleted_at IS NULL AND (numero_facture ILIKE ? OR numero_lot ILIKE ?) ORDER BY date DESC");
+    QString crit = "%" + criterion + "%";
+    query.addBindValue(crit);
+    query.addBindValue(crit);
+
+    if (query.exec()) {
+        while (query.next()) {
+            EntreeStock entree;
+            entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
+            entree.setProduitId(QUuid(query.value("produit_id").toString()));
+            entree.setQuantite(query.value("quantite").toInt());
+            entree.setSourceEntreeId(QUuid(query.value("source_entree_id").toString()));
+            entree.setNumeroFacture(query.value("numero_facture").toString());
+            entree.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+            entree.setNumeroLot(query.value("numero_lot").toString());
+            entree.setDateExpiration(query.value("date_expiration").toDate());
+            entree.setCreePar(QUuid(query.value("cree_par").toString()));
+            entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
+            entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            entrees.append(entree);
+        }
+    }
+    return entrees;
+}
+
+bool RepositoryEntreeStock::exists(const QUuid& id) const
+{
+    return getById(id).has_value();
+}
+
+QList<EntreeStock> RepositoryEntreeStock::getByStatut(const QString& statut) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<EntreeStock> entrees;
+
+    query.prepare("SELECT * FROM entrees_stock WHERE statut_validation = ? AND deleted_at IS NULL ORDER BY date DESC");
     query.addBindValue(statut);
 
     if (query.exec()) {
         while (query.next()) {
-            EntreeStock entree = getById(QUuid(query.value("entree_stock_id").toString()));
+            EntreeStock entree;
+            entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
+            entree.setProduitId(QUuid(query.value("produit_id").toString()));
+            entree.setQuantite(query.value("quantite").toInt());
+            entree.setSourceEntreeId(QUuid(query.value("source_entree_id").toString()));
+            entree.setNumeroFacture(query.value("numero_facture").toString());
+            entree.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+            entree.setNumeroLot(query.value("numero_lot").toString());
+            entree.setDateExpiration(query.value("date_expiration").toDate());
+            entree.setCreePar(QUuid(query.value("cree_par").toString()));
+            entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
+            entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
             entrees.append(entree);
         }
     }
-
     return entrees;
 }
 
-QList<EntreeStock> RepositoryEntreeStock::getByProduit(const QUuid& produitId)
+QList<EntreeStock> RepositoryEntreeStock::getByProduit(const QUuid& produitId) const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     QList<EntreeStock> entrees;
 
-    query.prepare("SELECT * FROM entrees_stock WHERE produit_id = ? ORDER BY date DESC");
+    query.prepare("SELECT * FROM entrees_stock WHERE produit_id = ? AND deleted_at IS NULL ORDER BY date DESC");
     query.addBindValue(produitId.toString());
 
     if (query.exec()) {
         while (query.next()) {
-            EntreeStock entree = getById(QUuid(query.value("entree_stock_id").toString()));
+            EntreeStock entree;
+            entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
+            entree.setProduitId(QUuid(query.value("produit_id").toString()));
+            entree.setQuantite(query.value("quantite").toInt());
+            entree.setSourceEntreeId(QUuid(query.value("source_entree_id").toString()));
+            entree.setNumeroFacture(query.value("numero_facture").toString());
+            entree.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+            entree.setNumeroLot(query.value("numero_lot").toString());
+            entree.setDateExpiration(query.value("date_expiration").toDate());
+            entree.setCreePar(QUuid(query.value("cree_par").toString()));
+            entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
+            entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
             entrees.append(entree);
         }
     }
-
     return entrees;
 }
 
-QList<EntreeStock> RepositoryEntreeStock::getEnAttente()
+QList<EntreeStock> RepositoryEntreeStock::getEnAttente() const
 {
     return getByStatut("EN_ATTENTE");
 }
@@ -220,11 +254,12 @@ bool RepositoryEntreeStock::approuver(const QUuid& entreeId, const QUuid& utilis
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE entrees_stock SET "
-                  "statut_validation = 'APPROUVE', "
-                  "approuve_par = ?, "
-                  "date_mise_a_jour = CURRENT_TIMESTAMP "
-                  "WHERE entree_stock_id = ?");
+    query.prepare(R"(
+        UPDATE entrees_stock 
+        SET statut_validation = 'APPROUVE', approuve_par = ?, 
+            date_mise_a_jour = CURRENT_TIMESTAMP, updated_at = NOW(), version = version + 1, sync_status = 'PENDING'
+        WHERE entree_stock_id = ? AND deleted_at IS NULL
+    )");
     query.addBindValue(utilisateurId.toString());
     query.addBindValue(entreeId.toString());
 
@@ -232,8 +267,6 @@ bool RepositoryEntreeStock::approuver(const QUuid& entreeId, const QUuid& utilis
         m_dernierErreur = "Erreur approbation entrée stock: " + query.lastError().text();
         return false;
     }
-    
-    qDebug() << "[REPO-ENTREE] APPROUVE: entree_id=" << entreeId << "par=" << utilisateurId;
     return query.numRowsAffected() > 0;
 }
 
@@ -242,17 +275,76 @@ bool RepositoryEntreeStock::rejeter(const QUuid& entreeId)
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("UPDATE entrees_stock SET "
-                  "statut_validation = 'REJETE', "
-                  "date_mise_a_jour = CURRENT_TIMESTAMP "
-                  "WHERE entree_stock_id = ?");
+    query.prepare(R"(
+        UPDATE entrees_stock 
+        SET statut_validation = 'REJETE', 
+            date_mise_a_jour = CURRENT_TIMESTAMP, updated_at = NOW(), version = version + 1, sync_status = 'PENDING'
+        WHERE entree_stock_id = ? AND deleted_at IS NULL
+    )");
     query.addBindValue(entreeId.toString());
 
     if (!query.exec()) {
         m_dernierErreur = "Erreur rejet entrée stock: " + query.lastError().text();
         return false;
     }
-    
-    qDebug() << "[REPO-ENTREE] REJETE: entree_id=" << entreeId;
     return query.numRowsAffected() > 0;
+}
+
+QList<EntreeStock> RepositoryEntreeStock::getPendingSync() const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<EntreeStock> entrees;
+
+    if (query.exec("SELECT * FROM entrees_stock WHERE sync_status = 'PENDING' AND deleted_at IS NULL")) {
+        while (query.next()) {
+            EntreeStock entree;
+            entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
+            entree.setProduitId(QUuid(query.value("produit_id").toString()));
+            entree.setQuantite(query.value("quantite").toInt());
+            entree.setSourceEntreeId(QUuid(query.value("source_entree_id").toString()));
+            entree.setNumeroFacture(query.value("numero_facture").toString());
+            entree.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+            entree.setNumeroLot(query.value("numero_lot").toString());
+            entree.setDateExpiration(query.value("date_expiration").toDate());
+            entree.setCreePar(QUuid(query.value("cree_par").toString()));
+            entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
+            entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            entrees.append(entree);
+        }
+    }
+    return entrees;
+}
+
+QList<EntreeStock> RepositoryEntreeStock::getSinceVersion(int minVersion) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    QList<EntreeStock> entrees;
+
+    query.prepare("SELECT * FROM entrees_stock WHERE version >= ? AND deleted_at IS NULL");
+    query.addBindValue(minVersion);
+
+    if (query.exec()) {
+        while (query.next()) {
+            EntreeStock entree;
+            entree.setEntreeStockId(QUuid(query.value("entree_stock_id").toString()));
+            entree.setProduitId(QUuid(query.value("produit_id").toString()));
+            entree.setQuantite(query.value("quantite").toInt());
+            entree.setSourceEntreeId(QUuid(query.value("source_entree_id").toString()));
+            entree.setNumeroFacture(query.value("numero_facture").toString());
+            entree.setPrixUnitaire(query.value("prix_unitaire").toDouble());
+            entree.setNumeroLot(query.value("numero_lot").toString());
+            entree.setDateExpiration(query.value("date_expiration").toDate());
+            entree.setCreePar(QUuid(query.value("cree_par").toString()));
+            entree.setApprouvePar(QUuid(query.value("approuve_par").toString()));
+            entree.setStatutValidation(query.value("statut_validation").toString());
+            entree.setDate(query.value("date").toDateTime());
+            entree.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+            entrees.append(entree);
+        }
+    }
+    return entrees;
 }

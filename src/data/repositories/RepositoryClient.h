@@ -1,30 +1,34 @@
 #ifndef REPOSITORYCLIENT_H
 #define REPOSITORYCLIENT_H
 
-#include "IRepository.h"
 #include "../../core/entities/Client.h"
 #include <QList>
 #include <QString>
 #include <QUuid>
+#include <optional>
 
-class RepositoryClient : public IRepository<Client>
+class RepositoryClient
 {
 public:
     RepositoryClient();
 
-    bool create(const Client& entity) override;
-    Client getById(const QUuid& id) override;
-    QList<Client> getAll() override;
-    bool update(const Client& entity) override;
-    bool remove(const QUuid& id) override;
+    // CRUD & cycle de vie
+    bool create(const Client& entity);
+    bool update(const Client& entity);
+    bool logicalDelete(const QUuid& id);
+    std::optional<Client> getById(const QUuid& id) const;
+    QList<Client> getAll() const;
 
-    QList<Client> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
+    // Recherche métier
+    QList<Client> search(const QString& criterion) const;
+    bool exists(const QUuid& id) const;
+    QList<Client> getByRoute(const QUuid& routeId) const;
 
-    QString getLastError() const override { return m_dernierErreur; }
+    // SYNC / OFFLINE-FIRST
+    QList<Client> getPendingSync() const;
+    QList<Client> getSinceVersion(int minVersion) const;
 
-    // Méthodes spécifiques
-    QList<Client> getByRoute(const QUuid& routeId);
+    QString getLastError() const { return m_dernierErreur; }
 
 private:
     QString m_dernierErreur;

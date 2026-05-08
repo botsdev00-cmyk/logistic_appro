@@ -1,31 +1,38 @@
 #ifndef REPOSITORYENTREESTOCK_H
 #define REPOSITORYENTREESTOCK_H
 
-#include "IRepository.h"
 #include "../../core/entities/EntreeStock.h"
 #include <QList>
+#include <QString>
+#include <QUuid>
+#include <optional>
 
-class RepositoryEntreeStock : public IRepository<EntreeStock>
+class RepositoryEntreeStock
 {
 public:
     RepositoryEntreeStock();
 
-    bool create(const EntreeStock& entity) override;
-    EntreeStock getById(const QUuid& id) override;
-    QList<EntreeStock> getAll() override;
-    bool update(const EntreeStock& entity) override;
-    bool remove(const QUuid& id) override;
-    QList<EntreeStock> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
-    QString getLastError() const override { return m_dernierErreur; }
+    // CRUD & logique cycle vie
+    bool create(const EntreeStock& entity);
+    bool update(const EntreeStock& entity);
+    bool logicalDelete(const QUuid& id);
+    std::optional<EntreeStock> getById(const QUuid& id) const;
+    QList<EntreeStock> getAll() const;
 
-    // Méthodes spécifiques
-    QList<EntreeStock> getByStatut(const QString& statut);
-    QList<EntreeStock> getByProduit(const QUuid& produitId);
-    QList<EntreeStock> getEnAttente();
+    // Recherches métier
+    QList<EntreeStock> search(const QString& criterion) const;
+    bool exists(const QUuid& id) const;
+    QList<EntreeStock> getByStatut(const QString& statut) const;
+    QList<EntreeStock> getByProduit(const QUuid& produitId) const;
+    QList<EntreeStock> getEnAttente() const;
     bool approuver(const QUuid& entreeId, const QUuid& utilisateurId);
     bool rejeter(const QUuid& entreeId);
 
+    // OFFLINE-FIRST sync/REST
+    QList<EntreeStock> getPendingSync() const;
+    QList<EntreeStock> getSinceVersion(int minVersion) const;
+
+    QString getLastError() const { return m_dernierErreur; }
 private:
     QString m_dernierErreur;
 };
