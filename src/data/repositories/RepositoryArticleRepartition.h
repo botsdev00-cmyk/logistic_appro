@@ -4,28 +4,43 @@
 #include "../../core/entities/ArticleRepartition.h"
 #include <QList>
 #include <QUuid>
-#include <optional>
+#include <QString>
 
-class RepositoryArticleRepartition {
+class RepositoryArticleRepartition
+{
 public:
     RepositoryArticleRepartition();
 
     // CRUD standardisé
-    bool create(const ArticleRepartition& article);                  
-    bool update(const ArticleRepartition& article);                  
-    bool logicalDelete(const QUuid& articleRepartitionId);           
-    std::optional<ArticleRepartition> getById(const QUuid& id) const;
+    bool create(const ArticleRepartition& article);
+    bool update(const ArticleRepartition& article);
+    bool remove(const QUuid& articleId);
+    ArticleRepartition getById(const QUuid& id) const;
     QList<ArticleRepartition> getAll() const;
     QList<ArticleRepartition> getByRepartitionId(const QUuid& repartitionId) const;
 
-    // OFFLINE-FIRST
-    QList<ArticleRepartition> getPendingSync() const;                
+    // Offline-first - C++ API pur
+    QList<ArticleRepartition> getPendingSync() const;
+    QList<ArticleRepartition> getSyncedArticles() const;
+    QList<ArticleRepartition> getConflictSync() const;
     QList<ArticleRepartition> getSinceVersion(int minVersion) const;
+    int getPendingCount() const;
 
+    // Batch sync - C++ API pur
+    struct SyncResult {
+        QUuid articleId;
+        bool success;
+        QString message;
+        int newVersion;
+    };
+    QList<SyncResult> syncBatch(const QList<ArticleRepartition>& articles, const QUuid& utilisateurId);
+
+    // Error handling
     QString getLastError() const { return m_dernierErreur; }
 
 private:
     QString m_dernierErreur;
+    ArticleRepartition mapRowToArticle(const QSqlQuery& query) const;
 };
 
 #endif // REPOSITORYARTICLEREPARTITION_H

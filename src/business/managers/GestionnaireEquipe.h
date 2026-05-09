@@ -9,12 +9,39 @@
 class GestionnaireEquipe
 {
 public:
-    // Retourne l'id de l'équipe créée, ou QUuid() en cas d'échec
+    GestionnaireEquipe();
+    ~GestionnaireEquipe();
+
+    // CRUD métier
     QUuid creerEquipe(const QString& nom, 
-                      const QUuid& chefId, 
-                      const QList<QUuid>& membres,
-                      const QString& telephoneChef = "");
+                      const QString& nomChef,
+                      const QString& telephoneChef,
+                      const QString& description,
+                      const QUuid& createdBy);
+    
+    bool modifierEquipe(const Equipe& equipe, const QUuid& updatedBy);
+    bool supprimerEquipe(const QUuid& equipeId, const QUuid& deletedBy);
+    Equipe obtenirEquipe(const QUuid& equipeId) const;
+    QList<Equipe> listerEquipes() const;
+    QList<Equipe> rechercherEquipes(const QString& criterion) const;
+
+    // Offline-first
+    QList<Equipe> obtenirEquipesPendantes() const;
+    QList<Equipe> obtenirEquipesEnConflit() const;
+    int compterEquipesPendantes() const;
+    
+    // Synchronisation - API C++ pur
+    struct SyncReport {
+        int totalTreated;
+        int syncedCount;
+        int conflictCount;
+        QString message;
+    };
+    SyncReport synchroniserEquipes(const QList<Equipe>& equipes, const QUuid& utilisateurId);
+
+    // Error handling
     QString getDernierErreur() const { return m_dernierErreur; }
+
 private:
     QString m_dernierErreur;
 };
