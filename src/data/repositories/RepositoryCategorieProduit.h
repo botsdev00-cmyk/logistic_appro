@@ -6,16 +6,17 @@
 #include <QString>
 #include <QUuid>
 #include <optional>
+#include <QSqlQuery>
 
 class RepositoryCategorieProduit
 {
 public:
     RepositoryCategorieProduit();
 
-    // CRUD
-    bool create(const CategorieProduit& entity);         // Ajout : sync_status 'PENDING', version 1
-    bool update(const CategorieProduit& entity);         // Maj (maj version, sync_status)
-    bool logicalDelete(const QUuid& id);                 // Soft delete (never SQL DELETE)
+    // CRUD offline-first
+    bool create(const CategorieProduit& entity);               // Ajout : sync_status PENDING, version 1
+    bool update(const CategorieProduit& entity);               // Maj (maj version, sync_status)
+    bool logicalDelete(const QUuid& id);                       // Soft delete (never SQL DELETE)
     std::optional<CategorieProduit> getById(const QUuid& id) const;
     QList<CategorieProduit> getAll() const;
 
@@ -32,6 +33,7 @@ public:
 
 private:
     QString m_dernierErreur;
+    CategorieProduit mapRowToCategorie(const QSqlQuery& query) const;
 };
 
 #endif // REPOSITORYCATEGORIEPRODUIT_H

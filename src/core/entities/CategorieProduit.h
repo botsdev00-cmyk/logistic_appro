@@ -8,6 +8,8 @@
 class CategorieProduit
 {
 public:
+    enum class SyncStatus { PENDING, SYNCED, CONFLICT };
+
     CategorieProduit();
     ~CategorieProduit();
 
@@ -20,6 +22,9 @@ public:
     int getOrdreAffichage() const { return m_ordreAffichage; }
     QDateTime getDateCreation() const { return m_dateCreation; }
     QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    int getVersion() const { return m_version; }
+    SyncStatus getSyncStatus() const { return m_syncStatus; }
+    QDateTime getDeletedAt() const { return m_deletedAt; }
 
     // Setters
     void setCategorieProduitId(const QUuid& id) { m_categorieProduitId = id; }
@@ -30,6 +35,16 @@ public:
     void setOrdreAffichage(int ordre) { m_ordreAffichage = ordre; }
     void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
     void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
+    void setVersion(int v) { m_version = v; }
+    void setSyncStatus(SyncStatus status) { m_syncStatus = status; }
+    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
+
+    bool isDeleted() const { return m_deletedAt.isValid(); }
+    bool needsSync() const { return m_syncStatus != SyncStatus::SYNCED; }
+    QString syncStatusString() const;
+
+    // Conversion utilitaire (pour mapping DB à objet)
+    static SyncStatus fromString(const QString& v);
 
 private:
     QUuid m_categorieProduitId;
@@ -40,6 +55,9 @@ private:
     int m_ordreAffichage;
     QDateTime m_dateCreation;
     QDateTime m_dateMiseAJour;
+    int m_version;
+    SyncStatus m_syncStatus;
+    QDateTime m_deletedAt; // soft delete
 };
 
 #endif // CATEGORIEPRODUIT_H

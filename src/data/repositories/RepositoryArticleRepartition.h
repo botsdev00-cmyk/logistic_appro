@@ -5,6 +5,7 @@
 #include <QList>
 #include <QUuid>
 #include <QString>
+#include <QSqlQuery>
 
 class RepositoryArticleRepartition
 {

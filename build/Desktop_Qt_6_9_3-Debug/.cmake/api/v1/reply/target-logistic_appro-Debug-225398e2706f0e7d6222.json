@@ -44,25 +44,25 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 276,
+				"line" : 290,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 343,
+				"line" : 357,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 294,
+				"line" : 308,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 313,
+				"line" : 327,
 				"parent" : 0
 			},
 			{
@@ -150,7 +150,7 @@
 			{
 				"command" : 9,
 				"file" : 0,
-				"line" : 329,
+				"line" : 343,
 				"parent" : 0
 			},
 			{
@@ -172,7 +172,7 @@
 			{
 				"command" : 12,
 				"file" : 0,
-				"line" : 284,
+				"line" : 298,
 				"parent" : 0
 			}
 		]
@@ -417,8 +417,10 @@
 				88,
 				89,
 				90,
+				91,
 				92,
-				94
+				94,
+				96
 			]
 		}
 	],
@@ -648,30 +650,32 @@
 				88,
 				89,
 				90,
+				91,
 				92,
-				94
+				94,
+				96
 			]
 		},
 		{
 			"name" : "Resources",
 			"sourceIndexes" : 
 			[
-				91
+				93
 			]
 		},
 		{
 			"name" : "",
 			"sourceIndexes" : 
 			[
-				93
+				95
 			]
 		},
 		{
 			"name" : "CMake Rules",
 			"sourceIndexes" : 
 			[
-				95,
-				96
+				97,
+				98
 			]
 		}
 	],
@@ -1005,6 +1009,12 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
+			"path" : "src/api/OfflineApiServer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
 			"path" : "src/ui/main_window/FenetreMain.cpp",
 			"sourceGroupIndex" : 0
 		},
@@ -1222,6 +1232,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/utils/helpers/GenerateurPDF.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/utils/globals/globals.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{

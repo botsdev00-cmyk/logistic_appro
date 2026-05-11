@@ -6,6 +6,7 @@
 #include <QString>
 #include <QUuid>
 #include <optional>
+#include <QSqlQuery>
 
 class RepositoryClient
 {
@@ -32,6 +33,7 @@ public:
 
 private:
     QString m_dernierErreur;
+    Client mapRowToClient(const QSqlQuery& q) const;
 };
 
 #endif // REPOSITORYCLIENT_H

@@ -5,6 +5,7 @@
 #include "../../core/entities/Equipe.h"
 #include <QList>
 #include <QString>
+#include <QSqlQuery>
 #include <QUuid>
 
 class RepositoryEquipe : public IRepository<Equipe>

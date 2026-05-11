@@ -161,6 +161,15 @@ set(BUSINESS_MANAGERS
 set(BUSINESS_SOURCES ${BUSINESS_EXCEPTIONS} ${BUSINESS_SERVICES} ${BUSINESS_MANAGERS})
 
 # ============================================================================
+# API LAYER: OFFLINE API SERVER
+# ============================================================================
+
+set(API_SERVICES
+    ${SRC_DIR}/api/OfflineApiServer.cpp
+)
+
+
+# ============================================================================
 # UI LAYER: MAIN WINDOW
 # ============================================================================
 
@@ -267,6 +276,7 @@ set(ALL_SOURCES
     ${CORE_SOURCES}
     ${DATA_SOURCES}
     ${BUSINESS_SOURCES}
+    ${API_SERVICES}
     ${UI_SOURCES}
     ${UTIL_SOURCES}
     ${RESOURCES}

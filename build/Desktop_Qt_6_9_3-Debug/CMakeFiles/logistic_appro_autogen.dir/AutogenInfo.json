@@ -810,6 +810,12 @@
 	"HEADERS" : 
 	[
 		[
+			"/home/bots/semuliki_logistic/src/api/OfflineApiServer.h",
+			"MU",
+			"PA7CP7W2FZ/moc_OfflineApiServer.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/business/exceptions/AppException.h",
 			"MU",
 			"QTKAJ7UTZN/moc_AppException.cpp",
@@ -1438,6 +1444,11 @@
 	"SETTINGS_FILE" : "/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/logistic_appro_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
+		[
+			"/home/bots/semuliki_logistic/src/api/OfflineApiServer.cpp",
+			"MU",
+			null
+		],
 		[
 			"/home/bots/semuliki_logistic/src/business/exceptions/AppException.cpp",
 			"MU",

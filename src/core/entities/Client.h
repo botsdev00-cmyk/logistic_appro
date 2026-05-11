@@ -13,6 +13,11 @@ public:
         Credit5Jours,
         Credit7Jours
     };
+    enum class SyncStatus {
+        PENDING,
+        SYNCED,
+        CONFLICT
+    };
 
     Client();
     ~Client();
@@ -29,6 +34,9 @@ public:
     bool estActif() const { return m_estActif; }
     QDateTime getDateCreation() const { return m_dateCreation; }
     QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    int getVersion() const { return m_version; }
+    SyncStatus getSyncStatus() const { return m_syncStatus; }
+    QDateTime getDeletedAt() const { return m_deletedAt; }
 
     // Setters
     void setClientId(const QUuid& id) { m_clientId = id; }
@@ -42,11 +50,18 @@ public:
     void setEstActif(bool actif) { m_estActif = actif; }
     void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
     void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
+    void setVersion(int v) { m_version = v; }
+    void setSyncStatus(SyncStatus s) { m_syncStatus = s; }
+    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
 
     // Utility methods
     static QString conditionsPaiementToString(ConditionsPaiement conditions);
     static ConditionsPaiement stringToConditionsPaiement(const QString& str);
     QString getConditionsPaiementLabel() const;
+    bool isDeleted() const { return m_deletedAt.isValid(); }
+    bool needsSync() const { return m_syncStatus != SyncStatus::SYNCED; }
+    QString syncStatusString() const;
+    static SyncStatus syncStatusFromString(const QString& s);
 
 private:
     QUuid m_clientId;
@@ -60,6 +75,9 @@ private:
     bool m_estActif;
     QDateTime m_dateCreation;
     QDateTime m_dateMiseAJour;
+    int m_version = 1;
+    SyncStatus m_syncStatus = SyncStatus::PENDING;
+    QDateTime m_deletedAt;
 };
 
 #endif // CLIENT_H

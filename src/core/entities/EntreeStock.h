@@ -39,6 +39,7 @@ public:
     void setCreePar(const QUuid& id) { m_creePar = id; }
     void setApprouvePar(const QUuid& id) { m_approuvePar = id; }
     void setStatutValidation(const QString& statut) { m_statutValidation = statut; }
+    void setDateMiseAJour(const QDateTime& dt) { m_dateMiseAJour = dt; }
 
     // Validation
     bool estValide() const;

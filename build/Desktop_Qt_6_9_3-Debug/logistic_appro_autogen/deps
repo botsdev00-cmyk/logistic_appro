@@ -3,6 +3,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QMap \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QObject \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QSortFilterProxyModel \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
@@ -73,6 +74,7 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmargins.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmath.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmetacontainer.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmetaobject.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmetatype.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qminmax.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtCore/qnamespace.h \
@@ -179,6 +181,12 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qtransform.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qvalidator.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtGui/qwindowdefs.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/QSqlQuery \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/qsqldatabase.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/qsqlquery.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsql-config.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsqlexports.h \
+	/home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsqlglobal.h \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QComboBox \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDateEdit \
 	/home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/QDialog \
@@ -642,6 +650,8 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/CMakeFiles/3.30.5/CMakeSystem.cmake \
 	/home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
 	/home/bots/semuliki_logistic/resources/ressources.qrc \
+	/home/bots/semuliki_logistic/src/api/OfflineApiServer.cpp \
+	/home/bots/semuliki_logistic/src/api/OfflineApiServer.h \
 	/home/bots/semuliki_logistic/src/business/exceptions/AppException.cpp \
 	/home/bots/semuliki_logistic/src/business/exceptions/AppException.h \
 	/home/bots/semuliki_logistic/src/business/exceptions/BusinessException.cpp \
