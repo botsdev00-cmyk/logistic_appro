@@ -2,6 +2,7 @@
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryRepartition.h"
+#include "../../core/entities/Produit.h"
 #include <QHeaderView>
 #include <QDebug>
 #include <QVariant>
@@ -40,7 +41,8 @@ void TableauRetoursEnAttente::setRetoursEnAttente(const QList<RetourStock>& reto
         const auto& r = retours[i];
 
         // Article
-        QString nomProduit = repoProduit.getById(r.getProduitId()).getNom();
+        auto produitOpt = repoProduit.getById(r.getProduitId());
+        QString nomProduit = produitOpt ? produitOpt->getNom() : "(Inconnu)";
         QTableWidgetItem* itemArt = new QTableWidgetItem(nomProduit);
 
         // Quantité

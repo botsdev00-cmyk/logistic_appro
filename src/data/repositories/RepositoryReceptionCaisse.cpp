@@ -59,7 +59,7 @@ ReceptionCaisse RepositoryReceptionCaisse::getById(const QUuid& id)
     return reception;
 }
 
-QList<ReceptionCaisse> RepositoryReceptionCaisse::getAll()
+QList<ReceptionCaisse> RepositoryReceptionCaisse::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

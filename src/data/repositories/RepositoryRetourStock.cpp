@@ -64,7 +64,7 @@ RetourStock RepositoryRetourStock::getById(const QUuid& id)
     return retour;
 }
 
-QList<RetourStock> RepositoryRetourStock::getAll()
+QList<RetourStock> RepositoryRetourStock::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

@@ -14,7 +14,7 @@ public:
     // CRUD operations
     virtual bool create(const T& entity) = 0;
     virtual T getById(const QUuid& id) = 0;
-    virtual QList<T> getAll() = 0;
+    virtual QList<T> getAll() const = 0;
     virtual bool update(const T& entity) = 0;
     virtual bool remove(const QUuid& id) = 0;
 

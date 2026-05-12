@@ -51,7 +51,7 @@ Route RepositoryRoute::getById(const QUuid& id)
     return route;
 }
 
-QList<Route> RepositoryRoute::getAll()
+QList<Route> RepositoryRoute::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

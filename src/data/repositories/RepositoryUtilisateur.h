@@ -14,7 +14,7 @@ public:
 
     bool create(const Utilisateur& entity) override;
     Utilisateur getById(const QUuid& id) override;
-    QList<Utilisateur> getAll() override;
+    QList<Utilisateur> getAll() const override;
     bool update(const Utilisateur& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -28,7 +28,7 @@ public:
     Utilisateur getByEmail(const QString& email);
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYUTILISATEUR_H

@@ -46,7 +46,8 @@ public:
     QList<CategorieProduit> getCategoriesProduitSinceVersion(int minVersion) const;
 
     // ================= EQUIPE (exemple) =================
-    QUuid creerEquipe(const QString& nom, const QUuid& chefId, const QList<QUuid>& membres, const QString& telephoneChef = "");
+    // In OfflineApiServer.h (around line 49), replace the old declaration with:
+    QUuid creerEquipe(const QString& nom, const QString& nomChef, /*const QString& description,*/ const QUuid& createdBy);
     QList<Equipe> getAllEquipes() const;
     QList<Equipe> getPendingEquipes() const;
 

@@ -14,7 +14,7 @@ public:
 
     bool create(const Route& entity) override;
     Route getById(const QUuid& id) override;
-    QList<Route> getAll() override;
+    QList<Route> getAll() const override;
     bool update(const Route& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -24,7 +24,7 @@ public:
     QString getLastError() const override { return m_dernierErreur; }
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYROUTE_H

@@ -14,8 +14,7 @@ Equipe RepositoryEquipe::mapRowToEquipe(const QSqlQuery& query) const
     equipe.setEquipeId(QUuid(query.value("equipe_id").toString()));
     equipe.setNom(query.value("nom").toString());
     equipe.setNomChef(query.value("nom_chef").toString());
-    equipe.setTelephoneChef(query.value("telephone_chef").toString());
-    equipe.setDescription(query.value("description").toString());
+    // equipe.setDescription(query.value("description").toString());
     
     // Sync fields
     equipe.setSyncStatus(Equipe::stringToSyncStatus(query.value("sync_status").toString()));
@@ -23,7 +22,7 @@ Equipe RepositoryEquipe::mapRowToEquipe(const QSqlQuery& query) const
     equipe.setCreatedAt(query.value("created_at").toDateTime());
     equipe.setUpdatedAt(query.value("updated_at").toDateTime());
     equipe.setDeletedAt(query.value("deleted_at").toDateTime());
-    equipe.setCreatedBy(QUuid(query.value("created_by").toString()));
+    // equipe.setCreatedBy(QUuid(query.value("created_by").toString()));
     equipe.setUpdatedBy(QUuid(query.value("updated_by").toString()));
     equipe.setEstActif(query.value("est_actif").toBool());
     
@@ -37,17 +36,16 @@ bool RepositoryEquipe::create(const Equipe& entity)
 
     query.prepare(
         "INSERT INTO equipes "
-        "(equipe_id, nom, nom_chef, telephone_chef, description, "
+        "(equipe_id, nom, nom_chef, "
         "sync_status, version, created_at, updated_at, created_by, updated_by, est_actif) "
-        "VALUES (:id, :nom, :nomChef, :tel, :desc, :syncStatus, :version, "
+        "VALUES (:id, :nom, :nomChef, :syncStatus, :version, "
         ":createdAt, :updatedAt, :createdBy, :updatedBy, :actif)"
     );
     
     query.addBindValue(entity.getEquipeId().toString(QUuid::WithoutBraces));
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
-    query.addBindValue(entity.getTelephoneChef());
-    query.addBindValue(entity.getDescription());
+    // query.addBindValue(entity.getDescription());
     query.addBindValue(entity.syncStatusString());
     query.addBindValue(entity.getVersion());
     query.addBindValue(entity.getCreatedAt());
@@ -72,7 +70,7 @@ Equipe RepositoryEquipe::getById(const QUuid& id)
     QSqlQuery query(bd.getDatabase());
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE equipe_id = :id AND deleted_at IS NULL"
@@ -89,14 +87,14 @@ Equipe RepositoryEquipe::getById(const QUuid& id)
     return equipe;
 }
 
-QList<Equipe> RepositoryEquipe::getAll()
+QList<Equipe> RepositoryEquipe::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
     QList<Equipe> equipes;
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE deleted_at IS NULL ORDER BY nom"
@@ -118,15 +116,14 @@ bool RepositoryEquipe::update(const Equipe& entity)
 
     query.prepare(
         "UPDATE equipes SET nom = :nom, nom_chef = :nomChef, "
-        "telephone_chef = :tel, description = :desc, "
+        // "description = :desc, "
         "sync_status = :syncStatus, version = :version, "
         "updated_at = :updatedAt, updated_by = :updatedBy, est_actif = :actif "
         "WHERE equipe_id = :id AND deleted_at IS NULL"
     );
     query.addBindValue(entity.getNom());
     query.addBindValue(entity.getNomChef());
-    query.addBindValue(entity.getTelephoneChef());
-    query.addBindValue(entity.getDescription());
+    // query.addBindValue(entity.getDescription());
     query.addBindValue(entity.syncStatusString());
     query.addBindValue(entity.getVersion());
     query.addBindValue(entity.getUpdatedAt());
@@ -170,7 +167,7 @@ QList<Equipe> RepositoryEquipe::search(const QString& criterion)
     QList<Equipe> equipes;
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, /*description*/, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE (nom ILIKE :criterion OR nom_chef ILIKE :criterion) "
@@ -206,7 +203,7 @@ QList<Equipe> RepositoryEquipe::getPendingEquipes() const
     QList<Equipe> equipes;
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, /*description*/, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE sync_status = 'PENDING' AND deleted_at IS NULL "
@@ -228,7 +225,7 @@ QList<Equipe> RepositoryEquipe::getSyncedEquipes() const
     QList<Equipe> equipes;
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, /*description*/, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE sync_status = 'SYNCED' AND deleted_at IS NULL "
@@ -250,7 +247,7 @@ QList<Equipe> RepositoryEquipe::getConflictEquipes() const
     QList<Equipe> equipes;
 
     query.prepare(
-        "SELECT equipe_id, nom, nom_chef, telephone_chef, description, "
+        "SELECT equipe_id, nom, nom_chef, /*description*/, "
         "sync_status, version, created_at, updated_at, deleted_at, "
         "created_by, updated_by, est_actif "
         "FROM equipes WHERE sync_status = 'CONFLICT' AND deleted_at IS NULL "
@@ -315,9 +312,9 @@ QList<RepositoryEquipe::SyncResult> RepositoryEquipe::syncBatch(
         QSqlQuery upsertQuery(bd.getDatabase());
         upsertQuery.prepare(
             "INSERT INTO equipes "
-            "(equipe_id, nom, nom_chef, telephone_chef, description, "
+            "(equipe_id, nom, nom_chef, /*description*/, "
             "sync_status, version, created_at, updated_at, created_by, updated_by, est_actif) "
-            "VALUES (:id, :nom, :nomChef, :tel, :desc, 'SYNCED', :version, "
+            "VALUES (:id, :nom, :nomChef, :desc, 'SYNCED', :version, "
             ":createdAt, NOW(), :createdBy, :updatedBy, :actif) "
             "ON CONFLICT (equipe_id) DO UPDATE SET "
             "nom = EXCLUDED.nom, nom_chef = EXCLUDED.nom_chef, "
@@ -327,8 +324,7 @@ QList<RepositoryEquipe::SyncResult> RepositoryEquipe::syncBatch(
         upsertQuery.addBindValue(equipe.getEquipeId().toString(QUuid::WithoutBraces));
         upsertQuery.addBindValue(equipe.getNom());
         upsertQuery.addBindValue(equipe.getNomChef());
-        upsertQuery.addBindValue(equipe.getTelephoneChef());
-        upsertQuery.addBindValue(equipe.getDescription());
+        // upsertQuery.addBindValue(equipe.getDescription());
         upsertQuery.addBindValue(equipe.getVersion() + 1);
         upsertQuery.addBindValue(equipe.getCreatedAt());
         upsertQuery.addBindValue(equipe.getCreatedBy().toString(QUuid::WithoutBraces));

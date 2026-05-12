@@ -61,7 +61,7 @@ Vente RepositorySales::getById(const QUuid& id)
     return vente;
 }
 
-QList<Vente> RepositorySales::getAll()
+QList<Vente> RepositorySales::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QMessageBox>
+#include <QTextEdit>
 
 BoiteDialogNouvelleEquipe::BoiteDialogNouvelleEquipe(QWidget* parent)
     : QDialog(parent)
@@ -34,29 +35,33 @@ BoiteDialogNouvelleEquipe::BoiteDialogNouvelleEquipe(QWidget* parent)
     chefLayout->addWidget(m_comboChef);
     layout->addLayout(chefLayout);
 
+    // // Description
+    // QHBoxLayout* descLayout = new QHBoxLayout;
+    // descLayout->addWidget(new QLabel("Description :"));
+    // m_editDescription = new QTextEdit;
+    // m_editDescription->setFixedHeight(40);
+    // descLayout->addWidget(m_editDescription);
+    // layout->addLayout(descLayout);
+
     // Membres
     layout->addWidget(new QLabel("Membres :"));
     m_listeMembres = new QListWidget;
     m_listeMembres->setSelectionMode(QAbstractItemView::MultiSelection);
     layout->addWidget(m_listeMembres);
 
-    // -------------- RECUPERE LES UTILISATEURS DE LA BASE ---------------
+    // Récupération des utilisateurs
     RepositoryUtilisateur repoUtil;
     QList<Utilisateur> userList = repoUtil.getAll();
     for (const Utilisateur& u : userList) {
         QString displayName = u.getNomComplet();
         QUuid uid = u.getUtilisateurId();
-        
-        // Ajout au combobox du chef
+
         m_comboChef->addItem(displayName, uid);
         m_utilisateurs[displayName] = uid;
-        
-        // Ajout à la liste des membres
+
         QListWidgetItem* item = new QListWidgetItem(displayName, m_listeMembres);
         item->setData(Qt::UserRole, uid);
     }
-    
-    // -------------- FIN UTILISATEURS REELS ----------------------------
 
     // Boutons
     QHBoxLayout* btnLayout = new QHBoxLayout;
@@ -75,13 +80,15 @@ void BoiteDialogNouvelleEquipe::onValider()
 {
     QString nom = m_editNom->text().trimmed();
     int iChef = m_comboChef->currentIndex();
-    if (nom.isEmpty() || iChef < 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez remplir le nom et sélectionner un chef.");
-        return;
-    }
+    QString nomChef = m_comboChef->currentText();
     QUuid chefId = m_comboChef->currentData().toUuid();
 
-    // Membres sélectionnés
+    if (nom.isEmpty() || iChef < 0 || nomChef.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez remplir le nom, sélectionner un chef et remplir ses informations.");
+        return;
+    }
+
+    // Membres sélectionnés (hors chef)
     QList<QUuid> membres;
     for (QListWidgetItem* item : m_listeMembres->selectedItems()) {
         QUuid uid = item->data(Qt::UserRole).toUuid();
@@ -89,9 +96,9 @@ void BoiteDialogNouvelleEquipe::onValider()
             membres << uid;
     }
 
-    // Création via manager
+    // Création via manager (utilisation du chef comme createdBy)
     GestionnaireEquipe manager;
-    m_equipeId = manager.creerEquipe(nom, chefId, membres);
+    m_equipeId = manager.creerEquipe(nom, nomChef, /*description,*/ chefId);
     if (m_equipeId.isNull()) {
         QMessageBox::critical(this, "Erreur", "Création de l'équipe impossible.");
         return;

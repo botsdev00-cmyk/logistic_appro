@@ -409,10 +409,9 @@ QList<EntreeStock> GestionnaireStock::obtenirHistoriqueEntrees(const QUuid& prod
     return entrees;
 }
 
-EntreeStock GestionnaireStock::obtenirEntree(const QUuid& entreeId)
-{
-    if (!m_repoEntrees) return EntreeStock();
-    return m_repoEntrees->getById(entreeId);
+EntreeStock GestionnaireStock::obtenirEntree(const QUuid& entreeId) {
+    auto opt = m_repoEntrees->getById(entreeId);
+    return opt.value_or(EntreeStock());
 }
 
 bool GestionnaireStock::supprimerEntree(const QUuid& entreeId)
@@ -422,7 +421,7 @@ bool GestionnaireStock::supprimerEntree(const QUuid& entreeId)
         return false;
     }
 
-    if (m_repoEntrees->remove(entreeId)) {
+    if (m_repoEntrees->logicalDelete(entreeId)) {
         qDebug() << "[GESTIONNAIRE STOCK] ✓ Entrée supprimée:" << entreeId;
         synchroniserStockSoldes();
         return true;

@@ -15,8 +15,7 @@ public:
     // CRUD métier
     QUuid creerEquipe(const QString& nom, 
                       const QString& nomChef,
-                      const QString& telephoneChef,
-                      const QString& description,
+                      // const QString& description,
                       const QUuid& createdBy);
     
     bool modifierEquipe(const Equipe& equipe, const QUuid& updatedBy);

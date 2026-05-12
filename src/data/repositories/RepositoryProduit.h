@@ -7,28 +7,21 @@
 #include <QString>
 #include <QUuid>
 
-class RepositoryProduit : public IRepository<Produit>
-{
+class RepositoryProduit {
 public:
     RepositoryProduit();
 
-    bool create(const Produit& entity) override;
-    Produit getById(const QUuid& id) override;
-    QList<Produit> getAll() override;
-    bool update(const Produit& entity) override;
-    bool remove(const QUuid& id) override;
-
-    QList<Produit> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
-
-    QString getLastError() const override { return m_dernierErreur; }
-
-    // Méthodes spécifiques
-    Produit getByCodeSku(const QString& sku);
+    bool create(const Produit& entity);
+    bool update(const Produit& entity);
+    bool remove(const QUuid& id);
+    std::optional<Produit> getById(const QUuid& id);
+    std::optional<Produit> getByCodeSku(const QString& sku);
+    QList<Produit> getAll();
     QList<Produit> getByCategorie(const QUuid& categorieId);
-
+    QList<Produit> search(const QString& criterion);
+    bool exists(const QUuid& id);
+    QString getLastError() const { return m_dernierErreur; }
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
-
-#endif // REPOSITORYPRODUIT_H
+#endif //REPOSITORYPRODUIT_H

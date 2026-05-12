@@ -14,7 +14,7 @@ public:
     // ====== CRUD ======
     bool create(const EntreeStock& entity) override;
     EntreeStock getById(const QUuid& id) override;
-    QList<EntreeStock> getAll() override;
+    QList<EntreeStock> getAll() const override;
     bool update(const EntreeStock& entity) override;
     bool remove(const QUuid& id) override;
     QList<EntreeStock> search(const QString& criterion) override;
@@ -45,7 +45,7 @@ public:
     QList<EntreeStock> getPagine(int page, int pageSize);
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORY_STOCK_H

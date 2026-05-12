@@ -12,7 +12,7 @@ public:
 
     bool create(const RetourStock& entity) override;
     RetourStock getById(const QUuid& id) override;
-    QList<RetourStock> getAll() override;
+    QList<RetourStock> getAll() const override;
     bool update(const RetourStock& entity) override;
     bool remove(const QUuid& id) override;
     QList<RetourStock> search(const QString& criterion) override;
@@ -28,7 +28,7 @@ public:
     bool rejeter(const QUuid& retourId);
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYRETOURSTOCK_H

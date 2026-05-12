@@ -81,7 +81,7 @@ Repartition RepositoryRepartition::getById(const QUuid& id)
     return rep;
 }
 
-QList<Repartition> RepositoryRepartition::getAll()
+QList<Repartition> RepositoryRepartition::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

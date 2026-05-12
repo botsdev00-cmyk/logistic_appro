@@ -64,7 +64,7 @@ Utilisateur RepositoryUtilisateur::getById(const QUuid& id)
     return utilisateur;
 }
 
-QList<Utilisateur> RepositoryUtilisateur::getAll()
+QList<Utilisateur> RepositoryUtilisateur::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

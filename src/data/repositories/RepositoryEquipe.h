@@ -16,7 +16,7 @@ public:
     // Standard CRUD
     bool create(const Equipe& entity) override;
     Equipe getById(const QUuid& id) override;
-    QList<Equipe> getAll() override;
+    QList<Equipe> getAll() const override;
     bool update(const Equipe& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -43,7 +43,7 @@ public:
     QString getLastError() const override { return m_dernierErreur; }
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
     Equipe mapRowToEquipe(const QSqlQuery& query) const;
 };
 

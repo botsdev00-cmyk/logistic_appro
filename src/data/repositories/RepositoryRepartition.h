@@ -14,7 +14,7 @@ public:
 
     bool create(const Repartition& entity) override;
     Repartition getById(const QUuid& id) override;
-    QList<Repartition> getAll() override;
+    QList<Repartition> getAll() const override;
     bool update(const Repartition& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -29,7 +29,7 @@ public:
     QList<Repartition> getByStatut(const Repartition::Statut& statut);
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYREPARTITION_H

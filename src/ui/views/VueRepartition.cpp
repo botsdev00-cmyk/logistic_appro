@@ -80,7 +80,8 @@ void VueRepartition::creerWidgets()
 
 void VueRepartition::initialiserConnexions()
 {
-    connect(m_comboStatut.get(), QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VueRepartition::filtrerParStatut);
+    connect(m_comboStatut.get(), QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &VueRepartition::filtrerParStatut);
     m_tableauRepartition->chargerDonnees();
 }
 
@@ -109,8 +110,14 @@ void VueRepartition::verifierStatut()
     txt += "Statut: " + repartition.getStatutLabel() + "\n";
     txt += "Date  : " + repartition.getDateRepartition().toString("dd/MM/yyyy") + "\n";
     txt += "Articles sortis :\n";
-    for(const auto& art : repartition.getArticles())
-    txt += QString("— %1 : %2\n").arg(ArticleRepartition::getNomProduitDepuisId(art.getProduitId())).arg(art.getQuantiteTotale());
+
+    RepositoryProduit repoProduit;
+
+    for(const auto& art : repartition.getArticles()) {
+        auto prodOpt = repoProduit.getById(art.getProduitId());
+        QString nomProduit = prodOpt ? prodOpt->getNom() : "(Inconnu)";
+        txt += QString("— %1 : %2\n").arg(nomProduit).arg(art.getQuantiteTotale());
+    }
     QMessageBox::information(this, "Info Statut Répartition", txt);
 }
 
@@ -124,9 +131,11 @@ void VueRepartition::chargerRetours()
     // 2. Récupérer la liste des articles concernés (à adapter selon ton flux)
     Repartition repartition = g_repartitionMgr->obtenirRepartition(repId, true);
     QList<LigneRetourRepartition> lignesProduits;
+    RepositoryProduit repoProduit;
     for (const auto& art : repartition.getArticles()) {
         LigneRetourRepartition ligne;
-        ligne.produitNom = ArticleRepartition::getNomProduitDepuisId(art.getProduitId());
+        auto prodOpt = repoProduit.getById(art.getProduitId());
+        ligne.produitNom = prodOpt ? prodOpt->getNom() : "(Inconnu)";
         ligne.produitId  = art.getProduitId();
         ligne.quantiteSortie = art.getQuantiteTotale();
         ligne.prixUnitaire = 0.0;
@@ -137,8 +146,6 @@ void VueRepartition::chargerRetours()
         lignesProduits.append(ligne);
     }
 
-    // récupère la liste des produits/articles de la répartition !
-    // Si tu ouvres une boîte de dialogue, fais plutôt :
     BoiteDialogRetourRepartition boiteDialogue(lignesProduits, repId, this);
     if (boiteDialogue.exec() != QDialog::Accepted)
         return;
@@ -216,7 +223,6 @@ void VueRepartition::chargerRetours()
 
     m_tableauRepartition->rafraichir();
 }
-
 
 void VueRepartition::filtrerParStatut()
 {

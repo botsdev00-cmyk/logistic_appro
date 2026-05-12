@@ -9,6 +9,7 @@
 #include "../dialogs/BoiteDialogRetourStock.h"
 #include "../../core/entities/EntreeStock.h"
 #include "../../core/entities/RetourStock.h"
+#include "../../core/entities/Produit.h"
 #include "../../business/managers/GestionnaireRaisonsRetour.h"
 #include "../../business/managers/GestionnaireRepartition.h"
 #include "../../data/repositories/RepositoryProduit.h"
@@ -468,9 +469,10 @@ void VueStock::onLigneRetourClicked(const RetourStock& retour)
             nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
         }
     }
-    // -- Récupération du nom produit
+    // -- Récupération du nom produit AVEC CHECK optional
     RepositoryProduit repoProduit;
-    QString nomProduit = repoProduit.getById(retour.getProduitId()).getNom();
+    auto produitOpt = repoProduit.getById(retour.getProduitId());
+    QString nomProduit = produitOpt ? produitOpt->getNom() : "(Inconnu)";
 
     // Ouvre le dialog prérenseigné
     GestionnaireRaisonsRetour raisonsMgr;

@@ -14,7 +14,7 @@ public:
     // ============ INTERFACE IRepository ============
     bool create(const StockSolde& entity) override;
     StockSolde getById(const QUuid& id) override;
-    QList<StockSolde> getAll() override;
+    QList<StockSolde> getAll() const override;
     bool update(const StockSolde& entity) override;
     bool remove(const QUuid& id) override;
     QList<StockSolde> search(const QString& criterion) override;
@@ -50,7 +50,7 @@ public:
     QMap<QString, double> obtenirValeurParCategorie();
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYSTOCKSOLDES_H

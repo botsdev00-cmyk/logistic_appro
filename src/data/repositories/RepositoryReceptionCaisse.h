@@ -14,7 +14,7 @@ public:
 
     bool create(const ReceptionCaisse& entity) override;
     ReceptionCaisse getById(const QUuid& id) override;
-    QList<ReceptionCaisse> getAll() override;
+    QList<ReceptionCaisse> getAll() const override;
     bool update(const ReceptionCaisse& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -29,7 +29,7 @@ public:
     QList<ReceptionCaisse> getWithDiscrepancies();
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYRECEPTIONCAISSE_H

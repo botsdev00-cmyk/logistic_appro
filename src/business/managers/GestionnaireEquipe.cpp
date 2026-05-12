@@ -2,22 +2,12 @@
 #include "../../data/repositories/RepositoryEquipe.h"
 #include <QDebug>
 
-GestionnaireEquipe::GestionnaireEquipe()
-{
-}
+GestionnaireEquipe::GestionnaireEquipe() {}
+GestionnaireEquipe::~GestionnaireEquipe() {}
 
-GestionnaireEquipe::~GestionnaireEquipe()
-{
-}
-
-QUuid GestionnaireEquipe::creerEquipe(const QString& nom, 
-                                      const QString& nomChef,
-                                      const QString& telephoneChef,
-                                      const QString& description,
-                                      const QUuid& createdBy)
+QUuid GestionnaireEquipe::creerEquipe(const QString& nom, const QString& nomChef, /*const QString& description,*/ const QUuid& createdBy)
 {
     m_dernierErreur.clear();
-
     if (nom.isEmpty()) {
         m_dernierErreur = "Le nom de l'équipe ne peut pas être vide";
         return QUuid();
@@ -27,8 +17,7 @@ QUuid GestionnaireEquipe::creerEquipe(const QString& nom,
     equipe.setEquipeId(QUuid::createUuid());
     equipe.setNom(nom);
     equipe.setNomChef(nomChef);
-    equipe.setTelephoneChef(telephoneChef);
-    equipe.setDescription(description);
+    // equipe.setDescription(description);
     equipe.setCreatedBy(createdBy);
     equipe.setUpdatedBy(createdBy);
     equipe.setSyncStatus(Equipe::PENDING);
@@ -40,7 +29,6 @@ QUuid GestionnaireEquipe::creerEquipe(const QString& nom,
         m_dernierErreur = repo.getLastError();
         return QUuid();
     }
-
     qDebug() << "GestionnaireEquipe::creerEquipe success:" << nom << "(" << equipe.getEquipeId() << ")";
     return equipe.getEquipeId();
 }
@@ -48,12 +36,10 @@ QUuid GestionnaireEquipe::creerEquipe(const QString& nom,
 bool GestionnaireEquipe::modifierEquipe(const Equipe& equipe, const QUuid& updatedBy)
 {
     m_dernierErreur.clear();
-
     if (equipe.getNom().isEmpty()) {
         m_dernierErreur = "Le nom de l'équipe ne peut pas être vide";
         return false;
     }
-
     Equipe equipeToUpdate = equipe;
     equipeToUpdate.setUpdatedBy(updatedBy);
     equipeToUpdate.setSyncStatus(Equipe::PENDING);
@@ -65,28 +51,21 @@ bool GestionnaireEquipe::modifierEquipe(const Equipe& equipe, const QUuid& updat
         m_dernierErreur = repo.getLastError();
         return false;
     }
-
     qDebug() << "GestionnaireEquipe::modifierEquipe success:" << equipe.getNom();
     return true;
 }
 
-bool GestionnaireEquipe::supprimerEquipe(const QUuid& equipeId, const QUuid& deletedBy)
+bool GestionnaireEquipe::supprimerEquipe(const QUuid& equipeId, const QUuid&)
 {
     m_dernierErreur.clear();
-
     RepositoryEquipe repo;
-    Equipe equipe = repo.getById(equipeId);
-    
-    if (equipe.getEquipeId().isNull()) {
-        m_dernierErreur = "Équipe non trouvée";
-        return false;
-    }
 
+    // Assuming you don't have a specific way to check existence via getById
+    // without std::optional, just proceed to remove.
     if (!repo.remove(equipeId)) {
         m_dernierErreur = repo.getLastError();
         return false;
     }
-
     qDebug() << "GestionnaireEquipe::supprimerEquipe success:" << equipeId;
     return true;
 }
@@ -94,7 +73,7 @@ bool GestionnaireEquipe::supprimerEquipe(const QUuid& equipeId, const QUuid& del
 Equipe GestionnaireEquipe::obtenirEquipe(const QUuid& equipeId) const
 {
     RepositoryEquipe repo;
-    return repo.getById(equipeId);
+    return repo.getById(equipeId); // Returns Equipe directly
 }
 
 QList<Equipe> GestionnaireEquipe::listerEquipes() const
@@ -127,8 +106,7 @@ int GestionnaireEquipe::compterEquipesPendantes() const
     return repo.getPendingCount();
 }
 
-GestionnaireEquipe::SyncReport GestionnaireEquipe::synchroniserEquipes(
-    const QList<Equipe>& equipes, const QUuid& utilisateurId)
+GestionnaireEquipe::SyncReport GestionnaireEquipe::synchroniserEquipes(const QList<Equipe>& equipes, const QUuid& utilisateurId)
 {
     m_dernierErreur.clear();
     SyncReport report;
@@ -149,17 +127,16 @@ GestionnaireEquipe::SyncReport GestionnaireEquipe::synchroniserEquipes(
             report.syncedCount++;
             qDebug() << "Sync success:" << result.equipeId.toString() << "v" << result.newVersion;
         } else {
-            if (result.message.contains("CONFLICT")) {
+            if (result.message.contains("CONFLICT"))
                 report.conflictCount++;
-            }
             qDebug() << "Sync failed:" << result.message;
         }
     }
 
     report.message = QString("Sync report: %1/%2 synced, %3 conflicts")
-        .arg(report.syncedCount)
-        .arg(report.totalTreated)
-        .arg(report.conflictCount);
+                         .arg(report.syncedCount)
+                         .arg(report.totalTreated)
+                         .arg(report.conflictCount);
 
     qDebug() << "GestionnaireEquipe::synchroniserEquipes" << report.message;
     return report;

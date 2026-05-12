@@ -98,7 +98,7 @@ EntreeStock RepositoryStock::getById(const QUuid& id)
 // READ - ALL
 // ============================================================================
 
-QList<EntreeStock> RepositoryStock::getAll()
+QList<EntreeStock> RepositoryStock::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

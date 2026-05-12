@@ -158,10 +158,10 @@ QList<CategorieProduit> OfflineApiServer::getCategoriesProduitSinceVersion(int m
 
 // ==================== EQUIPE (exemple minimal) ====================
 
-QUuid OfflineApiServer::creerEquipe(const QString& nom, const QUuid& chefId, const QList<QUuid>& membres, const QString& telephoneChef)
+QUuid OfflineApiServer::creerEquipe(const QString& nom, const QString& nomChef, /*const QString& description,*/ const QUuid& createdBy)
 {
     GestionnaireEquipe gest;
-    QUuid equipeId = gest.creerEquipe(nom, chefId, membres, telephoneChef);
+    QUuid equipeId = gest.creerEquipe(nom, nomChef, /*description,*/ createdBy);
     m_lastErreur = gest.getDernierErreur();
     return equipeId;
 }

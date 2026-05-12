@@ -48,7 +48,7 @@ StockSolde RepositoryStockSoldes::getById(const QUuid& id)
     return solde;
 }
 
-QList<StockSolde> RepositoryStockSoldes::getAll()
+QList<StockSolde> RepositoryStockSoldes::getAll() const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());

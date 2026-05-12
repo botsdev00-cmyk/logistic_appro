@@ -14,7 +14,7 @@ public:
 
     bool create(const Vente& entity) override;
     Vente getById(const QUuid& id) override;
-    QList<Vente> getAll() override;
+    QList<Vente> getAll() const override;
     bool update(const Vente& entity) override;
     bool remove(const QUuid& id) override;
 
@@ -30,7 +30,7 @@ public:
     double getTotalCash(const QUuid& repartitionId);
 
 private:
-    QString m_dernierErreur;
+    mutable QString m_dernierErreur;
 };
 
 #endif // REPOSITORYSALES_H

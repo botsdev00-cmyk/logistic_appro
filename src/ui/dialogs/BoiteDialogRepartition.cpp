@@ -234,9 +234,9 @@ void BoiteDialogRepartition::creerRepartition()
         RepositoryProduit repoProduit;
         for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
             QUuid produitId = QUuid(m_tableArticles->item(row, 0)->text());
-            Produit prod = repoProduit.getById(produitId);
+            auto prod = repoProduit.getById(produitId);
             int quantiteVente = m_tableArticles->item(row, 2)->text().toInt();
-            montantAttendu += quantiteVente * prod.getPrixUnitaire();
+            montantAttendu += quantiteVente * prod->getPrixUnitaire();
         }
         m_gestionnaire->mettreAJourMontantAttendu(m_repartitionId, montantAttendu);
 
