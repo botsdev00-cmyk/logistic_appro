@@ -6,17 +6,13 @@
 
 GestionnaireCatalogue::GestionnaireCatalogue()
     : m_repositoryProduit(nullptr), m_repositoryCategorieProduit(nullptr)
-{}
-
+{ }
 GestionnaireCatalogue::~GestionnaireCatalogue() {}
 
-void GestionnaireCatalogue::setRepositoryProduit(RepositoryProduit* repo) {
-    m_repositoryProduit = repo;
-}
-void GestionnaireCatalogue::setRepositoryCategorieProduit(RepositoryCategorieProduit* repo) {
-    m_repositoryCategorieProduit = repo;
-}
+void GestionnaireCatalogue::setRepositoryProduit(RepositoryProduit* repo) { m_repositoryProduit = repo; }
+void GestionnaireCatalogue::setRepositoryCategorieProduit(RepositoryCategorieProduit* repo) { m_repositoryCategorieProduit = repo; }
 
+// Catégories
 bool GestionnaireCatalogue::creerCategorie(const CategorieProduit& categorie) {
     effacerErreur();
     if (!m_repositoryCategorieProduit) return false;
@@ -43,28 +39,30 @@ bool GestionnaireCatalogue::changerStatutCategorie(const QUuid& categorieId, boo
     if (!optCat) return false;
     CategorieProduit cat = *optCat;
     cat.setEstActif(actif);
+    cat.setVersion(cat.getVersion() + 1);
+    cat.setSyncStatus(CategorieProduit::SyncStatus::PENDING);
     return m_repositoryCategorieProduit->update(cat);
 }
-
-CategorieProduit GestionnaireCatalogue::obtenirCategorie(const QUuid& categorieId) {
-    auto optCat = m_repositoryCategorieProduit->getById(categorieId);
-    if (!optCat) return CategorieProduit();
-    return *optCat;
+std::optional<CategorieProduit> GestionnaireCatalogue::obtenirCategorie(const QUuid& categorieId) {
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->getById(categorieId) : std::nullopt;
 }
-CategorieProduit GestionnaireCatalogue::obtenirCategorieParCode(const QString& code) {
-    auto optCat = m_repositoryCategorieProduit->getByCode(code);
-    if (!optCat) return CategorieProduit();
-    return *optCat;
+std::optional<CategorieProduit> GestionnaireCatalogue::obtenirCategorieParCode(const QString& code) {
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->getByCode(code) : std::nullopt;
 }
 QList<CategorieProduit> GestionnaireCatalogue::obtenirTousCategoriesProduits() {
-    if (!m_repositoryCategorieProduit) return {};
-    return m_repositoryCategorieProduit->getAll();
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->getAll() : QList<CategorieProduit>{};
 }
 QList<CategorieProduit> GestionnaireCatalogue::rechercherCategories(const QString& critere) {
-    if (!m_repositoryCategorieProduit) return {};
-    return m_repositoryCategorieProduit->search(critere);
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->search(critere) : QList<CategorieProduit>{};
+}
+QList<CategorieProduit> GestionnaireCatalogue::obtenirCategoriesASynchroniser() {
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->getPendingSync() : QList<CategorieProduit>{};
+}
+QList<CategorieProduit> GestionnaireCatalogue::obtenirCategoriesDepuisVersion(int minVersion) {
+    return m_repositoryCategorieProduit ? m_repositoryCategorieProduit->getSinceVersion(minVersion) : QList<CategorieProduit>{};
 }
 
+// Produits
 bool GestionnaireCatalogue::creerProduit(const Produit& produit) {
     effacerErreur();
     if (!m_repositoryProduit) return false;
@@ -82,7 +80,7 @@ bool GestionnaireCatalogue::mettreAJourProduit(const Produit& produit) {
 bool GestionnaireCatalogue::supprimerProduit(const QUuid& produitId) {
     effacerErreur();
     if (!m_repositoryProduit) return false;
-    bool ok = m_repositoryProduit->remove(produitId);
+    bool ok = m_repositoryProduit->logicalDelete(produitId);
     if (!ok) m_dernierErreur = m_repositoryProduit->getLastError();
     return ok;
 }
@@ -93,43 +91,36 @@ bool GestionnaireCatalogue::changerStatutProduit(const QUuid& produitId, bool ac
     if (!optProd.has_value()) return false;
     Produit prod = *optProd;
     prod.setEstActif(actif);
+    prod.setVersion(prod.getVersion() + 1);
+    prod.setSyncStatus(Produit::SyncStatus::PENDING);
     return m_repositoryProduit->update(prod);
 }
 
-Produit GestionnaireCatalogue::obtenirProduit(const QUuid& produitId) {
-    if (!m_repositoryProduit) return Produit();
-    auto optProd = m_repositoryProduit->getById(produitId);
-    if (!optProd.has_value()) return Produit();
-    return *optProd;
+std::optional<Produit> GestionnaireCatalogue::obtenirProduit(const QUuid& produitId) {
+    return m_repositoryProduit ? m_repositoryProduit->getById(produitId) : std::nullopt;
 }
-
-Produit GestionnaireCatalogue::obtenirProduitParSKU(const QString& sku) {
-    if (!m_repositoryProduit) return Produit();
-    auto optProd = m_repositoryProduit->getByCodeSku(sku);
-    if (!optProd.has_value()) return Produit();
-    return *optProd;
+std::optional<Produit> GestionnaireCatalogue::obtenirProduitParSKU(const QString& sku) {
+    return m_repositoryProduit ? m_repositoryProduit->getByCodeSku(sku) : std::nullopt;
 }
-
-QList<Produit> GestionnaireCatalogue::obtenirProduitsParCategorie(const QUuid& categorieId) {
-    if (!m_repositoryProduit) return {};
-    return m_repositoryProduit->getByCategorie(categorieId);
-}
-
-
 QList<Produit> GestionnaireCatalogue::obtenirTousProduits() {
-    if (!m_repositoryProduit) return {};
-    return m_repositoryProduit->getAll();
+    return m_repositoryProduit ? m_repositoryProduit->getAll() : QList<Produit>{};
 }
-
+QList<Produit> GestionnaireCatalogue::obtenirProduitsParCategorie(const QUuid& categorieId) {
+    return m_repositoryProduit ? m_repositoryProduit->getByCategorie(categorieId) : QList<Produit>{};
+}
 QList<Produit> GestionnaireCatalogue::rechercherProduits(const QString& critere) {
-    if (!m_repositoryProduit) return {};
-    return m_repositoryProduit->search(critere);
+    return m_repositoryProduit ? m_repositoryProduit->search(critere) : QList<Produit>{};
+}
+QList<Produit> GestionnaireCatalogue::obtenirProduitsASynchroniser() {
+    return m_repositoryProduit ? m_repositoryProduit->getPendingSync() : QList<Produit>{};
+}
+QList<Produit> GestionnaireCatalogue::obtenirProduitsDepuisVersion(int minVersion) {
+    return m_repositoryProduit ? m_repositoryProduit->getSinceVersion(minVersion) : QList<Produit>{};
 }
 
-bool GestionnaireCatalogue::validerCatalogue() { /* ton implémentation */ return true; }
-int GestionnaireCatalogue::obtenirNombreProduits() { return obtenirTousProduits().size(); }
-int GestionnaireCatalogue::obtenirNombreCategories() { return obtenirTousCategoriesProduits().size(); }
-bool GestionnaireCatalogue::validerProduit(const Produit&) { return true; }
-bool GestionnaireCatalogue::validerCategorie(const CategorieProduit&) { return true; }
-bool GestionnaireCatalogue::verifierUniciteCodeCategorie(const QString&, const QUuid&) { return true; }
-bool GestionnaireCatalogue::verifierUniciteSkuProduit(const QString&, const QUuid&) { return true; }
+int GestionnaireCatalogue::obtenirNombreProduits() {
+    return obtenirTousProduits().size();
+}
+int GestionnaireCatalogue::obtenirNombreCategories() {
+    return obtenirTousCategoriesProduits().size();
+}

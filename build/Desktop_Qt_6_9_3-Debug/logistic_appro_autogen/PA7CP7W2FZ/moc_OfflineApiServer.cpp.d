@@ -134,17 +134,22 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsql-config.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsqlexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsqlglobal.h \
+  /home/bots/semuliki_logistic/src/business/managers/GestionnaireCaisse.h \
   /home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.h \
   /home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.h \
   /home/bots/semuliki_logistic/src/core/entities/ArticleRepartition.h \
   /home/bots/semuliki_logistic/src/core/entities/CategorieProduit.h \
   /home/bots/semuliki_logistic/src/core/entities/Client.h \
   /home/bots/semuliki_logistic/src/core/entities/Equipe.h \
+  /home/bots/semuliki_logistic/src/core/entities/Produit.h \
+  /home/bots/semuliki_logistic/src/core/entities/ReceptionCaisse.h \
   /home/bots/semuliki_logistic/src/data/repositories/IRepository.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryCategorieProduit.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryClient.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h \
+  /home/bots/semuliki_logistic/src/data/repositories/RepositoryProduit.h \
+  /home/bots/semuliki_logistic/src/data/repositories/RepositoryReceptionCaisse.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \

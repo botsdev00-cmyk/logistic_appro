@@ -8,48 +8,66 @@
 class ReceptionCaisse
 {
 public:
-    enum class Statut {
-        EnAttente,
-        Recu,
-        Valide,
-        Discrepance
-    };
+    enum class Statut { EnAttente, Recu, Valide, Discrepance };
+    enum class SyncStatus { PENDING, SYNCED, CONFLICT };
 
     ReceptionCaisse();
     ~ReceptionCaisse();
 
-    // Getters
+    // Getters/Setters
     QUuid getReceptionCaisseId() const { return m_receptionCaisseId; }
-    QUuid getRepartitionId() const { return m_repartitionId; }
-    double getMontantAttendu() const { return m_montantAttendu; }
-    double getMontantRecu() const { return m_montantRecu; }
-    double getEcart() const { return m_montantAttendu - m_montantRecu; }
-    QString getNumeroRecu() const { return m_numeroRecu; }
-    Statut getStatut() const { return m_statut; }
-    QUuid getCaissierId() const { return m_caissierId; }
-    QDateTime getDateReception() const { return m_dateReception; }
-    QString getNotes() const { return m_notes; }
-    QDateTime getDateCreation() const { return m_dateCreation; }
-    QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
-
-    // Setters
     void setReceptionCaisseId(const QUuid& id) { m_receptionCaisseId = id; }
-    void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
-    void setMontantAttendu(double montant) { m_montantAttendu = montant; }
-    void setMontantRecu(double montant) { m_montantRecu = montant; }
-    void setNumeroRecu(const QString& numero) { m_numeroRecu = numero; }
-    void setStatut(Statut statut) { m_statut = statut; }
-    void setCaissierId(const QUuid& id) { m_caissierId = id; }
-    void setDateReception(const QDateTime& date) { m_dateReception = date; }
-    void setNotes(const QString& notes) { m_notes = notes; }
-    void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
-    void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
 
-    // Utility methods
-    static QString statutToString(Statut statut);
-    static Statut stringToStatut(const QString& str);
+    QUuid getRepartitionId() const { return m_repartitionId; }
+    void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
+
+    double getMontantAttendu() const { return m_montantAttendu; }
+    void setMontantAttendu(double m) { m_montantAttendu = m; }
+
+    double getMontantRecu() const { return m_montantRecu; }
+    void setMontantRecu(double m) { m_montantRecu = m; }
+
+    double getEcart() const { return m_montantAttendu - m_montantRecu; }
+
+    QString getNumeroRecu() const { return m_numeroRecu; }
+    void setNumeroRecu(const QString& n) { m_numeroRecu = n; }
+
+    Statut getStatut() const { return m_statut; }
+    void setStatut(Statut s) { m_statut = s; }
+
+    QUuid getCaissierId() const { return m_caissierId; }
+    void setCaissierId(const QUuid& id) { m_caissierId = id; }
+
+    QDateTime getDateReception() const { return m_dateReception; }
+    void setDateReception(const QDateTime& d) { m_dateReception = d; }
+
+    QString getNotes() const { return m_notes; }
+    void setNotes(const QString& n) { m_notes = n; }
+
+    QDateTime getDateCreation() const { return m_dateCreation; }
+    void setDateCreation(const QDateTime& d) { m_dateCreation = d; }
+
+    QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    void setDateMiseAJour(const QDateTime& d) { m_dateMiseAJour = d; }
+
+    QDateTime getDeletedAt() const { return m_deletedAt; }
+    void setDeletedAt(const QDateTime& d) { m_deletedAt = d; }
+
+    int getVersion() const { return m_version; }
+    void setVersion(int v) { m_version = v; }
+
+    SyncStatus getSyncStatus() const { return m_syncStatus; }
+    void setSyncStatus(SyncStatus s) { m_syncStatus = s; }
+
+    // Utilitaires
+    static QString statutToString(Statut);
+    static Statut stringToStatut(const QString&);
     QString getStatutLabel() const;
-    bool hasDiscrepancy() const;
+
+    static QString syncStatusToString(SyncStatus);
+    static SyncStatus stringToSyncStatus(const QString&);
+
+    bool hasDiscrepancy() const { return getEcart() != 0.0; }
 
 private:
     QUuid m_receptionCaisseId;
@@ -63,6 +81,9 @@ private:
     QString m_notes;
     QDateTime m_dateCreation;
     QDateTime m_dateMiseAJour;
+    QDateTime m_deletedAt;
+    int m_version;
+    SyncStatus m_syncStatus;
 };
 
 #endif // RECEPTIONCAISSE_H

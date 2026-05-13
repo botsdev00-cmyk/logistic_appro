@@ -6,6 +6,7 @@
 #include <QList>
 #include <QString>
 #include <QUuid>
+#include <QSqlQuery>
 
 class RepositoryReceptionCaisse : public IRepository<ReceptionCaisse>
 {
@@ -20,15 +21,19 @@ public:
 
     QList<ReceptionCaisse> search(const QString& criterion) override;
     bool exists(const QUuid& id) override;
-
     QString getLastError() const override { return m_dernierErreur; }
 
-    // Méthodes spécifiques
+    // Offline-first
+    QList<ReceptionCaisse> getBySyncStatus(ReceptionCaisse::SyncStatus status) const;
+    QList<ReceptionCaisse> getSinceVersion(int minVersion) const;
+
+    // Anciennes méthodes pour compatibilité métier
     ReceptionCaisse getByRepartition(const QUuid& repartitionId);
-    QList<ReceptionCaisse> getByStatut(const ReceptionCaisse::Statut& statut);
+    QList<ReceptionCaisse> getByStatut(ReceptionCaisse::Statut statut);
     QList<ReceptionCaisse> getWithDiscrepancies();
 
 private:
+    void hydrateFromQuery(ReceptionCaisse& rc, const QSqlQuery& query) const;
     mutable QString m_dernierErreur;
 };
 

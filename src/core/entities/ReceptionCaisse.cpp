@@ -2,60 +2,58 @@
 
 ReceptionCaisse::ReceptionCaisse()
     : m_receptionCaisseId(QUuid::createUuid()),
-      m_montantAttendu(0.0),
-      m_montantRecu(0.0),
-      m_statut(Statut::EnAttente),
-      m_dateCreation(QDateTime::currentDateTime()),
-      m_dateMiseAJour(QDateTime::currentDateTime())
-{
-}
+    m_montantAttendu(0.0),
+    m_montantRecu(0.0),
+    m_statut(Statut::EnAttente),
+    m_dateCreation(QDateTime::currentDateTime()),
+    m_dateMiseAJour(QDateTime::currentDateTime()),
+    m_deletedAt(),
+    m_version(1),
+    m_syncStatus(SyncStatus::PENDING)
+{}
 
-ReceptionCaisse::~ReceptionCaisse()
-{
-}
+ReceptionCaisse::~ReceptionCaisse() {}
 
-QString ReceptionCaisse::statutToString(Statut statut)
-{
-    switch (statut) {
-        case Statut::EnAttente:
-            return "en_attente";
-        case Statut::Recu:
-            return "recu";
-        case Statut::Valide:
-            return "validé";
-        case Statut::Discrepance:
-            return "discrepance";
-        default:
-            return "en_attente";
+QString ReceptionCaisse::statutToString(Statut s) {
+    switch (s) {
+    case Statut::EnAttente: return "EN_ATTENTE";
+    case Statut::Recu: return "RECU";
+    case Statut::Valide: return "VALIDE";
+    case Statut::Discrepance: return "DISCREPANCE";
+    default: return "EN_ATTENTE";
     }
 }
 
-ReceptionCaisse::Statut ReceptionCaisse::stringToStatut(const QString& str)
-{
-    QString lower = str.toLower();
-    if (lower == "recu") return Statut::Recu;
-    if (lower == "validé") return Statut::Valide;
-    if (lower == "discrepance") return Statut::Discrepance;
+ReceptionCaisse::Statut ReceptionCaisse::stringToStatut(const QString& str) {
+    QString val = str.trimmed().toUpper();
+    if (val == "RECU") return Statut::Recu;
+    if (val == "VALIDE") return Statut::Valide;
+    if (val == "DISCREPANCE") return Statut::Discrepance;
     return Statut::EnAttente;
 }
 
-QString ReceptionCaisse::getStatutLabel() const
-{
-    switch (m_statut) {
-        case Statut::EnAttente:
-            return "En attente";
-        case Statut::Recu:
-            return "Reçu";
-        case Statut::Valide:
-            return "Validé";
-        case Statut::Discrepance:
-            return "Discordance";
-        default:
-            return "Inconnu";
+QString ReceptionCaisse::syncStatusToString(SyncStatus s) {
+    switch (s) {
+    case SyncStatus::PENDING: return "PENDING";
+    case SyncStatus::SYNCED: return "SYNCED";
+    case SyncStatus::CONFLICT: return "CONFLICT";
+    default: return "PENDING";
     }
 }
 
-bool ReceptionCaisse::hasDiscrepancy() const
-{
-    return getEcart() != 0.0;
+ReceptionCaisse::SyncStatus ReceptionCaisse::stringToSyncStatus(const QString& str) {
+    QString val = str.trimmed().toUpper();
+    if (val == "SYNCED") return SyncStatus::SYNCED;
+    if (val == "CONFLICT") return SyncStatus::CONFLICT;
+    return SyncStatus::PENDING;
+}
+
+QString ReceptionCaisse::getStatutLabel() const {
+    switch (m_statut) {
+    case Statut::EnAttente: return "En attente";
+    case Statut::Recu: return "Reçu";
+    case Statut::Valide: return "Validé";
+    case Statut::Discrepance: return "Discordance";
+    default: return "Inconnu";
+    }
 }

@@ -3,7 +3,6 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QVariant>
-#include <QDebug>
 
 RepositoryCategorieProduit::RepositoryCategorieProduit() {}
 

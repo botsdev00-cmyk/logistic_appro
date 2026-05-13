@@ -136,7 +136,7 @@ void BoiteDialogCategorie::onValider()
     }
 
     // ----- Vérification d'unicité du code -----
-    CategorieProduit existante = m_gestionnaireCatalogue->obtenirCategorieParCode(code);
+    CategorieProduit existante = m_gestionnaireCatalogue->obtenirCategorieParCode(code).value_or(CategorieProduit());
     qDebug() << "[DEBUG-CAT] existante.id=" << existante.getCategorieProduitId();
 
     if (!existante.getCategorieProduitId().isNull()

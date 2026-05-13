@@ -1,4 +1,7 @@
 #include "OfflineApiServer.h"
+#include "../business/managers/GestionnaireCaisse.h"
+#include "../data/repositories/RepositoryReceptionCaisse.h"
+#include "../core/entities/ReceptionCaisse.h"
 #include <QMutex>
 #include <QMutexLocker>
 
@@ -193,4 +196,99 @@ QList<ArticleRepartition> OfflineApiServer::getArticlesRepartition(const QUuid& 
 QString OfflineApiServer::getLastErreur() const
 {
     return m_lastErreur;
+}
+
+// ======== CAISSE ========
+
+QUuid OfflineApiServer::creerReceptionCaisse(const QUuid& repartitionId, double montantAttendu, const QUuid& caissierId, const QString& notes)
+{
+    GestionnaireCaisse gest;
+    QUuid id = gest.creerReceptionCaisse(repartitionId, montantAttendu, caissierId, notes);
+    m_lastErreur = gest.getDernierErreur();
+    return id;
+}
+
+bool OfflineApiServer::enregistrerMontantRecu(const QUuid& receptionId, double montantRecu)
+{
+    GestionnaireCaisse gest;
+    bool ok = gest.enregistrerMontantRecu(receptionId, montantRecu);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+bool OfflineApiServer::validerReception(const QUuid& receptionId)
+{
+    GestionnaireCaisse gest;
+    bool ok = gest.validerReception(receptionId);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+bool OfflineApiServer::supprimerReceptionCaisse(const QUuid& receptionId)
+{
+    GestionnaireCaisse gest;
+    bool ok = gest.softDeleteReception(receptionId);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+ReceptionCaisse OfflineApiServer::getReceptionCaisse(const QUuid& receptionId) const
+{
+    GestionnaireCaisse gest;
+    ReceptionCaisse rc = gest.obtenirReception(receptionId);
+    // pas de set m_lastErreur ici car const, sinon utiliser mutable
+    return rc;
+}
+
+ReceptionCaisse OfflineApiServer::getReceptionCaisseParRepartition(const QUuid& repartitionId) const
+{
+    GestionnaireCaisse gest;
+    ReceptionCaisse rc = gest.obtenirReceptionParRepartition(repartitionId);
+    return rc;
+}
+
+QList<ReceptionCaisse> OfflineApiServer::getAllReceptionsCaisse() const
+{
+    RepositoryReceptionCaisse repo;
+    return repo.getAll();
+}
+
+QList<ReceptionCaisse> OfflineApiServer::searchReceptionsCaisse(const QString& critere) const
+{
+    RepositoryReceptionCaisse repo;
+    return repo.search(critere);
+}
+
+QList<ReceptionCaisse> OfflineApiServer::getPendingReceptionsCaisse() const
+{
+    RepositoryReceptionCaisse repo;
+    return repo.getBySyncStatus(ReceptionCaisse::SyncStatus::PENDING);
+}
+
+QList<ReceptionCaisse> OfflineApiServer::getConflictReceptionsCaisse() const
+{
+    RepositoryReceptionCaisse repo;
+    return repo.getBySyncStatus(ReceptionCaisse::SyncStatus::CONFLICT);
+}
+
+QList<ReceptionCaisse> OfflineApiServer::getReceptionsCaisseSinceVersion(int minVersion) const
+{
+    RepositoryReceptionCaisse repo;
+    return repo.getSinceVersion(minVersion);
+}
+
+bool OfflineApiServer::marquerReceptionCaisseSynced(const QUuid& receptionId, int nouvelleVersion)
+{
+    GestionnaireCaisse gest;
+    bool ok = gest.marquerSynced(receptionId, nouvelleVersion);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+bool OfflineApiServer::marquerReceptionCaisseConflit(const QUuid& receptionId)
+{
+    GestionnaireCaisse gest;
+    bool ok = gest.marquerConflit(receptionId);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
 }

@@ -1,128 +1,94 @@
 #include "GestionnaireCaisse.h"
-#include "../exceptions/BusinessException.h"
 #include "../../data/repositories/RepositoryReceptionCaisse.h"
-#include "../../core/entities/ReceptionCaisse.h"
-#include <QDebug>
 #include <QDateTime>
+#include <QDebug>
 
-GestionnaireCaisse::GestionnaireCaisse()
-{
-}
+GestionnaireCaisse::GestionnaireCaisse() : m_dernierErreur() {}
 
-QUuid GestionnaireCaisse::creerReceptionCaisse(const QUuid& repartitionId, double montantAttendu)
+QUuid GestionnaireCaisse::creerReceptionCaisse(const QUuid& repartitionId, double montantAttendu, const QUuid& caissierId, const QString& notes)
 {
-    try {
-        if (repartitionId.isNull()) {
-            m_dernierErreur = "ID répartition invalide";
-            return QUuid();
-        }
-        
-        if (montantAttendu < 0) {
-            m_dernierErreur = "Montant invalide";
-            return QUuid();
-        }
-        
-        ReceptionCaisse reception;
-        reception.setRepartitionId(repartitionId);
-        reception.setMontantAttendu(montantAttendu);
-        reception.setNumeroRecu(genererNumeroRecu());
-        reception.setStatut(ReceptionCaisse::Statut::EnAttente);
-        
-        RepositoryReceptionCaisse repo;
-        if (!repo.create(reception)) {
-            m_dernierErreur = "Erreur lors de la création : " + repo.getLastError();
-            return QUuid();
-        }
-        
-        qDebug() << "Réception caisse créée :" << reception.getReceptionCaisseId().toString();
-        return reception.getReceptionCaisseId();
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    if (repartitionId.isNull() || montantAttendu < 0) {
+        m_dernierErreur = "Paramètres invalides";
         return QUuid();
     }
+
+    ReceptionCaisse reception;
+    reception.setRepartitionId(repartitionId);
+    reception.setMontantAttendu(montantAttendu);
+    reception.setNumeroRecu(genererNumeroRecu());
+    reception.setStatut(ReceptionCaisse::Statut::EnAttente);
+    reception.setVersion(1);
+    reception.setSyncStatus(ReceptionCaisse::SyncStatus::PENDING);
+    reception.setDateCreation(QDateTime::currentDateTime());
+    reception.setDateMiseAJour(QDateTime::currentDateTime());
+    reception.setCaissierId(caissierId);
+    reception.setNotes(notes);
+
+    RepositoryReceptionCaisse repo;
+    if (!repo.create(reception)) {
+        m_dernierErreur = "Erreur lors de la création : " + repo.getLastError();
+        return QUuid();
+    }
+    return reception.getReceptionCaisseId();
 }
 
 bool GestionnaireCaisse::enregistrerMontantRecu(const QUuid& receptionId, double montantRecu)
 {
-    try {
-        if (receptionId.isNull() || montantRecu < 0) {
-            m_dernierErreur = "Paramètres invalides";
-            return false;
-        }
-        
-        RepositoryReceptionCaisse repo;
-        ReceptionCaisse reception = repo.getById(receptionId);
-        
-        if (reception.getReceptionCaisseId().isNull()) {
-            m_dernierErreur = "Réception non trouvée";
-            return false;
-        }
-        
-        reception.setMontantRecu(montantRecu);
-        reception.setDateReception(QDateTime::currentDateTime());
-        
-        if (reception.hasDiscrepancy()) {
-            reception.setStatut(ReceptionCaisse::Statut::Discrepance);
-        } else {
-            reception.setStatut(ReceptionCaisse::Statut::Recu);
-        }
-        
-        return repo.update(reception);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    if (receptionId.isNull() || montantRecu < 0) {
+        m_dernierErreur = "Paramètres invalides";
         return false;
     }
+
+    RepositoryReceptionCaisse repo;
+    ReceptionCaisse rc = repo.getById(receptionId);
+    if (rc.getReceptionCaisseId().isNull()) {
+        m_dernierErreur = "Réception non trouvée";
+        return false;
+    }
+
+    rc.setMontantRecu(montantRecu);
+    rc.setDateReception(QDateTime::currentDateTime());
+    rc.setDateMiseAJour(QDateTime::currentDateTime());
+    rc.setVersion(rc.getVersion() + 1);
+    rc.setSyncStatus(ReceptionCaisse::SyncStatus::PENDING);
+
+    if (rc.hasDiscrepancy()) {
+        rc.setStatut(ReceptionCaisse::Statut::Discrepance);
+    } else {
+        rc.setStatut(ReceptionCaisse::Statut::Recu);
+    }
+
+    return repo.update(rc);
 }
 
 bool GestionnaireCaisse::validerReception(const QUuid& receptionId)
 {
-    try {
-        RepositoryReceptionCaisse repo;
-        ReceptionCaisse reception = repo.getById(receptionId);
-        
-        if (reception.getReceptionCaisseId().isNull()) {
-            m_dernierErreur = "Réception non trouvée";
-            return false;
-        }
-        
-        if (reception.hasDiscrepancy()) {
-            m_dernierErreur = "Discordance détectée : " + 
-                             QString::number(reception.getEcart(), 'f', 2);
-            reception.setStatut(ReceptionCaisse::Statut::Discrepance);
-        } else {
-            reception.setStatut(ReceptionCaisse::Statut::Valide);
-        }
-        
-        return repo.update(reception);
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    RepositoryReceptionCaisse repo;
+    ReceptionCaisse rc = repo.getById(receptionId);
+    if (rc.getReceptionCaisseId().isNull()) {
+        m_dernierErreur = "Réception non trouvée";
         return false;
     }
+
+    rc.setDateMiseAJour(QDateTime::currentDateTime());
+    rc.setVersion(rc.getVersion() + 1);
+    rc.setSyncStatus(ReceptionCaisse::SyncStatus::PENDING);
+
+    if (rc.hasDiscrepancy()) {
+        m_dernierErreur = "Discordance détectée : " + QString::number(rc.getEcart(), 'f', 2);
+        rc.setStatut(ReceptionCaisse::Statut::Discrepance);
+    } else {
+        rc.setStatut(ReceptionCaisse::Statut::Valide);
+    }
+
+    return repo.update(rc);
 }
 
-bool GestionnaireCaisse::genererRecu(const QUuid& receptionId)
+bool GestionnaireCaisse::softDeleteReception(const QUuid& receptionId)
 {
-    try {
-        RepositoryReceptionCaisse repo;
-        ReceptionCaisse reception = repo.getById(receptionId);
-        
-        if (reception.getReceptionCaisseId().isNull()) {
-            m_dernierErreur = "Réception non trouvée";
-            return false;
-        }
-        
-        // Générer le reçu PDF ou imprimé
-        qDebug() << "Génération du reçu :" << reception.getNumeroRecu();
-        
-        return true;
-        
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
-        return false;
-    }
+    RepositoryReceptionCaisse repo;
+    // soft-delete = update de la colonne deleted_at, sync_status = PENDING (déjà géré dans repo)
+    return repo.remove(receptionId);
 }
 
 ReceptionCaisse GestionnaireCaisse::obtenirReception(const QUuid& receptionId)
@@ -131,7 +97,7 @@ ReceptionCaisse GestionnaireCaisse::obtenirReception(const QUuid& receptionId)
     return repo.getById(receptionId);
 }
 
-ReceptionCaisse GestionnaireCaisse::obtenirReceptionRepartition(const QUuid& repartitionId)
+ReceptionCaisse GestionnaireCaisse::obtenirReceptionParRepartition(const QUuid& repartitionId)
 {
     RepositoryReceptionCaisse repo;
     return repo.getByRepartition(repartitionId);
@@ -149,29 +115,25 @@ QList<ReceptionCaisse> GestionnaireCaisse::obtenirReceptionsAvecDiscrepance()
     return repo.getWithDiscrepancies();
 }
 
-double GestionnaireCaisse::obtenirTotalCashRecu()
+double GestionnaireCaisse::obtenirTotalCashValide()
 {
     RepositoryReceptionCaisse repo;
-    QList<ReceptionCaisse> receptions = repo.getByStatut(ReceptionCaisse::Statut::Valide);
-    
+    QList<ReceptionCaisse> List = repo.getByStatut(ReceptionCaisse::Statut::Valide);
     double total = 0.0;
-    for (const auto& reception : receptions) {
-        total += reception.getMontantRecu();
+    for (const auto& rc : List) {
+        total += rc.getMontantRecu();
     }
-    
     return total;
 }
 
 double GestionnaireCaisse::obtenirTotalEcarts()
 {
     RepositoryReceptionCaisse repo;
-    QList<ReceptionCaisse> receptions = repo.getWithDiscrepancies();
-    
+    QList<ReceptionCaisse> List = repo.getWithDiscrepancies();
     double total = 0.0;
-    for (const auto& reception : receptions) {
-        total += qAbs(reception.getEcart());
+    for (const auto& rc : List) {
+        total += std::abs(rc.getEcart());
     }
-    
     return total;
 }
 
@@ -180,36 +142,43 @@ int GestionnaireCaisse::obtenirNombreDiscrepances()
     return obtenirReceptionsAvecDiscrepance().count();
 }
 
-bool GestionnaireCaisse::validerDiscrepance(const QUuid& receptionId)
+QList<ReceptionCaisse> GestionnaireCaisse::obtenirReceptionsASynchroniser()
 {
     RepositoryReceptionCaisse repo;
-    ReceptionCaisse reception = repo.getById(receptionId);
-    
-    if (reception.getReceptionCaisseId().isNull()) {
-        m_dernierErreur = "Réception non trouvée";
-        return false;
-    }
-    
-    reception.setStatut(ReceptionCaisse::Statut::Discrepance);
-    return repo.update(reception);
+    return repo.getBySyncStatus(ReceptionCaisse::SyncStatus::PENDING);
 }
 
-QList<ReceptionCaisse> GestionnaireCaisse::obtenirAlertesDiscrepance()
+QList<ReceptionCaisse> GestionnaireCaisse::obtenirReceptionsEnConflit()
 {
-    return obtenirReceptionsAvecDiscrepance();
+    RepositoryReceptionCaisse repo;
+    return repo.getBySyncStatus(ReceptionCaisse::SyncStatus::CONFLICT);
 }
 
-QString GestionnaireCaisse::genererNumeroRecu()
+bool GestionnaireCaisse::marquerSynced(const QUuid& receptionId, int nouvelleVersion)
 {
-    QString date = QDateTime::currentDateTime().toString("yyMMdd");
-    QString heure = QDateTime::currentDateTime().toString("hhmmss");
+    RepositoryReceptionCaisse repo;
+    ReceptionCaisse rc = repo.getById(receptionId);
+    if (rc.getReceptionCaisseId().isNull()) return false;
+    rc.setSyncStatus(ReceptionCaisse::SyncStatus::SYNCED);
+    rc.setVersion(nouvelleVersion);
+    rc.setDateMiseAJour(QDateTime::currentDateTime());
+    return repo.update(rc);
+}
+
+bool GestionnaireCaisse::marquerConflit(const QUuid& receptionId)
+{
+    RepositoryReceptionCaisse repo;
+    ReceptionCaisse rc = repo.getById(receptionId);
+    if (rc.getReceptionCaisseId().isNull()) return false;
+    rc.setSyncStatus(ReceptionCaisse::SyncStatus::CONFLICT);
+    rc.setDateMiseAJour(QDateTime::currentDateTime());
+    rc.setVersion(rc.getVersion() + 1);
+    return repo.update(rc);
+}
+
+QString GestionnaireCaisse::genererNumeroRecu() const
+{
+    const QString date = QDateTime::currentDateTime().toString("yyMMdd");
+    const QString heure = QDateTime::currentDateTime().toString("hhmmss");
     return QString("RC-%1-%2").arg(date, heure);
-}
-
-bool GestionnaireCaisse::detecterDiscrepance(const QUuid& receptionId)
-{
-    RepositoryReceptionCaisse repo;
-    ReceptionCaisse reception = repo.getById(receptionId);
-    
-    return reception.hasDiscrepancy();
 }

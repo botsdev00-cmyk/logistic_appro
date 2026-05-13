@@ -39,11 +39,10 @@ public:
     void setSyncStatus(SyncStatus status) { m_syncStatus = status; }
     void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
 
+    // Utilitaires
     bool isDeleted() const { return m_deletedAt.isValid(); }
     bool needsSync() const { return m_syncStatus != SyncStatus::SYNCED; }
     QString syncStatusString() const;
-
-    // Conversion utilitaire (pour mapping DB à objet)
     static SyncStatus fromString(const QString& v);
 
 private:
@@ -57,7 +56,7 @@ private:
     QDateTime m_dateMiseAJour;
     int m_version;
     SyncStatus m_syncStatus;
-    QDateTime m_deletedAt; // soft delete
+    QDateTime m_deletedAt;
 };
 
 #endif // CATEGORIEPRODUIT_H

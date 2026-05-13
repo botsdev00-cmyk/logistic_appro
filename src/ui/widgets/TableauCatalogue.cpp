@@ -230,7 +230,7 @@ void TableauCatalogue::chargerProduits()
         QStandardItem* itemNom = new QStandardItem(produit.getNom());
         itemNom->setEditable(false);
 
-        CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(
+        CategorieProduit existante = m_gestionnaireCatalogue->obtenirCategorieParCode(code).value_or(CategorieProduit());
             produit.getCategorieProduitId()
         );
         QStandardItem* itemCategorie = new QStandardItem(categorie.getNom());
@@ -404,7 +404,7 @@ void TableauCatalogue::onModifierProduit(const QUuid& produitId)
         return;
     }
 
-    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId);
+    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
     if (produit.getProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Produit non trouvé");
         return;
@@ -424,7 +424,7 @@ void TableauCatalogue::onBasculeStatut(const QUuid& produitId)
         return;
     }
 
-    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId);
+    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
     if (produit.getProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Produit non trouvé");
         return;
@@ -470,7 +470,7 @@ void TableauCatalogue::onModifierCategorie(const QUuid& categorieId)
         return;
     }
 
-    CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(categorieId);
+    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
     if (categorie.getCategorieProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Catégorie non trouvée");
         return;
@@ -490,7 +490,7 @@ void TableauCatalogue::onBasculeStatutCategorie(const QUuid& categorieId)
         return;
     }
 
-    CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(categorieId);
+    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
     if (categorie.getCategorieProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Catégorie non trouvée");
         return;

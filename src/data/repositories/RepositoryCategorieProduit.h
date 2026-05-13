@@ -14,18 +14,16 @@ public:
     RepositoryCategorieProduit();
 
     // CRUD offline-first
-    bool create(const CategorieProduit& entity);               // Ajout : sync_status PENDING, version 1
-    bool update(const CategorieProduit& entity);               // Maj (maj version, sync_status)
-    bool logicalDelete(const QUuid& id);                       // Soft delete (never SQL DELETE)
+    bool create(const CategorieProduit& entity);           // Ajout : sync_status PENDING, version 1
+    bool update(const CategorieProduit& entity);           // Mise à jour (maj version, sync_status)
+    bool logicalDelete(const QUuid& id);                   // Soft delete
     std::optional<CategorieProduit> getById(const QUuid& id) const;
     QList<CategorieProduit> getAll() const;
 
-    // Recherche avancée
+    // Recherche/synchro
     QList<CategorieProduit> search(const QString& criterion) const;
     bool exists(const QUuid& id) const;
     std::optional<CategorieProduit> getByCode(const QString& code) const;
-
-    // OFFLINE-FIRST
     QList<CategorieProduit> getPendingSync() const;
     QList<CategorieProduit> getSinceVersion(int minVersion) const;
 
