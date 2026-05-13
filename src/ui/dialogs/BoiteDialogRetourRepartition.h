@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <QUuid>
 #include <QList>
-#include <QVector>
 
 class QTableWidget;
 class QPushButton;
@@ -27,6 +26,7 @@ class BoiteDialogRetourRepartition : public QDialog
 public:
     BoiteDialogRetourRepartition(const QList<LigneRetourRepartition>& donneesProduits, const QUuid& repId, QWidget* parent = nullptr);
     QList<LigneRetourRepartition> resultats() const;
+    QUuid repartitionId() const { return m_repartitionId; }
 
 private slots:
     void validerRetour();

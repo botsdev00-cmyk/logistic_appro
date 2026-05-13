@@ -3,6 +3,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QSqlRecord>
 
 // ============================================================================
 // HELPERS POUR MAPPER L'ENUM C++ VERS LES UUIDS DE LA BASE DE DONNEES
@@ -264,4 +265,38 @@ QList<Repartition> RepositoryRepartition::getByStatut(const Repartition::Statut&
         }
     }
     return reps;
+}
+
+Repartition RepositoryRepartition::mapRowToRepartition(const QSqlQuery& query) const
+{
+    Repartition r;
+
+    r.setRepartitionId(QUuid(query.value("repartition_id").toString()));
+    r.setEquipeId(QUuid(query.value("equipe_id").toString()));
+    r.setRouteId(QUuid(query.value("route_id").toString()));
+    r.setStatutRepartitionId(QUuid(query.value("statut_repartition_id").toString()));
+
+    // Pour la gestion du statut enum, il faudra ensuite faire une résolution uuid->enum si tu utilises .getStatut()
+    // (ex : mapping application, cf ton helper getStatutFromUuid dans le repo !)
+
+    r.setDateRepartition(query.value("date_repartition").toDate());
+    r.setMontantCashAttendu(query.value("montant_cash_attendu").toDouble());
+
+    if (query.record().indexOf("date_mise_a_jour") >= 0)
+        r.setDateMiseAJour(query.value("date_mise_a_jour").toDateTime());
+
+    if (query.record().indexOf("chef_id") >= 0)
+        r.setChefId(QUuid(query.value("chef_id").toString()));
+
+    if (query.record().indexOf("annule") >= 0)
+        r.setAnnule(query.value("annule").toBool());
+
+    if (query.record().indexOf("created_at") >= 0)
+        r.setCreatedAt(query.value("created_at").toDateTime());
+    if (query.record().indexOf("updated_at") >= 0)
+        r.setUpdatedAt(query.value("updated_at").toDateTime());
+    if (query.record().indexOf("deleted_at") >= 0)
+        r.setDeletedAt(query.value("deleted_at").toDateTime());
+
+    return r;
 }

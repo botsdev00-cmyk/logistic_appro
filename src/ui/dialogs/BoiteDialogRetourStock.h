@@ -19,17 +19,18 @@ class BoiteDialogRetourStock : public QDialog
 
 public:
     explicit BoiteDialogRetourStock(GestionnaireStock* gestionnaire,
-                                GestionnaireRaisonsRetour* gestionnaireRaisons,
-                                GestionnaireRepartition* gestionnaireRepartition,
-                                const QUuid& utilisateurId,
-                                QWidget* parent = nullptr,
-                                QUuid repartitionPreselectionnee = QUuid());
+                                    GestionnaireRaisonsRetour* gestionnaireRaisons,
+                                    GestionnaireRepartition* gestionnaireRepartition,
+                                    const QUuid& utilisateurId,
+                                    QWidget* parent = nullptr,
+                                    const QUuid& repartitionPreselectionnee = QUuid());
     ~BoiteDialogRetourStock();
 
-    void setRepartitionPreselectionnee(const QUuid& repId);
     void setEquipe(const QString& nomEquipe);
     void setProduit(const QUuid& produitId, const QString& nomProduit);
     void setQuantite(int quantite);
+
+    QUuid repartitionId() const { return m_repartitionId; } // Pour consulter le choix (optionnel)
 
 private slots:
     void onValider();
@@ -39,19 +40,20 @@ private:
     void initializeUI();
     void chargerProduits();
     void chargerRaisons();
-    void chargerRepartitions();
+    void chargerRepartitionPreremplie();
 
     GestionnaireStock* m_gestionnaire;
     GestionnaireRaisonsRetour* m_gestionnaireRaisons;
     GestionnaireRepartition* m_gestionnaireRepartition;
     QUuid m_utilisateurId;
+    QUuid m_repartitionId; // interne, car plus de sélection utilisateur
 
     QComboBox* m_comboProduit;
     QComboBox* m_comboRaison;
-    QComboBox* m_comboRepartition;
+    QLabel* m_labelRepartition; // Remplace le QComboBox
+    QLabel* m_labelEquipe;
     QSpinBox* m_spinQuantite;
     QTextEdit* m_editObservations;
-    QLabel* m_labelEquipe;
     QPushButton* m_btnValider;
     QPushButton* m_btnAnnuler;
 };

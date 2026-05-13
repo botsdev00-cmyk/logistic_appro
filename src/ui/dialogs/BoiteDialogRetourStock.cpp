@@ -12,6 +12,7 @@
 #include <QSpinBox>
 #include <QTextEdit>
 #include <QPushButton>
+#include <QLabel>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -21,19 +22,18 @@ BoiteDialogRetourStock::BoiteDialogRetourStock(
     GestionnaireRepartition* gestionnaireRepartition,
     const QUuid& utilisateurId,
     QWidget* parent,
-    QUuid repartitionPreselectionnee
-) : QDialog(parent),
+    const QUuid& repartitionPreselectionnee
+    ) : QDialog(parent),
     m_gestionnaire(gestionnaire),
     m_gestionnaireRaisons(gestionnaireRaisons),
     m_gestionnaireRepartition(gestionnaireRepartition),
-    m_utilisateurId(utilisateurId)
+    m_utilisateurId(utilisateurId),
+    m_repartitionId(repartitionPreselectionnee)
 {
     setWindowTitle("Nouveau Retour de Stock");
     setModal(true);
     setMinimumWidth(500);
     initializeUI();
-    if (!repartitionPreselectionnee.isNull())
-        setRepartitionPreselectionnee(repartitionPreselectionnee);
 }
 
 BoiteDialogRetourStock::~BoiteDialogRetourStock()
@@ -53,9 +53,10 @@ void BoiteDialogRetourStock::initializeUI()
     m_comboRaison = new QComboBox();
     form->addRow("Raison du retour:", m_comboRaison);
 
-    // Répartition d'origine
-    m_comboRepartition = new QComboBox();
-    form->addRow("Répartition d'origine :", m_comboRepartition);
+    // Répartition d'origine (AFFICHAGE SEULEMENT)
+    m_labelRepartition = new QLabel(this);
+    m_labelRepartition->setStyleSheet("font-weight:bold; background:#f5f5f5; padding:2px;");
+    form->addRow("Répartition d'origine :", m_labelRepartition);
 
     // Équipe
     m_labelEquipe = new QLabel("(Non renseignée)", this);
@@ -91,15 +92,17 @@ void BoiteDialogRetourStock::initializeUI()
     // Peuplement
     chargerProduits();
     chargerRaisons();
-    chargerRepartitions();
+    chargerRepartitionPreremplie();
 }
 
 void BoiteDialogRetourStock::chargerProduits()
 {
     m_comboProduit->clear();
     m_comboProduit->addItem("Sélectionner…", QVariant());
-    for (const auto& stock : m_gestionnaire->obtenirTousLesStocks()) {
-        m_comboProduit->addItem(stock.produitNom + " (" + stock.codeSKU + ")", QVariant(stock.produitId));
+    if (m_gestionnaire) {
+        for (const auto& stock : m_gestionnaire->obtenirTousLesStocks()) {
+            m_comboProduit->addItem(stock.produitNom + " (" + stock.codeSKU + ")", QVariant(stock.produitId));
+        }
     }
 }
 
@@ -113,46 +116,30 @@ void BoiteDialogRetourStock::chargerRaisons()
     }
 }
 
-void BoiteDialogRetourStock::chargerRepartitions()
+void BoiteDialogRetourStock::chargerRepartitionPreremplie()
 {
-    m_comboRepartition->clear();
-    m_comboRepartition->addItem("--Aucune répartition--", QVariant());
-    if (m_gestionnaireRepartition) {
-        for (const auto& rep : m_gestionnaireRepartition->obtenirRepartitionsEnCours()) {
-            QString nomEquipe;
-            QString nomRoute;
-
+    // Par convention métier : champ = grisé, non éditable
+    QString label = "(non trouvée)";
+    if (m_gestionnaireRepartition && !m_repartitionId.isNull()) {
+        auto rep = m_gestionnaireRepartition->obtenirRepartition(m_repartitionId, false);
+        if (!rep.getRepartitionId().isNull()) {
             RepositoryEquipe repoEquipe;
             RepositoryRoute repoRoute;
-
-            nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
-            nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
-
-            QString label = QString("Équipe: %1 | Route: %2 | %3")
-                                .arg(nomEquipe)
-                                .arg(nomRoute)
-                                .arg(rep.getDateRepartition().toString("dd/MM/yy"));
-            m_comboRepartition->addItem(label, QVariant(rep.getRepartitionId()));
+            QString nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+            QString nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
+            // Label complet
+            label = QString("%1 | %2 | %3")
+                        .arg(nomEquipe)
+                        .arg(nomRoute)
+                        .arg(rep.getDateRepartition().toString("dd/MM/yy"));
+            setEquipe(nomEquipe);
+        } else {
+            setEquipe("(Non trouvée)");
         }
+    } else {
+        setEquipe("(Non trouvée)");
     }
-}
-
-void BoiteDialogRetourStock::setRepartitionPreselectionnee(const QUuid& repId)
-{
-    for (int i=0; i < m_comboRepartition->count(); ++i) {
-        if (m_comboRepartition->itemData(i).toUuid() == repId) {
-            m_comboRepartition->setCurrentIndex(i);
-            m_comboRepartition->setEnabled(false); // optionnel : désactive si contexte imposé
-            // Remplit équipe associée automatiquement
-            auto rep = m_gestionnaireRepartition->obtenirRepartition(repId, false);
-            if (!rep.getEquipeId().isNull()) {
-                RepositoryEquipe repoEquipe;
-                QString nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
-                setEquipe(nomEquipe);
-            }
-            break;
-        }
-    }
+    m_labelRepartition->setText(label);
 }
 
 void BoiteDialogRetourStock::setEquipe(const QString& nomEquipe)
@@ -196,26 +183,18 @@ void BoiteDialogRetourStock::onValider()
 
     QUuid produitId = m_comboProduit->currentData().toUuid();
     QUuid raisonId = m_comboRaison->currentData().toUuid();
-    QUuid repartitionId = m_comboRepartition->currentData().toUuid();
     int quantite = m_spinQuantite->value();
     QString observations = m_editObservations->toPlainText();
 
     bool ok = false;
-    // Si répartition renseignée, utilise la méthode dédiée
-    if (!repartitionId.isNull()) {
+    // On ne permet plus de retour sans répartition en contexte clôture répartition
+    if (!m_repartitionId.isNull()) {
         ok = m_gestionnaire->creerRetourApresRepartition(
-            produitId, quantite, repartitionId, raisonId, observations, m_utilisateurId
-        );
+            produitId, quantite, m_repartitionId, raisonId, observations, m_utilisateurId
+            );
     } else {
-        RetourStock retour;
-        retour.setProduitId(produitId);
-        retour.setQuantite(quantite);
-        retour.setRaisonRetourId(raisonId);
-        retour.setRepartitionId(QUuid());
-        retour.setObservations(observations);
-        retour.setCreePar(m_utilisateurId);
-        retour.setStatutValidation("EN_ATTENTE");
-        ok = m_gestionnaire->creerRetourStock(retour);
+        QMessageBox::warning(this, "Erreur", "Aucune répartition sélectionnée !");
+        return;
     }
     if (ok) {
         QMessageBox::information(this, "Succès", "Retour de stock créé avec succès");

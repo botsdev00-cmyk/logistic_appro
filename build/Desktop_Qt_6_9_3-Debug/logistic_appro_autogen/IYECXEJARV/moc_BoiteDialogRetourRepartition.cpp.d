@@ -2,7 +2,6 @@
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QVector \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20iterator.h \
@@ -126,7 +125,6 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/quuid.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvariant.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvarlengtharray.h \
-  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qvector.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qversiontagging.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qxptype_traits.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qyieldcpu.h \
