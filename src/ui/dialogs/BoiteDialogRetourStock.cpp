@@ -118,16 +118,18 @@ void BoiteDialogRetourStock::chargerRaisons()
 
 void BoiteDialogRetourStock::chargerRepartitionPreremplie()
 {
-    // Par convention métier : champ = grisé, non éditable
     QString label = "(non trouvée)";
+    QString nomEquipe = "(Inconnue)";
     if (m_gestionnaireRepartition && !m_repartitionId.isNull()) {
         auto rep = m_gestionnaireRepartition->obtenirRepartition(m_repartitionId, false);
         if (!rep.getRepartitionId().isNull()) {
             RepositoryEquipe repoEquipe;
             RepositoryRoute repoRoute;
-            QString nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+            auto optEq = repoEquipe.getById(rep.getEquipeId());
+            if (optEq && !optEq->getEquipeId().isNull())
+                nomEquipe = optEq->getNom();
+
             QString nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
-            // Label complet
             label = QString("%1 | %2 | %3")
                         .arg(nomEquipe)
                         .arg(nomRoute)

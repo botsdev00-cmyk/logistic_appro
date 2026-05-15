@@ -11,15 +11,19 @@
 #include "../core/entities/Equipe.h"
 #include "../core/entities/ArticleRepartition.h"
 #include "../core/entities/ReceptionCaisse.h"
+#include "../core/entities/Credit.h"
 #include "../data/repositories/RepositoryClient.h"
 #include "../data/repositories/RepositoryCategorieProduit.h"
 #include "../data/repositories/RepositoryProduit.h"
 #include "../data/repositories/RepositoryEquipe.h"
 #include "../data/repositories/RepositoryReceptionCaisse.h"
 #include "../data/repositories/RepositoryArticleRepartition.h"
+#include "../data/repositories/RepositoryCredit.h"
 #include "../business/managers/GestionnaireClient.h"
 #include "../business/managers/GestionnaireEquipe.h"
 #include "../business/managers/GestionnaireCaisse.h"
+#include "../business/managers/GestionnaireCredit.h"
+
 
 class OfflineApiServer : public QObject
 {
@@ -27,18 +31,22 @@ class OfflineApiServer : public QObject
 public:
     static OfflineApiServer* instance();
 
-    // ================= CLIENT =================
+    // ====================== CLIENT  ======================
     QUuid creerClient(const QString& nom, const QString& adresse, const QString& telephone,
-                      const QString& email, const QUuid& routeId, const QString& conditionsPaiement);
-    bool modifierClient(const QUuid& clientId, const QString& nom, const QString& adresse);
+                      const QString& email, const QUuid& routeId, const QUuid& conditionPaiementId, const QUuid& grilleId = QUuid());
+
+    bool modifierClient(const QUuid& clientId, const QString& nom, const QString& adresse, const QString& telephone,
+                        const QString& email, const QUuid& routeId, const QUuid& conditionPaiementId, const QUuid& grilleId = QUuid());
+
     bool supprimerClient(const QUuid& clientId); // soft delete
+
     std::optional<Client> getClient(const QUuid& clientId) const;
+
     QList<Client> getClientsByRoute(const QUuid& routeId) const;
     QList<Client> getAllClients() const;
     QList<Client> searchClients(const QString& nom) const;
-    QList<Client> getPendingClients() const;
+    QList<Client> getPendingClients() const;               // offline-first PENDING
     QList<Client> getClientsSinceVersion(int minVersion) const;
-
     // ============= CATALOGUE PRODUIT (Categories & Produits) =============
 
     // ---------- CATEGORIES ----------
@@ -65,9 +73,16 @@ public:
     QList<Produit> getProduitsSinceVersion(int minVersion) const;
 
     // ================= EQUIPE =================
-    QUuid creerEquipe(const QString& nom, const QString& nomChef, /*const QString& description,*/ const QUuid& createdBy);
+    QUuid creerEquipe(const QString& nom, const QString& nomChef, const QUuid& createdBy, bool estActif = true);
+    bool modifierEquipe(const Equipe& equipe, const QUuid& updatedBy);
+    bool supprimerEquipe(const QUuid& equipeId);
+
+    std::optional<Equipe> getEquipe(const QUuid& equipeId) const;
     QList<Equipe> getAllEquipes() const;
+    QList<Equipe> searchEquipes(const QString& criterion) const;
     QList<Equipe> getPendingEquipes() const;
+    QList<Equipe> getConflictEquipes() const;
+    QList<Equipe> getEquipesSinceVersion(int minVersion) const;
 
     // ========== ARTICLE REPARTITION (exemple) ==========
     QList<ArticleRepartition> getArticlesRepartition(const QUuid& repartitionId) const;
@@ -92,6 +107,25 @@ public:
     QList<ReceptionCaisse> getReceptionsCaisseSinceVersion(int minVersion) const;
     bool marquerReceptionCaisseSynced(const QUuid& receptionId, int nouvelleVersion);
     bool marquerReceptionCaisseConflit(const QUuid& receptionId);
+
+    // ================= CREDIT =================
+    QUuid creerCredit(const QUuid& venteId, const QUuid& clientId, double montant, const QDate& dateEcheance, const QString& notes = "");
+    bool payerCredit(const QUuid& creditId, const QDate& datePaiement);
+    bool annulerCredit(const QUuid& creditId); // soft delete
+
+    std::optional<Credit> getCredit(const QUuid& creditId) const;
+    QList<Credit> getAllCredits() const;
+    QList<Credit> searchCredits(const QString& critere) const;
+    QList<Credit> getCreditsByClient(const QUuid& clientId) const;
+    QList<Credit> getOverdueCredits() const;
+    QList<Credit> getPendingCredits() const;
+    QList<Credit> getCreditsSinceVersion(int minVersion) const;
+
+    double getTotalCreditsEnAttente() const;
+    double getTotalCreditsEnRetard() const;
+    double getTotalCreditsClient(const QUuid& clientId) const;
+
+    QList<Credit> getCreditsEnAlerte() const;
 
     // =============== COMMUN ERROR ====================
     QString getLastErreur() const;

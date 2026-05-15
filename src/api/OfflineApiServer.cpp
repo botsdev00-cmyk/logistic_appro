@@ -1,7 +1,4 @@
 #include "OfflineApiServer.h"
-#include "../business/managers/GestionnaireCaisse.h"
-#include "../data/repositories/RepositoryReceptionCaisse.h"
-#include "../core/entities/ReceptionCaisse.h"
 #include <QMutex>
 #include <QMutexLocker>
 
@@ -28,18 +25,19 @@ OfflineApiServer::OfflineApiServer(QObject* parent)
 // ================= CLIENT =================
 
 QUuid OfflineApiServer::creerClient(const QString& nom, const QString& adresse, const QString& telephone,
-                                    const QString& email, const QUuid& routeId, const QString& conditionsPaiement)
+                                    const QString& email, const QUuid& routeId, const QUuid& conditionPaiementId, const QUuid& grilleId)
 {
     GestionnaireClient gest;
-    QUuid clientId = gest.creerClient(nom, adresse, telephone, email, routeId, conditionsPaiement);
+    QUuid clientId = gest.creerClient(nom, adresse, telephone, email, routeId, conditionPaiementId, grilleId);
     m_lastErreur = gest.getDernierErreur();
     return clientId;
 }
 
-bool OfflineApiServer::modifierClient(const QUuid& clientId, const QString& nom, const QString& adresse)
+bool OfflineApiServer::modifierClient(const QUuid& clientId, const QString& nom, const QString& adresse, const QString& telephone,
+                                      const QString& email, const QUuid& routeId, const QUuid& conditionPaiementId, const QUuid& grilleId)
 {
     GestionnaireClient gest;
-    bool ok = gest.modifierClient(clientId, nom, adresse);
+    bool ok = gest.modifierClient(clientId, nom, adresse, telephone, email, routeId, conditionPaiementId, grilleId);
     m_lastErreur = gest.getDernierErreur();
     return ok;
 }
@@ -55,43 +53,33 @@ bool OfflineApiServer::supprimerClient(const QUuid& clientId)
 std::optional<Client> OfflineApiServer::getClient(const QUuid& clientId) const
 {
     auto client = m_repoClient.getById(clientId);
-    m_lastErreur = m_repoClient.getLastError();
+    // On ne set pas m_lastErreur car const, gestion mutabilité possible si besoin futur
     return client;
 }
 
 QList<Client> OfflineApiServer::getClientsByRoute(const QUuid& routeId) const
 {
-    auto list = m_repoClient.getByRoute(routeId);
-    m_lastErreur = m_repoClient.getLastError();
-    return list;
+    return m_repoClient.getByRoute(routeId);
 }
 
 QList<Client> OfflineApiServer::getAllClients() const
 {
-    auto list = m_repoClient.getAll();
-    m_lastErreur = m_repoClient.getLastError();
-    return list;
+    return m_repoClient.getAll();
 }
 
 QList<Client> OfflineApiServer::searchClients(const QString& nom) const
 {
-    auto list = m_repoClient.search(nom);
-    m_lastErreur = m_repoClient.getLastError();
-    return list;
+    return m_repoClient.search(nom);
 }
 
 QList<Client> OfflineApiServer::getPendingClients() const
 {
-    auto list = m_repoClient.getPendingSync();
-    m_lastErreur = m_repoClient.getLastError();
-    return list;
+    return m_repoClient.getPendingSync();
 }
 
 QList<Client> OfflineApiServer::getClientsSinceVersion(int minVersion) const
 {
-    auto list = m_repoClient.getSinceVersion(minVersion);
-    m_lastErreur = m_repoClient.getLastError();
-    return list;
+    return m_repoClient.getSinceVersion(minVersion);
 }
 
 // ============= CATEGORIE PRODUIT =============
@@ -159,30 +147,64 @@ QList<CategorieProduit> OfflineApiServer::getCategoriesProduitSinceVersion(int m
     return list;
 }
 
-// ==================== EQUIPE (exemple minimal) ====================
+// ================= EQUIPE =================
 
-QUuid OfflineApiServer::creerEquipe(const QString& nom, const QString& nomChef, /*const QString& description,*/ const QUuid& createdBy)
+QUuid OfflineApiServer::creerEquipe(const QString& nom, const QString& nomChef, const QUuid& createdBy, bool estActif)
 {
     GestionnaireEquipe gest;
-    QUuid equipeId = gest.creerEquipe(nom, nomChef, /*description,*/ createdBy);
+    QUuid equipeId = gest.creerEquipe(nom, nomChef, createdBy, estActif);
     m_lastErreur = gest.getDernierErreur();
     return equipeId;
 }
 
+bool OfflineApiServer::modifierEquipe(const Equipe& equipe, const QUuid& updatedBy)
+{
+    GestionnaireEquipe gest;
+    bool ok = gest.modifierEquipe(equipe, updatedBy);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+bool OfflineApiServer::supprimerEquipe(const QUuid& equipeId)
+{
+    GestionnaireEquipe gest;
+    bool ok = gest.supprimerEquipe(equipeId);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+std::optional<Equipe> OfflineApiServer::getEquipe(const QUuid& equipeId) const
+{
+    RepositoryEquipe repo;
+    auto eq = repo.getById(equipeId);
+    // pas de set m_lastErreur ici (const)
+    return eq;
+}
+
 QList<Equipe> OfflineApiServer::getAllEquipes() const
 {
-    auto list = m_repoEquipe.getAll();
-    m_lastErreur = m_repoEquipe.getLastError();
-    return list;
+    return m_repoEquipe.getAll();
+}
+
+QList<Equipe> OfflineApiServer::searchEquipes(const QString& criterion) const
+{
+    return m_repoEquipe.search(criterion);
 }
 
 QList<Equipe> OfflineApiServer::getPendingEquipes() const
 {
-    auto list = m_repoEquipe.getPendingEquipes();
-    m_lastErreur = m_repoEquipe.getLastError();
-    return list;
+    return m_repoEquipe.getPendingEquipes();
 }
 
+QList<Equipe> OfflineApiServer::getConflictEquipes() const
+{
+    return m_repoEquipe.getConflictEquipes();
+}
+
+QList<Equipe> OfflineApiServer::getEquipesSinceVersion(int minVersion) const
+{
+    return m_repoEquipe.getSinceVersion(minVersion);
+}
 // ================ ARTICLE REPARTITION ==================
 
 QList<ArticleRepartition> OfflineApiServer::getArticlesRepartition(const QUuid& repartitionId) const
@@ -291,4 +313,107 @@ bool OfflineApiServer::marquerReceptionCaisseConflit(const QUuid& receptionId)
     bool ok = gest.marquerConflit(receptionId);
     m_lastErreur = gest.getDernierErreur();
     return ok;
+}
+
+// ================= CREDIT =================
+
+QUuid OfflineApiServer::creerCredit(const QUuid& venteId, const QUuid& clientId, double montant, const QDate& dateEcheance, const QString& notes)
+{
+    GestionnaireCredit gest;
+    QUuid creditId = gest.creerCredit(venteId, clientId, montant, dateEcheance, notes);
+    m_lastErreur = gest.getDernierErreur();
+    return creditId;
+}
+
+bool OfflineApiServer::payerCredit(const QUuid& creditId, const QDate& datePaiement)
+{
+    GestionnaireCredit gest;
+    bool ok = gest.payerCredit(creditId, datePaiement);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+bool OfflineApiServer::annulerCredit(const QUuid& creditId)
+{
+    GestionnaireCredit gest;
+    bool ok = gest.annulerCredit(creditId);
+    m_lastErreur = gest.getDernierErreur();
+    return ok;
+}
+
+std::optional<Credit> OfflineApiServer::getCredit(const QUuid& creditId) const
+{
+    RepositoryCredit repo;
+    auto credit = repo.getById(creditId);
+    // pas de m_lastErreur car méthode const, sauf usage mutable
+    return credit;
+}
+
+QList<Credit> OfflineApiServer::getAllCredits() const
+{
+    RepositoryCredit repo;
+    return repo.getAll();
+}
+
+QList<Credit> OfflineApiServer::searchCredits(const QString& critere) const
+{
+    RepositoryCredit repo;
+    return repo.search(critere);
+}
+
+QList<Credit> OfflineApiServer::getCreditsByClient(const QUuid& clientId) const
+{
+    RepositoryCredit repo;
+    return repo.getByClient(clientId);
+}
+
+QList<Credit> OfflineApiServer::getOverdueCredits() const
+{
+    RepositoryCredit repo;
+    return repo.getOverdueCredits();
+}
+
+QList<Credit> OfflineApiServer::getPendingCredits() const
+{
+    RepositoryCredit repo;
+    return repo.getPendingSync();
+}
+
+QList<Credit> OfflineApiServer::getCreditsSinceVersion(int minVersion) const
+{
+    RepositoryCredit repo;
+    return repo.getSinceVersion(minVersion);
+}
+
+double OfflineApiServer::getTotalCreditsEnAttente() const
+{
+    RepositoryCredit repo;
+    return repo.getTotalAmount(Credit::Statut::EnAttente);
+}
+
+double OfflineApiServer::getTotalCreditsEnRetard() const
+{
+    RepositoryCredit repo;
+    QList<Credit> creditsEnRetard = repo.getOverdueCredits();
+    double total = 0.0;
+    for (const auto& credit : creditsEnRetard)
+        total += credit.getMontant();
+    return total;
+}
+
+double OfflineApiServer::getTotalCreditsClient(const QUuid& clientId) const
+{
+    RepositoryCredit repo;
+    QList<Credit> credits = repo.getByClient(clientId);
+    double total = 0.0;
+    for (const auto& credit : credits)
+        if (credit.getStatut() == Credit::Statut::EnAttente)
+            total += credit.getMontant();
+    return total;
+}
+
+QList<Credit> OfflineApiServer::getCreditsEnAlerte() const
+{
+    GestionnaireCredit gest;
+    return gest.obtenirCreditsAlerte();
 }

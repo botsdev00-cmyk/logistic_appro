@@ -13,19 +13,19 @@ class RepositoryClient
 public:
     RepositoryClient();
 
-    // CRUD & cycle de vie
+    // CRUD & offline-first
     bool create(const Client& entity);
     bool update(const Client& entity);
     bool logicalDelete(const QUuid& id);
     std::optional<Client> getById(const QUuid& id) const;
     QList<Client> getAll() const;
 
-    // Recherche métier
+    // Recherche et offline
     QList<Client> search(const QString& criterion) const;
     bool exists(const QUuid& id) const;
     QList<Client> getByRoute(const QUuid& routeId) const;
 
-    // SYNC / OFFLINE-FIRST
+    // Offline sync management
     QList<Client> getPendingSync() const;
     QList<Client> getSinceVersion(int minVersion) const;
 

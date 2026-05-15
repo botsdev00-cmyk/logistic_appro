@@ -10,10 +10,8 @@
 #include <QPushButton>
 #include <memory>
 #include <QUuid>
-
+#include <QList>
 #include "../../core/entities/ArticleRepartition.h"
-
-class GestionnaireRepartition;
 
 class BoiteDialogRepartition : public QDialog
 {
@@ -21,7 +19,6 @@ class BoiteDialogRepartition : public QDialog
 public:
     explicit BoiteDialogRepartition(QWidget* parent = nullptr);
     ~BoiteDialogRepartition();
-
     QUuid getRepartitionId() const { return m_repartitionId; }
 
 private:
@@ -42,7 +39,6 @@ private slots:
     void mettreAJourArticles();
 
 private:
-    // Widgets principaux
     std::unique_ptr<QComboBox> m_comboEquipe;
     std::unique_ptr<QComboBox> m_comboRoute;
     std::unique_ptr<QDateEdit> m_dateRepartition;
@@ -59,12 +55,8 @@ private:
 
     QUuid m_repartitionId;
 
-    // Pour création dynamique d'équipe/route
     std::unique_ptr<QPushButton> m_btnNouvelleEquipe;
     std::unique_ptr<QPushButton> m_btnNouvelleRoute;
-
-    // Gestionnaire
-    std::unique_ptr<GestionnaireRepartition> m_gestionnaire;
 };
 
 #endif // BOITEDIALOGREPARTITION_H

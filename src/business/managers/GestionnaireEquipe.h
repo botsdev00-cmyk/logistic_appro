@@ -4,6 +4,7 @@
 #include <QString>
 #include <QUuid>
 #include <QList>
+#include <optional>
 #include "../../core/entities/Equipe.h"
 
 class GestionnaireEquipe
@@ -12,33 +13,20 @@ public:
     GestionnaireEquipe();
     ~GestionnaireEquipe();
 
-    // CRUD métier
-    QUuid creerEquipe(const QString& nom, 
-                      const QString& nomChef,
-                      // const QString& description,
-                      const QUuid& createdBy);
-    
+    // CRUD
+    QUuid creerEquipe(const QString& nom, const QString& nomChef, const QUuid& createdBy, bool estActif = true);
     bool modifierEquipe(const Equipe& equipe, const QUuid& updatedBy);
-    bool supprimerEquipe(const QUuid& equipeId, const QUuid& deletedBy);
-    Equipe obtenirEquipe(const QUuid& equipeId) const;
+    bool supprimerEquipe(const QUuid& equipeId);
+
+    std::optional<Equipe> obtenirEquipe(const QUuid& equipeId) const;
     QList<Equipe> listerEquipes() const;
     QList<Equipe> rechercherEquipes(const QString& criterion) const;
 
     // Offline-first
     QList<Equipe> obtenirEquipesPendantes() const;
-    QList<Equipe> obtenirEquipesEnConflit() const;
-    int compterEquipesPendantes() const;
-    
-    // Synchronisation - API C++ pur
-    struct SyncReport {
-        int totalTreated;
-        int syncedCount;
-        int conflictCount;
-        QString message;
-    };
-    SyncReport synchroniserEquipes(const QList<Equipe>& equipes, const QUuid& utilisateurId);
+    QList<Equipe> obtenirEquipesConflit() const;
+    QList<Equipe> obtenirEquipesDepuisVersion(int version) const;
 
-    // Error handling
     QString getDernierErreur() const { return m_dernierErreur; }
 
 private:

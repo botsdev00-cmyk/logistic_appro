@@ -2,60 +2,29 @@
 
 Client::Client()
     : m_clientId(QUuid::createUuid()),
-      m_conditionsPaiement(ConditionsPaiement::Cash),
-      m_estActif(true),
-      m_dateCreation(QDateTime::currentDateTime()),
-      m_dateMiseAJour(QDateTime::currentDateTime()),
-      m_version(1),
-      m_syncStatus(SyncStatus::PENDING)
+    m_routeId(QUuid()),
+    m_conditionPaiementId(QUuid()),
+    m_version(1),
+    m_syncState(SyncState::PENDING),
+    m_createdAt(QDateTime::currentDateTime()),
+    m_updatedAt(QDateTime::currentDateTime())
 {}
 
-Client::~Client()
-{}
+Client::~Client() {}
 
-QString Client::conditionsPaiementToString(ConditionsPaiement conditions)
+QString Client::syncStateString() const
 {
-    switch (conditions) {
-        case ConditionsPaiement::Cash: return "cash";
-        case ConditionsPaiement::Credit5Jours: return "credit_5jours";
-        case ConditionsPaiement::Credit7Jours: return "credit_7jours";
-        default: return "cash";
+    switch (m_syncState) {
+    case SyncState::PENDING:  return "PENDING";
+    case SyncState::SYNCED:   return "SYNCED";
+    case SyncState::CONFLICT: return "CONFLICT";
+    default:                  return "PENDING";
     }
 }
-
-Client::ConditionsPaiement Client::stringToConditionsPaiement(const QString& str)
+SyncState Client::syncStateFromString(const QString& val)
 {
-    QString lower = str.toLower();
-    if (lower == "credit_5jours") return ConditionsPaiement::Credit5Jours;
-    if (lower == "credit_7jours") return ConditionsPaiement::Credit7Jours;
-    return ConditionsPaiement::Cash;
-}
-
-QString Client::getConditionsPaiementLabel() const
-{
-    switch (m_conditionsPaiement) {
-        case ConditionsPaiement::Cash: return "Espèces";
-        case ConditionsPaiement::Credit5Jours: return "Crédit 5 jours";
-        case ConditionsPaiement::Credit7Jours: return "Crédit 7 jours";
-        default: return "Inconnu";
-    }
-}
-
-QString Client::syncStatusString() const
-{
-    switch (m_syncStatus) {
-        case SyncStatus::PENDING:   return "PENDING";
-        case SyncStatus::SYNCED:    return "SYNCED";
-        case SyncStatus::CONFLICT:  return "CONFLICT";
-        default:                    return "UNKNOWN";
-    }
-}
-
-Client::SyncStatus Client::syncStatusFromString(const QString& s)
-{
-    QString v = s.toUpper();
-    if (v == "PENDING") return SyncStatus::PENDING;
-    if (v == "SYNCED") return SyncStatus::SYNCED;
-    if (v == "CONFLICT") return SyncStatus::CONFLICT;
-    return SyncStatus::PENDING;
+    QString v = val.trimmed().toUpper();
+    if (v == "SYNCED")   return SyncState::SYNCED;
+    if (v == "CONFLICT") return SyncState::CONFLICT;
+    return SyncState::PENDING;
 }

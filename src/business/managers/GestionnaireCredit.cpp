@@ -1,12 +1,10 @@
 #include "GestionnaireCredit.h"
-#include "../exceptions/BusinessException.h"
 #include "../../data/repositories/RepositoryCredit.h"
-#include "../../core/entities/Credit.h"
 #include <QDebug>
 
 GestionnaireCredit::GestionnaireCredit() {}
 
-QUuid GestionnaireCredit::creerCredit(const QUuid& venteId, const QUuid& clientId, double montant, const QDate& dateEcheance)
+QUuid GestionnaireCredit::creerCredit(const QUuid& venteId, const QUuid& clientId, double montant, const QDate& dateEcheance, const QString& notes)
 {
     try {
         if (venteId.isNull() || clientId.isNull()) {
@@ -23,13 +21,15 @@ QUuid GestionnaireCredit::creerCredit(const QUuid& venteId, const QUuid& clientI
         credit.setMontant(montant);
         credit.setDateEcheance(dateEcheance);
         credit.setStatut(Credit::Statut::EnAttente);
+        credit.setNotes(notes);
+        credit.setSyncStatus(Credit::SyncStatus::PENDING);
+        credit.setVersion(1);
 
         RepositoryCredit repo;
         if (!repo.create(credit)) {
             m_dernierErreur = "Erreur lors de la création : " + repo.getLastError();
             return QUuid();
         }
-        qDebug() << "Crédit créé :" << credit.getCreditId().toString();
         return credit.getCreditId();
     } catch (const std::exception& e) {
         m_dernierErreur = QString::fromStdString(e.what());
@@ -39,31 +39,24 @@ QUuid GestionnaireCredit::creerCredit(const QUuid& venteId, const QUuid& clientI
 
 bool GestionnaireCredit::payerCredit(const QUuid& creditId, const QDate& datePaiement)
 {
-    try {
-        RepositoryCredit repo;
-        auto optCredit = repo.getById(creditId);
-        if (!optCredit) {
-            m_dernierErreur = "Crédit non trouvé";
-            return false;
-        }
-        Credit credit = *optCredit;
-        credit.setStatut(Credit::Statut::Paye);
-        credit.setDatePaiement(datePaiement);
-        return repo.update(credit);
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
+    RepositoryCredit repo;
+    auto optCredit = repo.getById(creditId);
+    if (!optCredit) {
+        m_dernierErreur = "Crédit non trouvé";
         return false;
     }
+    Credit credit = *optCredit;
+    credit.setStatut(Credit::Statut::Paye);
+    credit.setDatePaiement(datePaiement);
+    credit.setSyncStatus(Credit::SyncStatus::PENDING);
+    credit.setVersion(credit.getVersion() + 1);
+    return repo.update(credit);
 }
+
 bool GestionnaireCredit::annulerCredit(const QUuid& creditId)
 {
-    try {
-        RepositoryCredit repo;
-        return repo.logicalDelete(creditId);
-    } catch (const std::exception& e) {
-        m_dernierErreur = QString::fromStdString(e.what());
-        return false;
-    }
+    RepositoryCredit repo;
+    return repo.logicalDelete(creditId);
 }
 Credit GestionnaireCredit::obtenirCredit(const QUuid& creditId)
 {
@@ -86,6 +79,16 @@ QList<Credit> GestionnaireCredit::obtenirCreditEnAttente()
 {
     RepositoryCredit repo;
     return repo.getByStatut(Credit::Statut::EnAttente);
+}
+QList<Credit> GestionnaireCredit::obtenirPendingSync()
+{
+    RepositoryCredit repo;
+    return repo.getPendingSync();
+}
+QList<Credit> GestionnaireCredit::obtenirDepuisVersion(int version)
+{
+    RepositoryCredit repo;
+    return repo.getSinceVersion(version);
 }
 double GestionnaireCredit::obtenirTotalCreditsEnAttente()
 {
@@ -139,6 +142,8 @@ void GestionnaireCredit::mettreAJourStatutCredit(const QUuid& creditId)
     Credit credit = *optCredit;
     if (credit.estEnRetard()) {
         credit.setStatut(Credit::Statut::EnRetard);
+        credit.setSyncStatus(Credit::SyncStatus::PENDING);
+        credit.setVersion(credit.getVersion() + 1);
         repo.update(credit);
     }
 }

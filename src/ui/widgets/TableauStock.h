@@ -21,6 +21,7 @@ public:
     void chargerDonnees();
     void filtrer(const QString& critere);
     void filtrerParStatut(const QString& statut);
+    void remplirTableau(const QList<StockInfo>& stocks);
 
 private slots:
     void onAfficherDetail(int row);
@@ -29,7 +30,6 @@ private slots:
 
 private:
     void initializeUI();
-    void remplirTableau(const QList<StockInfo>& stocks);
     QColor obtenirCouleurStatut(const QString& statut);
 
     GestionnaireStock* m_gestionnaire;

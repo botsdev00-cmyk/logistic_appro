@@ -1,5 +1,8 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/J3CC273FWE/moc_VueStock.cpp: /home/bots/semuliki_logistic/src/ui/views/VueStock.h \
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q20functional.h \
@@ -22,6 +25,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayalgorithms.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearraylist.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qbytearrayview.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcalendar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qchar.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcompare_impl.h \
@@ -35,6 +39,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qcontiguouscache.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdarwinhelpers.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatastream.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdatetime.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qdebug.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qendian.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qexceptionhandling.h \
@@ -54,6 +59,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlatin1stringview.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qline.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlist.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlocale.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qlogging.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmalloc.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/qmap.h \
@@ -158,6 +164,7 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsexports.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qtwidgetsglobal.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtWidgets/qwidget.h \
+  /home/bots/semuliki_logistic/src/core/entities/Produit.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \

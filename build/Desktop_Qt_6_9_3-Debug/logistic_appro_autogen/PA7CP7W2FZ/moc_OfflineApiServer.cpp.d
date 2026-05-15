@@ -1,5 +1,6 @@
 /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/PA7CP7W2FZ/moc_OfflineApiServer.cpp: /home/bots/semuliki_logistic/src/api/OfflineApiServer.h \
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDate \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QObject \
@@ -136,10 +137,12 @@
   /home/bots/Qt/6.9.3/gcc_64/include/QtSql/qtsqlglobal.h \
   /home/bots/semuliki_logistic/src/business/managers/GestionnaireCaisse.h \
   /home/bots/semuliki_logistic/src/business/managers/GestionnaireClient.h \
+  /home/bots/semuliki_logistic/src/business/managers/GestionnaireCredit.h \
   /home/bots/semuliki_logistic/src/business/managers/GestionnaireEquipe.h \
   /home/bots/semuliki_logistic/src/core/entities/ArticleRepartition.h \
   /home/bots/semuliki_logistic/src/core/entities/CategorieProduit.h \
   /home/bots/semuliki_logistic/src/core/entities/Client.h \
+  /home/bots/semuliki_logistic/src/core/entities/Credit.h \
   /home/bots/semuliki_logistic/src/core/entities/Equipe.h \
   /home/bots/semuliki_logistic/src/core/entities/Produit.h \
   /home/bots/semuliki_logistic/src/core/entities/ReceptionCaisse.h \
@@ -147,6 +150,7 @@
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryArticleRepartition.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryCategorieProduit.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryClient.h \
+  /home/bots/semuliki_logistic/src/data/repositories/RepositoryCredit.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryProduit.h \
   /home/bots/semuliki_logistic/src/data/repositories/RepositoryReceptionCaisse.h \

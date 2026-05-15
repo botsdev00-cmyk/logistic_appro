@@ -1,50 +1,37 @@
 #ifndef REPOSITORYEQUIPE_H
 #define REPOSITORYEQUIPE_H
 
-#include "IRepository.h"
 #include "../../core/entities/Equipe.h"
 #include <QList>
 #include <QString>
-#include <QSqlQuery>
 #include <QUuid>
+#include <optional>
+#include <QSqlQuery>
 
-class RepositoryEquipe : public IRepository<Equipe>
+class RepositoryEquipe
 {
 public:
     RepositoryEquipe();
 
-    // Standard CRUD
-    bool create(const Equipe& entity) override;
-    Equipe getById(const QUuid& id) override;
-    QList<Equipe> getAll() const override;
-    bool update(const Equipe& entity) override;
-    bool remove(const QUuid& id) override;
+    // CRUD
+    bool create(const Equipe& entity);
+    bool update(const Equipe& entity);
+    bool logicalDelete(const QUuid& id);
+    std::optional<Equipe> getById(const QUuid& id) const;
+    QList<Equipe> getAll() const;
 
-    // Search & filtering
-    QList<Equipe> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
+    QList<Equipe> search(const QString& criterion) const;
+    bool exists(const QUuid& id) const;
 
-    // Offline-first specific methods
+    // Offline-first
     QList<Equipe> getPendingEquipes() const;
-    QList<Equipe> getSyncedEquipes() const;
     QList<Equipe> getConflictEquipes() const;
-    int getPendingCount() const;
+    QList<Equipe> getSinceVersion(int minVersion) const;
 
-    // Batch sync - C++ API pur
-    struct SyncResult {
-        QUuid equipeId;
-        bool success;
-        QString message;
-        int newVersion;
-    };
-    QList<SyncResult> syncBatch(const QList<Equipe>& equipes, const QUuid& utilisateurId);
-
-    // Error handling
-    QString getLastError() const override { return m_dernierErreur; }
-
+    QString getLastError() const { return m_dernierErreur; }
 private:
-    mutable QString m_dernierErreur;
-    Equipe mapRowToEquipe(const QSqlQuery& query) const;
+    QString m_dernierErreur;
+    Equipe mapRowToEquipe(const QSqlQuery& q) const;
 };
 
 #endif // REPOSITORYEQUIPE_H

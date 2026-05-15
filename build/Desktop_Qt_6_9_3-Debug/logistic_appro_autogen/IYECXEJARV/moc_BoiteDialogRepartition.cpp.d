@@ -2,6 +2,7 @@
   /home/bots/semuliki_logistic/build/Desktop_Qt_6_9_3-Debug/logistic_appro_autogen/moc_predefs.h \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDate \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QDateTime \
+  /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QList \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QString \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/QUuid \
   /home/bots/Qt/6.9.3/gcc_64/include/QtCore/q17memory.h \

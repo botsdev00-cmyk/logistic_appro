@@ -6,20 +6,21 @@
 #include <QString>
 #include <QUuid>
 #include <optional>
+#include <QSqlQuery>
 
 class RepositoryCredit
 {
 public:
     RepositoryCredit();
 
-    // CRUD & gestion de cycle de vie
-    bool create(const Credit& entity);
-    bool update(const Credit& entity);
+    // CRUD & cycle de vie
+    bool create(Credit credit);
+    bool update(Credit credit);
     bool logicalDelete(const QUuid& id);
     std::optional<Credit> getById(const QUuid& id) const;
     QList<Credit> getAll() const;
 
-    // Recherche/filtrage métier
+    // Recherches/filtrages métier
     QList<Credit> search(const QString& criterion) const;
     bool exists(const QUuid& id) const;
     QList<Credit> getByClient(const QUuid& clientId) const;
@@ -27,13 +28,14 @@ public:
     QList<Credit> getByStatut(const Credit::Statut& statut) const;
     double getTotalAmount(const Credit::Statut& statut) const;
 
-    // OFFLINE-FIRST / API/MOBILE
+    // Offline-first
     QList<Credit> getPendingSync() const;
     QList<Credit> getSinceVersion(int minVersion) const;
 
     QString getLastError() const { return m_dernierErreur; }
 private:
     QString m_dernierErreur;
+    Credit mapRowToCredit(const QSqlQuery& query) const;
 };
 
 #endif // REPOSITORYCREDIT_H

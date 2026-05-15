@@ -3,7 +3,10 @@
 
 #include <QWidget>
 #include <QUuid>
+#include <QList>
+#include "../../core/entities/Produit.h"  // Indispensable pour QList<Produit>
 
+class GestionnaireCatalogue;
 class GestionnaireStock;
 class QTabWidget;
 class QPushButton;
@@ -15,7 +18,7 @@ class TableauHistoriqueStock;
 class PanelAlertes;
 class TableauStockLocation;
 class TableauReconciliation;
-class TableauRetoursEnAttente; // Ajout pour le tableau de retours en attente
+class TableauRetoursEnAttente;
 class EntreeStock;
 class RetourStock;
 
@@ -35,18 +38,17 @@ private slots:
     void onAjouterEntree();
     void onAjouterRetour();
     void onEntreesEnAttente();
-    //void onRetoursEnAttente(); // Remplacé par tableau interactif
-    void onLigneRetourClicked(const RetourStock& retour); // NOUVEAU
+    void onLigneRetourClicked(const RetourStock& retour);
 
     // Recherche/Filtres
     void onRechercherStock();
     void onFiltrerParStatut(int index);
-    
+
     // Actions principales
     void onActualiser();
     void onExporterStock();
     void onSynchroniser();
-    
+
     // Outils avancés
     void onVerifierIntegrite();
     void onReparerStock();
@@ -58,11 +60,16 @@ private:
     void initializeSearchBar();
     void initializeTabs();
     void initializeAdvancedTools();
-    
+
     void connectSignals();
     void afficherAlertes();
 
+    // Helpers pour la recherche/affichage
+    void afficherTousLesStocks();
+    void afficherStocksProduits(const QList<Produit>& produits);
+
     GestionnaireStock* m_gestionnaire;
+    GestionnaireCatalogue* m_gestionnaireCatalogue;
     QUuid m_utilisateurId;
 
     // Widgets principaux
@@ -72,7 +79,7 @@ private:
     PanelAlertes* m_panelAlertes;
     TableauStockLocation* m_tableauStockLocation;
     TableauReconciliation* m_tableauReconciliation;
-    TableauRetoursEnAttente* m_tableauRetoursEnAttente; // NOUVEAU
+    TableauRetoursEnAttente* m_tableauRetoursEnAttente;
 
     QPushButton* m_btnAjouterEntree;
     QPushButton* m_btnAjouterRetour;
@@ -81,7 +88,7 @@ private:
     QPushButton* m_btnActualiser;
     QPushButton* m_btnExporter;
     QPushButton* m_btnSynchroniser;
-    
+
     // Outils avancés
     QPushButton* m_btnVerifierIntegrite;
     QPushButton* m_btnReparerStock;

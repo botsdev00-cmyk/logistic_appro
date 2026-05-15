@@ -45,10 +45,14 @@ void TableauRepartition::initialiserColonnes()
 }
 // Helper pour obtenir le nom d'une équipe/route via leur UUID
 QString getNomEquipe(const QUuid& id) {
-    RepositoryEquipe repo;
-    auto eq = repo.getById(id);
-    return eq.getNom();
+    RepositoryEquipe repoEquipe;
+    auto optEq = repoEquipe.getById(id);
+    // optEq est un std::optional<Equipe>
+    if (optEq && !optEq->getEquipeId().isNull())
+        return optEq->getNom();
+    return "(Inconnue)";
 }
+
 QString getNomRoute(const QUuid& id) {
     RepositoryRoute repo;
     auto r = repo.getById(id);

@@ -6,291 +6,205 @@
 
 RepositoryCredit::RepositoryCredit() {}
 
-bool RepositoryCredit::create(const Credit& entity)
+Credit RepositoryCredit::mapRowToCredit(const QSqlQuery& q) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
+    Credit credit;
+    credit.setCreditId(QUuid(q.value("credit_id").toString()));
+    credit.setVenteId(QUuid(q.value("vente_id").toString()));
+    credit.setClientId(QUuid(q.value("client_id").toString()));
+    credit.setMontant(q.value("montant").toDouble());
+    credit.setDateEcheance(q.value("date_echeance").toDate());
+    credit.setStatut(Credit::stringToStatut(q.value("statut").toString()));
+    credit.setDatePaiement(q.value("date_paiement").toDate());
+    credit.setNotes(q.value("notes").toString());
+    credit.setVersion(q.value("version").toInt());
+    credit.setSyncStatus(Credit::syncStatusFromString(q.value("sync_status").toString()));
+    credit.setCreatedAt(q.value("created_at").toDateTime());
+    credit.setUpdatedAt(q.value("updated_at").toDateTime());
+    credit.setDeletedAt(q.value("deleted_at").toDateTime());
+    return credit;
+}
 
-    query.prepare(R"(
-        INSERT INTO credits 
-        (credit_id, vente_id, client_id, montant, date_echeance, statut, notes,
-         sync_status, version, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, NOW(), NOW())
+bool RepositoryCredit::create(Credit e)
+{
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare(R"(
+        INSERT INTO credits (
+            credit_id, vente_id, client_id, montant, date_echeance, statut, date_paiement, notes,
+            sync_status, version, created_at, updated_at
+        ) VALUES (:id, :vente, :client, :montant, :echeance, :statut, :paiement, :notes, 'PENDING', 1, NOW(), NOW())
     )");
-    query.addBindValue(entity.getCreditId().toString());
-    query.addBindValue(entity.getVenteId().toString());
-    query.addBindValue(entity.getClientId().toString());
-    query.addBindValue(entity.getMontant());
-    query.addBindValue(entity.getDateEcheance());
-    query.addBindValue(Credit::statutToString(entity.getStatut()));
-    query.addBindValue(entity.getNotes());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur création crédit : " + query.lastError().text();
+    q.bindValue(":id", e.getCreditId().toString(QUuid::WithoutBraces));
+    q.bindValue(":vente", e.getVenteId().toString(QUuid::WithoutBraces));
+    q.bindValue(":client", e.getClientId().toString(QUuid::WithoutBraces));
+    q.bindValue(":montant", e.getMontant());
+    q.bindValue(":echeance", e.getDateEcheance());
+    q.bindValue(":statut", Credit::statutToString(e.getStatut()));
+    q.bindValue(":paiement", e.getDatePaiement());
+    q.bindValue(":notes", e.getNotes());
+    if (!q.exec()) {
+        m_dernierErreur = "Erreur création crédit : " + q.lastError().text();
         return false;
     }
     return true;
 }
 
-bool RepositoryCredit::update(const Credit& entity)
+bool RepositoryCredit::update(Credit e)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare(R"(
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare(R"(
         UPDATE credits SET
-          statut = ?, date_paiement = ?, notes = ?,
+          vente_id = :vente, client_id = :client, montant = :montant, date_echeance = :echeance,
+          statut = :statut, date_paiement = :paiement, notes = :notes,
           updated_at = NOW(), version = version + 1, sync_status = 'PENDING'
-        WHERE credit_id = ? AND deleted_at IS NULL
+        WHERE credit_id = :id AND deleted_at IS NULL
     )");
-    query.addBindValue(Credit::statutToString(entity.getStatut()));
-    query.addBindValue(entity.getDatePaiement());
-    query.addBindValue(entity.getNotes());
-    query.addBindValue(entity.getCreditId().toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur mise à jour crédit : " + query.lastError().text();
+    q.bindValue(":vente", e.getVenteId().toString(QUuid::WithoutBraces));
+    q.bindValue(":client", e.getClientId().toString(QUuid::WithoutBraces));
+    q.bindValue(":montant", e.getMontant());
+    q.bindValue(":echeance", e.getDateEcheance());
+    q.bindValue(":statut", Credit::statutToString(e.getStatut()));
+    q.bindValue(":paiement", e.getDatePaiement());
+    q.bindValue(":notes", e.getNotes());
+    q.bindValue(":id", e.getCreditId().toString(QUuid::WithoutBraces));
+    if (!q.exec()) {
+        m_dernierErreur = "Erreur update crédit : " + q.lastError().text();
         return false;
     }
-    return query.numRowsAffected() > 0;
+    return q.numRowsAffected() > 0;
 }
 
 bool RepositoryCredit::logicalDelete(const QUuid& id)
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare(R"(
-        UPDATE credits 
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare(R"(
+        UPDATE credits
         SET deleted_at = NOW(), sync_status = 'PENDING', version = version + 1
-        WHERE credit_id = ? AND deleted_at IS NULL
+        WHERE credit_id = :id AND deleted_at IS NULL
     )");
-    query.addBindValue(id.toString());
-
-    if (!query.exec()) {
-        m_dernierErreur = "Erreur suppression crédit : " + query.lastError().text();
+    q.bindValue(":id", id.toString(QUuid::WithoutBraces));
+    if (!q.exec()) {
+        m_dernierErreur = "Erreur suppression crédit : " + q.lastError().text();
         return false;
     }
-    return query.numRowsAffected() > 0;
+    return q.numRowsAffected() > 0;
 }
 
 std::optional<Credit> RepositoryCredit::getById(const QUuid& id) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    query.prepare("SELECT * FROM credits WHERE credit_id = ? AND deleted_at IS NULL");
-    query.addBindValue(id.toString());
-
-    if (query.exec() && query.next()) {
-        Credit credit;
-        credit.setCreditId(QUuid(query.value("credit_id").toString()));
-        credit.setVenteId(QUuid(query.value("vente_id").toString()));
-        credit.setClientId(QUuid(query.value("client_id").toString()));
-        credit.setMontant(query.value("montant").toDouble());
-        credit.setDateEcheance(query.value("date_echeance").toDate());
-        credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-        credit.setDatePaiement(query.value("date_paiement").toDate());
-        credit.setNotes(query.value("notes").toString());
-        return credit;
-    }
-    return std::nullopt;
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare("SELECT * FROM credits WHERE credit_id = :id AND deleted_at IS NULL");
+    q.bindValue(":id", id.toString(QUuid::WithoutBraces));
+    if (!q.exec() || !q.next()) return std::nullopt;
+    return mapRowToCredit(q);
 }
 
 QList<Credit> RepositoryCredit::getAll() const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    if (query.exec("SELECT * FROM credits WHERE deleted_at IS NULL ORDER BY date_echeance")) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    if (q.exec("SELECT * FROM credits WHERE deleted_at IS NULL ORDER BY date_echeance")) {
+        while (q.next())
+            res.append(mapRowToCredit(q));
     }
-    return credits;
+    return res;
 }
 
-QList<Credit> RepositoryCredit::search(const QString& criterion) const
+QList<Credit> RepositoryCredit::search(const QString& crit) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-    query.prepare(R"(
-        SELECT c.* FROM credits c 
-        JOIN clients cl ON c.client_id = cl.client_id 
-        WHERE cl.nom ILIKE ? AND c.deleted_at IS NULL ORDER BY c.date_echeance
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    q.prepare(R"(
+        SELECT c.* FROM credits c
+        JOIN clients cl ON c.client_id = cl.client_id
+        WHERE cl.nom ILIKE :c AND c.deleted_at IS NULL
+        ORDER BY c.date_echeance desc
     )");
-    query.addBindValue("%" + criterion + "%");
-
-    if (query.exec()) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
-    }
-    return credits;
+    q.bindValue(":c", "%" + crit + "%");
+    if (q.exec()) while (q.next()) res.append(mapRowToCredit(q));
+    return res;
 }
 
 bool RepositoryCredit::exists(const QUuid& id) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    query.prepare("SELECT 1 FROM credits WHERE credit_id = ? AND deleted_at IS NULL");
-    query.addBindValue(id.toString());
-    return query.exec() && query.next();
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare("SELECT 1 FROM credits WHERE credit_id = :id AND deleted_at IS NULL");
+    q.bindValue(":id", id.toString(QUuid::WithoutBraces));
+    return q.exec() && q.next();
 }
 
 QList<Credit> RepositoryCredit::getByClient(const QUuid& clientId) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    query.prepare("SELECT * FROM credits WHERE client_id = ? AND deleted_at IS NULL ORDER BY date_echeance DESC");
-    query.addBindValue(clientId.toString());
-
-    if (query.exec()) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
-    }
-    return credits;
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    q.prepare("SELECT * FROM credits WHERE client_id = :c AND deleted_at IS NULL ORDER BY date_echeance desc");
+    q.bindValue(":c", clientId.toString(QUuid::WithoutBraces));
+    if (q.exec()) while (q.next()) res.append(mapRowToCredit(q));
+    return res;
 }
 
 QList<Credit> RepositoryCredit::getOverdueCredits() const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    if (query.exec("SELECT * FROM credits WHERE statut = 'en_attente' AND date_echeance < CURRENT_DATE AND deleted_at IS NULL ORDER BY date_echeance")) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    if (q.exec("SELECT * FROM credits WHERE statut = 'EN_ATTENTE' AND date_echeance < CURRENT_DATE AND deleted_at IS NULL ORDER BY date_echeance")) {
+        while (q.next())
+            res.append(mapRowToCredit(q));
     }
-    return credits;
+    return res;
 }
 
 QList<Credit> RepositoryCredit::getByStatut(const Credit::Statut& statut) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    query.prepare("SELECT * FROM credits WHERE statut = ? AND deleted_at IS NULL ORDER BY date_echeance");
-    query.addBindValue(Credit::statutToString(statut));
-
-    if (query.exec()) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
-    }
-    return credits;
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    q.prepare("SELECT * FROM credits WHERE statut = :statut AND deleted_at IS NULL ORDER BY date_echeance");
+    q.bindValue(":statut", Credit::statutToString(statut));
+    if (q.exec()) while (q.next()) res.append(mapRowToCredit(q));
+    return res;
 }
 
 double RepositoryCredit::getTotalAmount(const Credit::Statut& statut) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-
-    query.prepare("SELECT SUM(montant) as total FROM credits WHERE statut = ? AND deleted_at IS NULL");
-    query.addBindValue(Credit::statutToString(statut));
-
-    if (query.exec() && query.next()) {
-        return query.value("total").toDouble();
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    q.prepare("SELECT SUM(montant) as total FROM credits WHERE statut = :statut AND deleted_at IS NULL");
+    q.bindValue(":statut", Credit::statutToString(statut));
+    if (q.exec() && q.next()) {
+        return q.value("total").toDouble();
     }
     return 0.0;
 }
 
+// --- offline-first
 QList<Credit> RepositoryCredit::getPendingSync() const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    if (query.exec("SELECT * FROM credits WHERE sync_status = 'PENDING' AND deleted_at IS NULL")) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    if (q.exec("SELECT * FROM credits WHERE sync_status = 'PENDING' AND deleted_at IS NULL")) {
+        while (q.next())
+            res.append(mapRowToCredit(q));
     }
-    return credits;
+    return res;
 }
-
 QList<Credit> RepositoryCredit::getSinceVersion(int minVersion) const
 {
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<Credit> credits;
-
-    query.prepare("SELECT * FROM credits WHERE version >= ? AND deleted_at IS NULL");
-    query.addBindValue(minVersion);
-
-    if (query.exec()) {
-        while (query.next()) {
-            Credit credit;
-            credit.setCreditId(QUuid(query.value("credit_id").toString()));
-            credit.setVenteId(QUuid(query.value("vente_id").toString()));
-            credit.setClientId(QUuid(query.value("client_id").toString()));
-            credit.setMontant(query.value("montant").toDouble());
-            credit.setDateEcheance(query.value("date_echeance").toDate());
-            credit.setStatut(Credit::stringToStatut(query.value("statut").toString()));
-            credit.setDatePaiement(query.value("date_paiement").toDate());
-            credit.setNotes(query.value("notes").toString());
-            credits.append(credit);
-        }
-    }
-    return credits;
+    ConnexionBaseDonnees& db = ConnexionBaseDonnees::getInstance();
+    QSqlQuery q(db.getDatabase());
+    QList<Credit> res;
+    q.prepare("SELECT * FROM credits WHERE version >= :v AND deleted_at IS NULL");
+    q.bindValue(":v", minVersion);
+    if (q.exec()) while (q.next()) res.append(mapRowToCredit(q));
+    return res;
 }

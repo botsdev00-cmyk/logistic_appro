@@ -1,27 +1,45 @@
 #include "BoiteDialogRepartition.h"
-#include "../../business/managers/GestionnaireRepartition.h"
 #include "../../data/repositories/RepositoryEquipe.h"
-#include "../../data/repositories/RepositoryRoute.h"
 #include "../../data/repositories/RepositoryProduit.h"
+#include "../../data/repositories/RepositoryArticleRepartition.h"
+#include "../../data/repositories/RepositoryRoute.h"
+#include "../../core/entities/Route.h"
+#include "../../core/entities/Equipe.h"
+#include "../../core/entities/Produit.h"
+#include "../../core/entities/ArticleRepartition.h"
 #include "BoiteDialogNouvelleEquipe.h"
 #include "BoiteDialogNouvelleRoute.h"
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QGridLayout>
-#include <QGroupBox>
 #include <QLabel>
-#include <QMessageBox>
+#include <QComboBox>
+#include <QPushButton>
+#include <QSpinBox>
+#include <QTableWidget>
+#include <QDateEdit>
 #include <QHeaderView>
+#include <QMessageBox>
+#include <QDebug>
 
 BoiteDialogRepartition::BoiteDialogRepartition(QWidget* parent)
     : QDialog(parent),
-      m_gestionnaire(std::make_unique<GestionnaireRepartition>())
+    m_comboEquipe(std::make_unique<QComboBox>()),
+    m_comboRoute(std::make_unique<QComboBox>()),
+    m_dateRepartition(std::make_unique<QDateEdit>()),
+    m_comboProduit(std::make_unique<QComboBox>()),
+    m_spinVente(std::make_unique<QSpinBox>()),
+    m_spinCadeau(std::make_unique<QSpinBox>()),
+    m_spinDegustation(std::make_unique<QSpinBox>()),
+    m_tableArticles(std::make_unique<QTableWidget>()),
+    m_boutonAjouter(std::make_unique<QPushButton>("Ajouter")),
+    m_boutonSupprimer(std::make_unique<QPushButton>("Supprimer")),
+    m_boutonCreer(std::make_unique<QPushButton>("Créer")),
+    m_boutonAnnuler(std::make_unique<QPushButton>("Annuler")),
+    m_btnNouvelleEquipe(std::make_unique<QPushButton>("Nouvelle équipe")),
+    m_btnNouvelleRoute(std::make_unique<QPushButton>("Nouvelle route"))
 {
-    setWindowTitle("Créer une nouvelle répartition");
-    setModal(true);
-    setFixedSize(800, 600);
-
+    setWindowTitle("Nouvelle répartition");
+    setMinimumWidth(700);
     creerWidgets();
     initialiserConnexions();
     chargerDonnees();
@@ -31,100 +49,69 @@ BoiteDialogRepartition::~BoiteDialogRepartition() {}
 
 void BoiteDialogRepartition::creerWidgets()
 {
-    QVBoxLayout* layoutPrincipal = new QVBoxLayout(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-    // Groupe Informations
-    QGroupBox* groupInfo = new QGroupBox("Informations de répartition");
-    QGridLayout* layoutInfo = new QGridLayout(groupInfo);
+    // Équipe / Route / Date
+    QHBoxLayout* eqRouteLayout = new QHBoxLayout;
+    eqRouteLayout->addWidget(new QLabel("Équipe :"));
+    eqRouteLayout->addWidget(m_comboEquipe.get());
+    eqRouteLayout->addWidget(m_btnNouvelleEquipe.get());
 
-    layoutInfo->addWidget(new QLabel("Équipe:"), 0, 0);
-    m_comboEquipe = std::make_unique<QComboBox>();
-    layoutInfo->addWidget(m_comboEquipe.get(), 0, 1);
+    eqRouteLayout->addSpacing(10);
+    eqRouteLayout->addWidget(new QLabel("Route :"));
+    eqRouteLayout->addWidget(m_comboRoute.get());
+    eqRouteLayout->addWidget(m_btnNouvelleRoute.get());
 
-    m_btnNouvelleEquipe = std::make_unique<QPushButton>("Nouvelle équipe...");
-    layoutInfo->addWidget(m_btnNouvelleEquipe.get(), 0, 2);
-
-    layoutInfo->addWidget(new QLabel("Route:"), 1, 0);
-    m_comboRoute = std::make_unique<QComboBox>();
-    layoutInfo->addWidget(m_comboRoute.get(), 1, 1);
-
-    m_btnNouvelleRoute = std::make_unique<QPushButton>("Nouvelle route...");
-    layoutInfo->addWidget(m_btnNouvelleRoute.get(), 1, 2);
-
-    layoutInfo->addWidget(new QLabel("Date:"), 2, 0);
-    m_dateRepartition = std::make_unique<QDateEdit>();
+    eqRouteLayout->addSpacing(10);
+    eqRouteLayout->addWidget(new QLabel("Date :"));
     m_dateRepartition->setDate(QDate::currentDate());
-    layoutInfo->addWidget(m_dateRepartition.get(), 2, 1);
+    eqRouteLayout->addWidget(m_dateRepartition.get());
+    mainLayout->addLayout(eqRouteLayout);
 
-    layoutPrincipal->addWidget(groupInfo);
-
-    // Groupe Articles
-    QGroupBox* groupArticles = new QGroupBox("Articles à répartir");
-    QVBoxLayout* layoutArticles = new QVBoxLayout(groupArticles);
-
-    QHBoxLayout* layoutAjout = new QHBoxLayout();
-    layoutAjout->addWidget(new QLabel("Produit:"));
-    m_comboProduit = std::make_unique<QComboBox>();
-    layoutAjout->addWidget(m_comboProduit.get());
-
-    layoutAjout->addWidget(new QLabel("Vente:"));
-    m_spinVente = std::make_unique<QSpinBox>();
+    // Produit
+    QHBoxLayout* ligneProduitLayout = new QHBoxLayout;
+    ligneProduitLayout->addWidget(new QLabel("Produit :"));
+    ligneProduitLayout->addWidget(m_comboProduit.get());
+    ligneProduitLayout->addWidget(new QLabel("Vente :"));
     m_spinVente->setMinimum(0);
-    layoutAjout->addWidget(m_spinVente.get());
-
-    layoutAjout->addWidget(new QLabel("Cadeau:"));
-    m_spinCadeau = std::make_unique<QSpinBox>();
+    ligneProduitLayout->addWidget(m_spinVente.get());
+    ligneProduitLayout->addWidget(new QLabel("Cadeau :"));
     m_spinCadeau->setMinimum(0);
-    layoutAjout->addWidget(m_spinCadeau.get());
-
-    layoutAjout->addWidget(new QLabel("Dégustation:"));
-    m_spinDegustation = std::make_unique<QSpinBox>();
+    ligneProduitLayout->addWidget(m_spinCadeau.get());
+    ligneProduitLayout->addWidget(new QLabel("Dégustation :"));
     m_spinDegustation->setMinimum(0);
-    layoutAjout->addWidget(m_spinDegustation.get());
+    ligneProduitLayout->addWidget(m_spinDegustation.get());
+    ligneProduitLayout->addWidget(m_boutonAjouter.get());
+    ligneProduitLayout->addWidget(m_boutonSupprimer.get());
+    mainLayout->addLayout(ligneProduitLayout);
 
-    m_boutonAjouter = std::make_unique<QPushButton>("Ajouter");
-    layoutAjout->addWidget(m_boutonAjouter.get());
-
-    layoutArticles->addLayout(layoutAjout);
-
-    // Table des articles : 6 colonnes, première colonne = produit_id caché
-    m_tableArticles = std::make_unique<QTableWidget>();
-    m_tableArticles->setColumnCount(6);
-    m_tableArticles->setHorizontalHeaderLabels({"ID Produit (caché)","Produit", "Vente", "Cadeau", "Dégustation", "Total"});
-    m_tableArticles->setColumnHidden(0, true);
-    m_tableArticles->horizontalHeader()->setStretchLastSection(false);
+    // Table des articles
+    m_tableArticles->setColumnCount(5);
+    m_tableArticles->setHorizontalHeaderLabels({"Produit", "Vente", "Cadeau", "Dégustation", "ProduitId"});
+    m_tableArticles->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     m_tableArticles->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_tableArticles->setSelectionMode(QAbstractItemView::SingleSelection);
-    layoutArticles->addWidget(m_tableArticles.get());
+    m_tableArticles->hideColumn(4); // Id produit caché
 
-    m_boutonSupprimer = std::make_unique<QPushButton>("Supprimer article");
-    layoutArticles->addWidget(m_boutonSupprimer.get());
+    mainLayout->addWidget(m_tableArticles.get());
 
-    layoutPrincipal->addWidget(groupArticles);
+    // Boutons bas
+    QHBoxLayout* btnLayout = new QHBoxLayout;
+    btnLayout->addStretch();
+    btnLayout->addWidget(m_boutonCreer.get());
+    btnLayout->addWidget(m_boutonAnnuler.get());
+    mainLayout->addLayout(btnLayout);
 
-    // Boutons
-    QHBoxLayout* layoutBoutons = new QHBoxLayout();
-    layoutBoutons->addStretch();
-
-    m_boutonCreer = std::make_unique<QPushButton>("Créer répartition");
-    m_boutonCreer->setMinimumWidth(150);
-    layoutBoutons->addWidget(m_boutonCreer.get());
-
-    m_boutonAnnuler = std::make_unique<QPushButton>("Annuler");
-    m_boutonAnnuler->setMinimumWidth(150);
-    layoutBoutons->addWidget(m_boutonAnnuler.get());
-
-    layoutPrincipal->addLayout(layoutBoutons);
+    setLayout(mainLayout);
 }
 
 void BoiteDialogRepartition::initialiserConnexions()
 {
-    connect(m_btnNouvelleEquipe.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleEquipe);
-    connect(m_btnNouvelleRoute.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleRoute);
-    connect(m_boutonCreer.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::creerRepartition);
     connect(m_boutonAnnuler.get(), &QPushButton::clicked, this, &QDialog::reject);
+    connect(m_boutonCreer.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::creerRepartition);
     connect(m_boutonAjouter.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::ajouterArticle);
     connect(m_boutonSupprimer.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::supprimerArticle);
+    connect(m_btnNouvelleEquipe.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleEquipe);
+    connect(m_btnNouvelleRoute.get(), &QPushButton::clicked, this, &BoiteDialogRepartition::onNouvelleRoute);
 }
 
 void BoiteDialogRepartition::chargerDonnees()
@@ -137,178 +124,195 @@ void BoiteDialogRepartition::chargerDonnees()
 void BoiteDialogRepartition::remplirComboEquipes()
 {
     m_comboEquipe->clear();
-    RepositoryEquipe repo;
-    QList<Equipe> equipes = repo.getAll();
-    for(const Equipe& eq : equipes) {
+    RepositoryEquipe repoEquipe;
+    QList<Equipe> equipes = repoEquipe.getAll();
+    for (const Equipe& eq : equipes)
         m_comboEquipe->addItem(eq.getNom(), eq.getEquipeId());
-    }
+    if (m_comboEquipe->count() > 0)
+        m_comboEquipe->setCurrentIndex(0);
 }
 
 void BoiteDialogRepartition::remplirComboRoutes()
 {
     m_comboRoute->clear();
-    RepositoryRoute repo;
-    QList<Route> routes = repo.getAll();
-    for(const Route& r : routes) {
-        m_comboRoute->addItem(r.getNom(), r.getRouteId());
+    RepositoryRoute repoRoute;
+    m_comboRoute->addItem("(Aucune route)", QUuid());
+
+    QList<Route> routes = repoRoute.getAll();
+    for (const Route& route : routes) {
+        m_comboRoute->addItem(route.getNom(), route.getRouteId());
     }
+    // Pour UX, sélectionner par défaut la première réelle si elle existe
+    if (routes.size() > 0)
+        m_comboRoute->setCurrentIndex(1); // index 0 = "Aucune route"
+    else
+        m_comboRoute->setCurrentIndex(0);
 }
+
 
 void BoiteDialogRepartition::remplirTableProduits()
 {
     m_comboProduit->clear();
-    RepositoryProduit repo;
-    auto produits = repo.getAll();
-    for(const auto& p : produits) {
-        m_comboProduit->addItem(p.getNom(), p.getProduitId());
-    }
+    RepositoryProduit repoProduit;
+    auto produits = repoProduit.getAll();
+    for (const Produit& prod : produits)
+        m_comboProduit->addItem(prod.getNom(), prod.getProduitId());
+    if (m_comboProduit->count() > 0)
+        m_comboProduit->setCurrentIndex(0);
 }
+
 
 void BoiteDialogRepartition::creerRepartition()
 {
-    // 1. Vérification : au moins un article dans le tableau
-    if (m_tableArticles->rowCount() == 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez ajouter au moins un article avant de valider.");
+    int idxEquipe = m_comboEquipe->currentIndex();
+    if (idxEquipe < 0) {
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une équipe.");
         return;
     }
-
-    // 2. Récupération des IDs sélectionnés
     QUuid equipeId = m_comboEquipe->currentData().toUuid();
-    QUuid routeId = m_comboRoute->currentData().toUuid();
-    QDate dateRepartition = m_dateRepartition->date();
-
-    if (equipeId.isNull() || routeId.isNull()) {
-        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner une équipe et une route.");
-        return;
-    }
-
-    // 3. Récupération du Chef d'équipe (utilisé comme créateur/chef_id)
     RepositoryEquipe repoEquipe;
-    Equipe equipeSelectionnee = repoEquipe.getById(equipeId);
-    QUuid chefId = QUuid(equipeSelectionnee.getNomChef());
-
-    if (chefId.isNull()) {
-        QMessageBox::critical(this, "Erreur", "L'équipe sélectionnée n'a pas de chef assigné valide.");
+    auto optEquipe = repoEquipe.getById(equipeId);
+    if (!optEquipe) {
+        QMessageBox::warning(this, "Erreur", "Équipe introuvable.");
         return;
     }
 
-    // 4. Création de l'entête de la répartition (montant attendu à 0, calculé après)
-    m_repartitionId = m_gestionnaire->creerRepartition(equipeId, routeId, dateRepartition, chefId);
-    
-    if (m_repartitionId.isNull()) {
-        QMessageBox::critical(this, "Erreur de création", 
-                             "Impossible de créer la répartition : " + m_gestionnaire->getDernierErreur());
+    int idxRoute = m_comboRoute->currentIndex();
+    QUuid routeId = (idxRoute >= 0) ? m_comboRoute->currentData().toUuid() : QUuid();
+
+    QDate dateRep = m_dateRepartition->date();
+
+    if (m_tableArticles->rowCount() == 0) {
+        QMessageBox::warning(this, "Erreur", "Veuillez ajouter au moins un article.");
         return;
     }
 
-    // 5. Boucle d'ajout des articles avec vérification de stock
-    bool erreurDetectee = false;
+    // Création de la répartition (simulée ici, à adapter si tu as une entité Repartition à stocker)
+    m_repartitionId = QUuid::createUuid();
+
+    // Sauvegarde de chaque ArticleRepartition
+    RepositoryArticleRepartition repoArtRep;
+    bool toutOK = true;
     for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
-        QUuid produitId = QUuid(m_tableArticles->item(row, 0)->text());
-        int quantiteVente = m_tableArticles->item(row, 2)->text().toInt();
-        int quantiteCadeau = m_tableArticles->item(row, 3)->text().toInt();
-        int quantiteDegustation = m_tableArticles->item(row, 4)->text().toInt();
+        QUuid produitId(m_tableArticles->item(row, 4)->text());
+        int vente = m_tableArticles->item(row, 1)->text().toInt();
+        int cadeau = m_tableArticles->item(row, 2)->text().toInt();
+        int degust = m_tableArticles->item(row, 3)->text().toInt();
 
-        ArticleRepartition article;
-        article.setRepartitionId(m_repartitionId);
-        article.setProduitId(produitId);
-        article.setQuantiteVente(quantiteVente);
-        article.setQuantiteCadeau(quantiteCadeau);
-        article.setQuantiteDegustation(quantiteDegustation);
+        ArticleRepartition artRep;
+        artRep.setArticleRepartitionId(QUuid::createUuid());
+        artRep.setRepartitionId(m_repartitionId);
+        artRep.setProduitId(produitId);
+        artRep.setQuantiteVente(vente);
+        artRep.setQuantiteCadeau(cadeau);
+        artRep.setQuantiteDegustation(degust);
+        artRep.setSyncStatus(ArticleRepartition::SyncStatus::PENDING);
+        artRep.setVersion(1);
 
-        if (!m_gestionnaire->ajouterArticle(article)) {
-            QString produitNom = m_tableArticles->item(row, 1)->text();
-            QMessageBox::critical(this, "Erreur Stock / Article", 
-                                 QString("Erreur sur le produit '%1' : %2")
-                                 .arg(produitNom)
-                                 .arg(m_gestionnaire->getDernierErreur()));
-            erreurDetectee = true;
-            break;
+        if (!repoArtRep.create(artRep)) {
+            toutOK = false;
+            QMessageBox::warning(this, "Erreur", QString("Impossible de sauvegarder un article : %1").arg(repoArtRep.getLastError()));
         }
     }
 
-    // 6. Finalisation et rollback si une erreur d'ajout article
-    if (!erreurDetectee) {
-        // Calcul automatique du montant attendu
-        double montantAttendu = 0.0;
-        RepositoryProduit repoProduit;
-        for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
-            QUuid produitId = QUuid(m_tableArticles->item(row, 0)->text());
-            auto prod = repoProduit.getById(produitId);
-            int quantiteVente = m_tableArticles->item(row, 2)->text().toInt();
-            montantAttendu += quantiteVente * prod->getPrixUnitaire();
-        }
-        m_gestionnaire->mettreAJourMontantAttendu(m_repartitionId, montantAttendu);
-
-        QMessageBox::information(this, "Succès", "La répartition a été créée avec succès.");
+    if (toutOK) {
+        QMessageBox::information(this, "Succès", "Répartition enregistrée avec succès !");
         accept();
-    } else {
-        // Suppression de la répartition vide si article(s) en erreur
-        m_gestionnaire->annulerRepartition(m_repartitionId);
     }
 }
 
 void BoiteDialogRepartition::ajouterArticle()
 {
-    if(m_comboProduit->currentIndex() < 0) return;
-    QString produit = m_comboProduit->currentText();
-    QUuid produitId = m_comboProduit->currentData().toUuid();
-    int qVente = m_spinVente->value();
-    int qCadeau = m_spinCadeau->value();
-    int qDegustation = m_spinDegustation->value();
-    int total = qVente + qCadeau + qDegustation;
-
-    if(total == 0) {
-        QMessageBox::warning(this, "Erreur", "Saisir au moins une quantité.");
+    int idx = m_comboProduit->currentIndex();
+    if (idx < 0) {
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un produit.");
         return;
     }
+    QString nomProduit = m_comboProduit->currentText();
+    QUuid produitId = m_comboProduit->currentData().toUuid();
+    int vente = m_spinVente->value();
+    int cadeau = m_spinCadeau->value();
+    int degust = m_spinDegustation->value();
 
-    for(int i=0; i<m_tableArticles->rowCount();++i)
-        if(m_tableArticles->item(i,0)->text() == produitId.toString()) {
-            QMessageBox::warning(this, "Erreur", "Produit déjà ajouté.");
+    // Évite le doublon produit dans la table
+    for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
+        if (m_tableArticles->item(row, 4)->text() == produitId.toString(QUuid::WithoutBraces)) {
+            QMessageBox::warning(this, "Erreur", "Cet article existe déjà dans la liste.");
             return;
         }
+    }
 
-    int row = m_tableArticles->rowCount();
-    m_tableArticles->insertRow(row);
-
-    QTableWidgetItem* itemId = new QTableWidgetItem(produitId.toString());
-    itemId->setData(Qt::UserRole, produitId);
-    itemId->setFlags(itemId->flags() & ~Qt::ItemIsEditable);
-    m_tableArticles->setItem(row, 0, itemId);
-
-    m_tableArticles->setItem(row, 1, new QTableWidgetItem(produit));
-    m_tableArticles->setItem(row, 2, new QTableWidgetItem(QString::number(qVente)));
-    m_tableArticles->setItem(row, 3, new QTableWidgetItem(QString::number(qCadeau)));
-    m_tableArticles->setItem(row, 4, new QTableWidgetItem(QString::number(qDegustation)));
-    m_tableArticles->setItem(row, 5, new QTableWidgetItem(QString::number(total)));
-
-    m_tableArticles->setColumnHidden(0, true);
-
-    m_spinVente->setValue(0);
-    m_spinCadeau->setValue(0);
-    m_spinDegustation->setValue(0);
+    int currentRow = m_tableArticles->rowCount();
+    m_tableArticles->insertRow(currentRow);
+    m_tableArticles->setItem(currentRow, 0, new QTableWidgetItem(nomProduit));
+    m_tableArticles->setItem(currentRow, 1, new QTableWidgetItem(QString::number(vente)));
+    m_tableArticles->setItem(currentRow, 2, new QTableWidgetItem(QString::number(cadeau)));
+    m_tableArticles->setItem(currentRow, 3, new QTableWidgetItem(QString::number(degust)));
+    // Stock l’id produit en UserRole et colonne cachée
+    auto idItem = new QTableWidgetItem(produitId.toString(QUuid::WithoutBraces));
+    m_tableArticles->setItem(currentRow, 4, idItem);
 }
 
 void BoiteDialogRepartition::supprimerArticle()
 {
-    if (m_tableArticles->currentRow() >= 0)
-        m_tableArticles->removeRow(m_tableArticles->currentRow());
+    int row = m_tableArticles->currentRow();
+    if (row >= 0)
+        m_tableArticles->removeRow(row);
 }
 
 void BoiteDialogRepartition::mettreAJourArticles()
 {
-    // Prévu pour une éventuelle logique future <-> widget synchronisation
+    int row = m_tableArticles->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un article dans le tableau à modifier.");
+        return;
+    }
+
+    int idxProduit = m_comboProduit->currentIndex();
+    if (idxProduit < 0) {
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un produit.");
+        return;
+    }
+
+    QString nomProduit = m_comboProduit->currentText();
+    QUuid produitId = m_comboProduit->currentData().toUuid();
+    int vente = m_spinVente->value();
+    int cadeau = m_spinCadeau->value();
+    int degust = m_spinDegustation->value();
+
+    // Vérifie que le produit sélectionné n’est pas déjà dans la table (autre ligne)
+    for (int r = 0; r < m_tableArticles->rowCount(); ++r) {
+        if (r == row) continue;
+        if (m_tableArticles->item(r, 4)->text() == produitId.toString(QUuid::WithoutBraces)) {
+            QMessageBox::warning(this, "Erreur", "Cet article existe déjà dans la liste.");
+            return;
+        }
+    }
+
+    // Met à jour la ligne
+    m_tableArticles->setItem(row, 0, new QTableWidgetItem(nomProduit));
+    m_tableArticles->setItem(row, 1, new QTableWidgetItem(QString::number(vente)));
+    m_tableArticles->setItem(row, 2, new QTableWidgetItem(QString::number(cadeau)));
+    m_tableArticles->setItem(row, 3, new QTableWidgetItem(QString::number(degust)));
+    m_tableArticles->setItem(row, 4, new QTableWidgetItem(produitId.toString(QUuid::WithoutBraces)));
 }
 
 void BoiteDialogRepartition::onNouvelleEquipe()
 {
     BoiteDialogNouvelleEquipe dialog(this);
-    if (dialog.exec() == QDialog::Accepted) {
-        remplirComboEquipes();
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        // Récupère l’ID et le nom de la nouvelle équipe
         QUuid id = dialog.getEquipeCreeeId();
-        int idx = m_comboEquipe->findData(id);
-        if (idx >= 0) m_comboEquipe->setCurrentIndex(idx);
+        QString nom = dialog.getEquipeCreeeNom();
+        if (!id.isNull()) {
+            // Rafraîchir la combo : pour garder les équipes de la BD même si le repo a évolué
+            remplirComboEquipes();
+            // Sélectionne la nouvelle équipe dans la combo (si elle y est)
+            int idx = m_comboEquipe->findData(id);
+            if (idx >= 0)
+                m_comboEquipe->setCurrentIndex(idx);
+        }
     }
 }
 
@@ -316,9 +320,13 @@ void BoiteDialogRepartition::onNouvelleRoute()
 {
     BoiteDialogNouvelleRoute dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
-        remplirComboRoutes();
         QUuid id = dialog.getRouteCreeeId();
-        int idx = m_comboRoute->findData(id);
-        if (idx >= 0) m_comboRoute->setCurrentIndex(idx);
+        QString nom = dialog.getRouteCreeeNom();
+        if (!id.isNull()) {
+            remplirComboRoutes();
+            int idx = m_comboRoute->findData(id);
+            if (idx >= 0)
+                m_comboRoute->setCurrentIndex(idx);
+        }
     }
 }

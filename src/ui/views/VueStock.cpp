@@ -12,6 +12,8 @@
 #include "../../core/entities/Produit.h"
 #include "../../business/managers/GestionnaireRaisonsRetour.h"
 #include "../../business/managers/GestionnaireRepartition.h"
+#include "../../business/managers/GestionnaireCatalogue.h"
+#include "../../business/managers/GestionnaireStock.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryRepartition.h"
@@ -25,25 +27,35 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QGroupBox>
-
 VueStock::VueStock(GestionnaireStock* gestionnaire, const QUuid& utilisateurId, QWidget* parent)
     : QWidget(parent),
-      m_gestionnaire(gestionnaire),
-      m_utilisateurId(utilisateurId),
-      m_tableauStockLocation(nullptr),
-      m_tableauReconciliation(nullptr),
-      m_tableauRetoursEnAttente(nullptr)
+    m_gestionnaire(gestionnaire),
+    m_utilisateurId(utilisateurId),
+    m_tabWidget(nullptr),
+    m_tableauStock(nullptr),
+    m_tableauHistorique(nullptr),
+    m_panelAlertes(nullptr),
+    m_tableauStockLocation(nullptr),
+    m_tableauReconciliation(nullptr),
+    m_tableauRetoursEnAttente(nullptr),
+    m_btnAjouterEntree(nullptr),
+    m_btnAjouterRetour(nullptr),
+    m_btnEntreesEnAttente(nullptr),
+    m_btnRetoursEnAttente(nullptr),
+    m_btnActualiser(nullptr),
+    m_btnExporter(nullptr),
+    m_btnSynchroniser(nullptr),
+    m_btnVerifierIntegrite(nullptr),
+    m_btnReparerStock(nullptr),
+    m_btnStockLocation(nullptr),
+    m_searchBox(nullptr),
+    m_filterStatus(nullptr),
+    m_labelValeurTotal(nullptr),
+    m_labelStatistiques(nullptr)
 {
-    qDebug() << "[VUE STOCK] ═══════════════════════════════════════════════";
-    qDebug() << "[VUE STOCK] Initialisation pour utilisateur:" << utilisateurId;
-    
     initializeUI();
     connectSignals();
     chargerDonnees();
-    afficherAlertes();
-
-    qDebug() << "[VUE STOCK] ✓ Initialisation OK";
-    qDebug() << "[VUE STOCK] ═══════════════════════════════════════════════";
 }
 
 VueStock::~VueStock()
@@ -466,9 +478,14 @@ void VueStock::onLigneRetourClicked(const RetourStock& retour)
         auto rep = repoRep.getById(repId);
         if (!rep.getEquipeId().isNull()) {
             RepositoryEquipe repoEquipe;
-            nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+            auto optEq = repoEquipe.getById(rep.getEquipeId()); // std::optional<Equipe>
+            if (optEq && !optEq->getEquipeId().isNull())
+                nomEquipe = optEq->getNom();
+            else
+                nomEquipe = "(Inconnue)";
         }
     }
+
     // -- Récupération du nom produit AVEC CHECK optional
     RepositoryProduit repoProduit;
     auto produitOpt = repoProduit.getById(retour.getProduitId());
@@ -486,43 +503,6 @@ void VueStock::onLigneRetourClicked(const RetourStock& retour)
         chargerDonnees();
         afficherAlertes();
         QMessageBox::information(this, "✓ Succès", "Retour de stock modifié/traité avec succès");
-    }
-}
-
-// void VueStock::onRetoursEnAttente()
-// {
-//     qDebug() << "[VUE STOCK] Afficher retours en attente";
-
-//     auto retours = m_gestionnaire->obtenirRetoursEnAttente();
-    
-//     if (retours.isEmpty()) {
-//         QMessageBox::information(this, "↩️ Retours en Attente", "Aucun retour en attente");
-//         return;
-//     }
-
-//     QString message = QString("↩️ RETOURS EN ATTENTE (%1)\n\n").arg(retours.count());
-    
-//     for (int i = 0; i < std::min(10, (int)retours.count()); ++i) {
-//         const auto& retour = retours[i];
-//         message += QString("• Quantité: %1 unités\n  Créé: %2\n\n")
-//             .arg(retour.getQuantite())
-//             .arg(retour.getDate().toString("dd/MM/yyyy HH:mm"));
-//     }
-
-//     if (retours.count() > 10) {
-//         message += QString("... et %1 autre(s)").arg(retours.count() - 10);
-//     }
-
-//     QMessageBox::information(this, "↩️ Retours en Attente", message);
-// }
-
-void VueStock::onRechercherStock()
-{
-    QString critere = m_searchBox->text();
-    qDebug() << "[VUE STOCK] Recherche:" << critere;
-
-    if (m_tableauStock) {
-        m_tableauStock->filtrer(critere);
     }
 }
 
@@ -570,4 +550,47 @@ void VueStock::onSynchroniser()
                              "Erreur lors de la synchronisation:\n" + 
                              m_gestionnaire->obtenirDernierErreur());
     }
+}
+
+void VueStock::onRechercherStock()
+{
+    QString critere = m_searchBox->text().trimmed();
+
+    if (critere.isEmpty()) {
+        // Si le champ de recherche est vide, afficher tous les stocks
+        afficherTousLesStocks();
+        return;
+    }
+
+    // Récupérer les produits correspondant au critère
+    QList<Produit> produits = m_gestionnaireCatalogue->rechercherProduits(critere);
+
+    if (produits.isEmpty()) {
+        QMessageBox::information(this, "Recherche", "Aucun produit trouvé avec ce critère.");
+        return;
+    }
+
+    // Afficher les stocks des produits trouvés
+    afficherStocksProduits(produits);
+}
+
+// Méthode helper pour afficher tous les stocks
+void VueStock::afficherTousLesStocks()
+{
+    QList<Produit> tousLesProduits = m_gestionnaireCatalogue->obtenirTousProduits();
+    afficherStocksProduits(tousLesProduits);
+}
+
+// Méthode helper pour afficher les stocks d'une liste de produits
+void VueStock::afficherStocksProduits(const QList<Produit>& produits)
+{
+    QList<StockInfo> stockInfos;
+    for (const Produit& produit : produits) {
+        // Utilise l'API du gestionnaire pour obtenir l'ensemble du StockInfo
+        StockInfo info = m_gestionnaire->obtenirStockDetail(produit.getProduitId());
+        stockInfos.append(info);
+    }
+
+    // Attention: la méthode remplirTableau doit être PUBLIQUE dans TableauStock.h
+    m_tableauStock->remplirTableau(stockInfos);
 }

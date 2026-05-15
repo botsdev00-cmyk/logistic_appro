@@ -15,6 +15,11 @@ public:
         EnRetard,
         Annule
     };
+    enum class SyncStatus {
+        PENDING,
+        SYNCED,
+        CONFLICT
+    };
 
     Credit();
     ~Credit();
@@ -28,27 +33,38 @@ public:
     Statut getStatut() const { return m_statut; }
     QDate getDatePaiement() const { return m_datePaiement; }
     QString getNotes() const { return m_notes; }
-    QDateTime getDateCreation() const { return m_dateCreation; }
-    QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    int getVersion() const { return m_version; }
+    SyncStatus getSyncStatus() const { return m_syncStatus; }
+    QDateTime getCreatedAt() const { return m_createdAt; }
+    QDateTime getUpdatedAt() const { return m_updatedAt; }
+    QDateTime getDeletedAt() const { return m_deletedAt; }
 
     // Setters
     void setCreditId(const QUuid& id) { m_creditId = id; }
     void setVenteId(const QUuid& id) { m_venteId = id; }
     void setClientId(const QUuid& id) { m_clientId = id; }
-    void setMontant(double montant) { m_montant = montant; }
-    void setDateEcheance(const QDate& date) { m_dateEcheance = date; }
-    void setStatut(Statut statut) { m_statut = statut; }
-    void setDatePaiement(const QDate& date) { m_datePaiement = date; }
-    void setNotes(const QString& notes) { m_notes = notes; }
-    void setDateCreation(const QDateTime& date) { m_dateCreation = date; }
-    void setDateMiseAJour(const QDateTime& date) { m_dateMiseAJour = date; }
+    void setMontant(double m) { m_montant = m; }
+    void setDateEcheance(const QDate& d) { m_dateEcheance = d; }
+    void setStatut(Statut s) { m_statut = s; }
+    void setDatePaiement(const QDate& d) { m_datePaiement = d; }
+    void setNotes(const QString& n) { m_notes = n; }
+    void setVersion(int v) { m_version = v; }
+    void setSyncStatus(SyncStatus s) { m_syncStatus = s; }
+    void setCreatedAt(const QDateTime& dt) { m_createdAt = dt; }
+    void setUpdatedAt(const QDateTime& dt) { m_updatedAt = dt; }
+    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
 
-    // Utility methods
-    static QString statutToString(Statut statut);
-    static Statut stringToStatut(const QString& str);
+    // Offline/Utility
+    bool isDeleted() const { return m_deletedAt.isValid(); }
+    bool needsSync() const { return m_syncStatus != SyncStatus::SYNCED; }
+
+    static QString statutToString(Statut s);
+    static Statut stringToStatut(const QString& s);
     QString getStatutLabel() const;
     int getJoursRetard() const;
     bool estEnRetard() const;
+    static QString syncStatusToString(SyncStatus s);
+    static SyncStatus syncStatusFromString(const QString& s);
 
 private:
     QUuid m_creditId;
@@ -59,8 +75,11 @@ private:
     Statut m_statut;
     QDate m_datePaiement;
     QString m_notes;
-    QDateTime m_dateCreation;
-    QDateTime m_dateMiseAJour;
+    int m_version = 1;
+    SyncStatus m_syncStatus = SyncStatus::PENDING;
+    QDateTime m_createdAt;
+    QDateTime m_updatedAt;
+    QDateTime m_deletedAt;
 };
 
 #endif // CREDIT_H

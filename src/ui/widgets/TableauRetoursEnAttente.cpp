@@ -8,7 +8,6 @@
 #include <QVariant>
 #include <QMetaType>
 
-// Assure-toi que RetourStock est sérialisable pour QVariant
 Q_DECLARE_METATYPE(RetourStock)
 
 TableauRetoursEnAttente::TableauRetoursEnAttente(QWidget* parent)
@@ -22,7 +21,6 @@ TableauRetoursEnAttente::TableauRetoursEnAttente(QWidget* parent)
 
     connect(this, &QTableWidget::cellDoubleClicked, [this](int row, int){
         if (row < 0 || row >= rowCount()) return;
-        // ⬇️ Récupère instantanément tout le RetourStock de la ligne double-cliquée, incluant son repId
         RetourStock retour = item(row, 0)->data(Qt::UserRole).value<RetourStock>();
         emit ligneRetourClicked(retour);
     });
@@ -55,9 +53,12 @@ void TableauRetoursEnAttente::setRetoursEnAttente(const QList<RetourStock>& reto
         QString nomEquipe = "(Aucune)";
         QUuid repId = r.getRepartitionId();
         if (!repId.isNull()) {
-            auto rep = repoRep.getById(repId);
-            if (!rep.getEquipeId().isNull())
-                nomEquipe = repoEquipe.getById(rep.getEquipeId()).getNom();
+            auto rep = repoRep.getById(repId); // rep est un objet
+            if (!rep.getEquipeId().isNull()) {
+                auto optEq = repoEquipe.getById(rep.getEquipeId());
+                if (optEq)
+                    nomEquipe = optEq->getNom();
+            }
         }
         QTableWidgetItem* itemEquipe = new QTableWidgetItem(nomEquipe);
 
@@ -66,7 +67,6 @@ void TableauRetoursEnAttente::setRetoursEnAttente(const QList<RetourStock>& reto
         setItem(i, 2, itemDate);
         setItem(i, 3, itemEquipe);
 
-        // ⬇️ Stocke l'objet RetourStock (avec son repId) dans la ligne !
         itemArt->setData(Qt::UserRole, QVariant::fromValue(r));
     }
 }

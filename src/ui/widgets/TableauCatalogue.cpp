@@ -13,15 +13,15 @@
 // Constructeur par défaut
 TableauCatalogue::TableauCatalogue(QWidget* parent)
     : QWidget(parent),
-      m_gestionnaireCatalogue(nullptr),
-      m_utilisateurId(QUuid()),
-      m_tableauProduits(nullptr),
-      m_tableauCategories(nullptr),
-      m_champRecherche(nullptr),
-      m_modeleTableau(nullptr),
-      m_modeleCategories(nullptr),
-      m_proxyModele(nullptr),
-      m_proxyModeleCategories(nullptr)
+    m_gestionnaireCatalogue(nullptr),
+    m_utilisateurId(QUuid()),
+    m_tableauProduits(nullptr),
+    m_tableauCategories(nullptr),
+    m_champRecherche(nullptr),
+    m_modeleTableau(nullptr),
+    m_modeleCategories(nullptr),
+    m_proxyModele(nullptr),
+    m_proxyModeleCategories(nullptr)
 {
     initializeUI();
 }
@@ -29,15 +29,15 @@ TableauCatalogue::TableauCatalogue(QWidget* parent)
 // Constructeur avec gestionnaire et utilisateur
 TableauCatalogue::TableauCatalogue(GestionnaireCatalogue* gestionnaire, const QUuid& utilisateurId, QWidget* parent)
     : QWidget(parent),
-      m_gestionnaireCatalogue(gestionnaire),
-      m_utilisateurId(utilisateurId),
-      m_tableauProduits(nullptr),
-      m_tableauCategories(nullptr),
-      m_champRecherche(nullptr),
-      m_modeleTableau(nullptr),
-      m_modeleCategories(nullptr),
-      m_proxyModele(nullptr),
-      m_proxyModeleCategories(nullptr)
+    m_gestionnaireCatalogue(gestionnaire),
+    m_utilisateurId(utilisateurId),
+    m_tableauProduits(nullptr),
+    m_tableauCategories(nullptr),
+    m_champRecherche(nullptr),
+    m_modeleTableau(nullptr),
+    m_modeleCategories(nullptr),
+    m_proxyModele(nullptr),
+    m_proxyModeleCategories(nullptr)
 {
     qDebug() << "[TABLEAU CATALOGUE] Initialisation avec utilisateur ID:" << utilisateurId.toString();
     initializeUI();
@@ -73,7 +73,7 @@ void TableauCatalogue::initializeUI()
 
     QLabel* labelRecherche = new QLabel("Rechercher :");
     labelRecherche->setStyleSheet("font-weight: bold;");
-    
+
     m_champRecherche = new QLineEdit();
     m_champRecherche->setPlaceholderText("SKU, Nom, Catégorie ou Code...");
     m_champRecherche->setMaximumWidth(350);
@@ -91,7 +91,7 @@ void TableauCatalogue::initializeUI()
         "    border: none;"
         "}"
         "QPushButton:hover { background-color: #0b7dda; }"
-    );
+        );
     connect(btnAjouterCategorie, &QPushButton::clicked, this, &TableauCatalogue::onAjouterCategorie);
 
     QPushButton* btnAjouter = new QPushButton("+ Nouveau Produit");
@@ -106,7 +106,7 @@ void TableauCatalogue::initializeUI()
         "    border: none;"
         "}"
         "QPushButton:hover { background-color: #45a049; }"
-    );
+        );
     connect(btnAjouter, &QPushButton::clicked, this, &TableauCatalogue::onAjouterProduit);
 
     QPushButton* btnRafraichir = new QPushButton("🔄 Rafraîchir");
@@ -121,7 +121,7 @@ void TableauCatalogue::initializeUI()
         "    border: none;"
         "}"
         "QPushButton:hover { background-color: #e68900; }"
-    );
+        );
     connect(btnRafraichir, &QPushButton::clicked, this, &TableauCatalogue::rafraichir);
 
     barreControle->addWidget(labelRecherche);
@@ -140,7 +140,7 @@ void TableauCatalogue::initializeUI()
     m_modeleTableau = new QStandardItemModel(this);
     m_modeleTableau->setHorizontalHeaderLabels(
         QStringList() << "SKU" << "Nom" << "Catégorie" << "Prix (€)" << "Stock Min" << "Statut" << "Actions"
-    );
+        );
 
     m_proxyModele = new QSortFilterProxyModel(this);
     m_proxyModele->setSourceModel(m_modeleTableau);
@@ -163,7 +163,7 @@ void TableauCatalogue::initializeUI()
         "QTableView { gridline-color: #e0e0e0; }"
         "QTableView::item { padding: 5px; }"
         "QHeaderView::section { background-color: #f5f5f5; padding: 5px; border: 1px solid #ddd; }"
-    );
+        );
     m_tableauProduits->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_tableauProduits, &QTableView::customContextMenuRequested,
             this, &TableauCatalogue::onMenuContextuel);
@@ -174,7 +174,7 @@ void TableauCatalogue::initializeUI()
     m_modeleCategories = new QStandardItemModel(this);
     m_modeleCategories->setHorizontalHeaderLabels(
         QStringList() << "Code" << "Nom" << "Description" << "Ordre" << "Statut" << "Actions"
-    );
+        );
 
     m_proxyModeleCategories = new QSortFilterProxyModel(this);
     m_proxyModeleCategories->setSourceModel(m_modeleCategories);
@@ -196,7 +196,7 @@ void TableauCatalogue::initializeUI()
         "QTableView { gridline-color: #e0e0e0; }"
         "QTableView::item { padding: 5px; }"
         "QHeaderView::section { background-color: #f5f5f5; padding: 5px; border: 1px solid #ddd; }"
-    );
+        );
     m_tableauCategories->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_tableauCategories, &QTableView::customContextMenuRequested,
             this, &TableauCatalogue::onMenuContextuel);
@@ -230,9 +230,8 @@ void TableauCatalogue::chargerProduits()
         QStandardItem* itemNom = new QStandardItem(produit.getNom());
         itemNom->setEditable(false);
 
-        CategorieProduit existante = m_gestionnaireCatalogue->obtenirCategorieParCode(code).value_or(CategorieProduit());
-            produit.getCategorieProduitId()
-        );
+        // *** Correction ici : récupération correcte de la catégorie du produit ***
+        CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(produit.getCategorieProduitId()).value_or(CategorieProduit());
         QStandardItem* itemCategorie = new QStandardItem(categorie.getNom());
         itemCategorie->setEditable(false);
 
@@ -451,7 +450,7 @@ void TableauCatalogue::onSupprimerProduit(const QUuid& produitId)
         "Confirmation suppression",
         "Êtes-vous sûr de vouloir supprimer ce produit ?\n(Cette action ne peut pas être annulée)",
         QMessageBox::Yes | QMessageBox::No
-    );
+        );
 
     if (reponse == QMessageBox::Yes) {
         if (m_gestionnaireCatalogue->supprimerProduit(produitId)) {
@@ -470,7 +469,7 @@ void TableauCatalogue::onModifierCategorie(const QUuid& categorieId)
         return;
     }
 
-    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
+    CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(categorieId).value_or(CategorieProduit());
     if (categorie.getCategorieProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Catégorie non trouvée");
         return;
@@ -490,7 +489,7 @@ void TableauCatalogue::onBasculeStatutCategorie(const QUuid& categorieId)
         return;
     }
 
-    Produit produit = m_gestionnaireCatalogue->obtenirProduit(produitId).value_or(Produit());
+    CategorieProduit categorie = m_gestionnaireCatalogue->obtenirCategorie(categorieId).value_or(CategorieProduit());
     if (categorie.getCategorieProduitId().isNull()) {
         QMessageBox::warning(this, "Erreur", "Catégorie non trouvée");
         return;
@@ -515,9 +514,9 @@ void TableauCatalogue::onSupprimerCategorie(const QUuid& categorieId)
     // Vérifier si la catégorie a des produits
     QList<Produit> produits = m_gestionnaireCatalogue->obtenirProduitsParCategorie(categorieId);
     if (!produits.isEmpty()) {
-        QMessageBox::warning(this, "Erreur", 
-            "Impossible de supprimer cette catégorie car elle contient " + 
-            QString::number(produits.count()) + " produit(s)");
+        QMessageBox::warning(this, "Erreur",
+                             "Impossible de supprimer cette catégorie car elle contient " +
+                                 QString::number(produits.count()) + " produit(s)");
         return;
     }
 
@@ -526,7 +525,7 @@ void TableauCatalogue::onSupprimerCategorie(const QUuid& categorieId)
         "Confirmation suppression",
         "Êtes-vous sûr de vouloir supprimer cette catégorie ?\n(Cette action ne peut pas être annulée)",
         QMessageBox::Yes | QMessageBox::No
-    );
+        );
 
     if (reponse == QMessageBox::Yes) {
         if (m_gestionnaireCatalogue->supprimerCategorie(categorieId)) {
