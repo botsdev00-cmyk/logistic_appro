@@ -1,55 +1,61 @@
 #ifndef REPOSITORYSTOCKSOLDES_H
 #define REPOSITORYSTOCKSOLDES_H
 
-#include "IRepository.h"
 #include "../../core/entities/StockSolde.h"
 #include <QList>
+#include <QString>
+#include <QUuid>
+#include <QSqlQuery>
 #include <QMap>
 
-class RepositoryStockSoldes : public IRepository<StockSolde>
+class RepositoryStockSoldes
 {
 public:
     RepositoryStockSoldes();
 
-    // ============ INTERFACE IRepository ============
-    bool create(const StockSolde& entity) override;
-    StockSolde getById(const QUuid& id) override;
-    QList<StockSolde> getAll() const override;
-    bool update(const StockSolde& entity) override;
-    bool remove(const QUuid& id) override;
-    QList<StockSolde> search(const QString& criterion) override;
-    bool exists(const QUuid& id) override;
-    QString getLastError() const override { return m_dernierErreur; }
+    // CRUD et gestion de vie
+    bool create(const StockSolde& entity);
+    bool update(const StockSolde& entity);
+    bool logicalDelete(const QUuid& id);
+    StockSolde getById(const QUuid& id) const;
+    QList<StockSolde> getAll() const;
 
-    // ============ MÉTHODES SPÉCIFIQUES ============
-    StockSolde getByProduit(const QUuid& produitId);
-    
-    // ✅ NOUVELLE MÉTHODE - Retourne les stocks avec tous les détails du produit
-    QList<StockSolde> obtenirStockDetail();
-    
-    // ============ CONSULTATIONS QUANTITÉS ============
-    int obtenirQuantiteDisponible(const QUuid& produitId);
-    int obtenirQuantiteTotal(const QUuid& produitId);
-    int obtenirQuantiteReservee(const QUuid& produitId);
+    // Recherche(s), accès métier
+    bool exists(const QUuid& id) const;
+    QList<StockSolde> search(const QString& criterion) const;
+    StockSolde getByProduit(const QUuid& produitId) const;
 
-    // ============ CONSULTATIONS VALEURS ============
-    double obtenirValeurTotalStock();
-    double obtenirValeurProduit(const QUuid& produitId);
+    // Quantités/valeurs métier
+    int obtenirQuantiteDisponible(const QUuid& produitId) const;
+    int obtenirQuantiteTotal(const QUuid& produitId) const;
+    int obtenirQuantiteReservee(const QUuid& produitId) const;
+    double obtenirValeurProduit(const QUuid& produitId) const;
+    double obtenirValeurTotalStock() const;
 
-    // ============ ALERTES STOCK ============
-    QList<StockSolde> obtenirStocksBas(int seuil);
-    QList<StockSolde> obtenirStocksEnRupture();
-    QList<StockSolde> obtenirStocksParCategorie(const QString& categorie);
+    // Alertes et catégories
+    QList<StockSolde> obtenirStocksBas(int seuil) const;
+    QList<StockSolde> obtenirStocksEnRupture() const;
+    QList<StockSolde> obtenirStocksParCategorie(const QString& categorie) const;
+    QList<StockSolde> obtenirStockDetail() const;
 
-    // ============ SYNCHRONISATION ============
+    // Synchronisation/sync
+    QList<StockSolde> getPendingSync() const;
+    QList<StockSolde> getSinceVersion(int minVersion) const;
     bool synchroniserTousSoldes();
     bool mettreAJourSolde(const QUuid& produitId);
-    
-    // ============ RAPPORTS ============
-    QMap<QString, int> obtenirStatistiquesParCategorie();
-    QMap<QString, double> obtenirValeurParCategorie();
+
+    // Rapports/stats
+    QMap<QString, int> obtenirStatistiquesParCategorie() const;
+    QMap<QString, double> obtenirValeurParCategorie() const;
+
+    // Erreurs
+    QString getLastError() const { return m_dernierErreur; }
 
 private:
+    // Mapping record (avec extraction C++ pur du location_historique)
+    StockSolde mapRowToStockSolde(const QSqlQuery& query) const;
+    int getJsonInt(const QString& str, const char* key) const;
+
     mutable QString m_dernierErreur;
 };
 

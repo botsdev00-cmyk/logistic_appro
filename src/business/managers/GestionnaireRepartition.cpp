@@ -10,42 +10,52 @@
 
 GestionnaireRepartition::GestionnaireRepartition() {}
 
-QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& utilisateurId)
+QUuid GestionnaireRepartition::creerRepartition(const QUuid& equipeId, const QUuid& routeId, const QDate& date, const QUuid& /*utilisateurId*/)
 {
     clearErreur();
+
+    // 1. Crée un nouvel UUID qui sera le même dans le C++ et la base
+    QUuid repartitionId = QUuid::createUuid();
+
+    // 2. Préparer l'objet Repartition avec toutes les données et l'UUID généré
     Repartition repartition;
-    repartition.setRepartitionId(QUuid::createUuid());
+    repartition.setRepartitionId(repartitionId);
     repartition.setEquipeId(equipeId);
     repartition.setRouteId(routeId);
     repartition.setDateRepartition(date);
-    repartition.setStatut(Repartition::Statut::EnCours); 
-    repartition.setCreePar(utilisateurId);
-    repartition.setMontantCashAttendu(0.0); // Initialisé à 0, sera mis à jour plus loin
+    repartition.setStatut(Repartition::Statut::EnCours); // ou EnAttente selon logique applicative
+    repartition.setMontantCashAttendu(0.0);
+    repartition.setChefId(QUuid()); // ou renseigner si tu as un chef affecté
+    repartition.setCreatedAt(QDateTime::currentDateTime());
+    repartition.setUpdatedAt(QDateTime::currentDateTime());
+    repartition.setDeletedAt(QDateTime());
+    repartition.setVersion(1);
+    repartition.setSyncStatus("PENDING");
 
     RepositoryRepartition repo;
+    // 3. ENREGISTRER la répartition en BASE AVANT TOUT
     if (!repo.create(repartition)) {
         m_dernierErreur = repo.getLastError();
-        return QUuid();
+        return QUuid(); // !! renvoie un id nul si la sauvegarde a échoué
     }
-    return repartition.getRepartitionId();
+
+    // 4. Retourner l'identifiant _créé et inséré_
+    return repartitionId;
 }
 
 bool GestionnaireRepartition::ajouterArticle(const ArticleRepartition& article)
 {
     clearErreur();
 
-    // 1. Vérification du stock via la vue v_statut_stock
+    // 1. Vérification du stock via la vue stock_soldes
     QSqlQuery query;
     query.prepare("SELECT quantite_disponible FROM stock_soldes WHERE produit_id = :id");
     query.bindValue(":id", article.getProduitId().toString(QUuid::WithoutBraces));
-    
     if (query.exec() && query.next()) {
         int dispo = query.value(0).toInt();
         int totalDemande = article.getQuantiteTotale();
-        
         if (totalDemande > dispo) {
-            m_dernierErreur = QString("Stock insuffisant pour ce produit (Disponible : %1, Demandé : %2)")
-                                .arg(dispo).arg(totalDemande);
+            m_dernierErreur = QString("Stock insuffisant pour ce produit (Disponible : %1, Demandé : %2)").arg(dispo).arg(totalDemande);
             return false;
         }
     } else {
@@ -53,9 +63,19 @@ bool GestionnaireRepartition::ajouterArticle(const ArticleRepartition& article)
         return false;
     }
 
-    // 2. Si le stock est OK, on procède à l'ajout
+    // 2. Création de l'article avec gestion du offline/audit
+    ArticleRepartition art = article; // copie
+    auto now = QDateTime::currentDateTime();
+    art.setCreatedAt(now);
+    art.setUpdatedAt(now);
+    art.setDeletedAt(QDateTime());
+    art.setVersion(1);
+    art.setSyncStatus(ArticleRepartition::SyncStatus::PENDING);    // on suppose ici que le manager connaît l'utilisateur courant... à passer potentiellement en param
+    // art.setCreatedBy(utilisateurId);
+    // art.setUpdatedBy(utilisateurId);
+
     RepositoryArticleRepartition repo;
-    if (!repo.create(article)) {
+    if (!repo.create(art)) {
         m_dernierErreur = repo.getLastError();
         return false;
     }
@@ -72,12 +92,13 @@ bool GestionnaireRepartition::marquerEnCours(const QUuid& repartitionId)
         m_dernierErreur = "Répartition non trouvée";
         return false;
     }
-
     if (!verifierQuantitesDisponibles(repartitionId, &m_dernierErreur)) {
         return false;
     }
-
     repartition.setStatut(Repartition::Statut::EnCours);
+    repartition.setVersion(repartition.getVersion()+1);
+    repartition.setSyncStatus("PENDING");
+    repartition.setUpdatedAt(QDateTime::currentDateTime());
     if (!repo.update(repartition)) {
         m_dernierErreur = "Passage à En cours échoué : " + repo.getLastError();
         return false;
@@ -96,7 +117,11 @@ bool GestionnaireRepartition::marquerCompletee(const QUuid& repartitionId)
         return false;
     }
     repartition.setStatut(Repartition::Statut::Completee);
-    repartition.setDateRetour(QDate::currentDate());
+    // repartition.setDateRetour(QDate::currentDate()); // SUPPRIMÉ car n'existe pas
+    repartition.setVersion(repartition.getVersion() + 1);
+    repartition.setSyncStatus("PENDING");
+    repartition.setUpdatedAt(QDateTime::currentDateTime());
+
     if (!repo.update(repartition)) {
         m_dernierErreur = "Passage à Complétée échoué : " + repo.getLastError();
         return false;
@@ -108,10 +133,24 @@ bool GestionnaireRepartition::annulerRepartition(const QUuid& repartitionId)
 {
     clearErreur();
     RepositoryRepartition repo;
-    if (!repo.remove(repartitionId)) {
+    Repartition repartition = repo.getById(repartitionId);
+
+    if (repartition.getRepartitionId().isNull()) {
+        m_dernierErreur = "Répartition non trouvée";
+        return false;
+    }
+
+    // Soft-delete
+    repartition.setDeletedAt(QDateTime::currentDateTime());
+    repartition.setSyncStatus("PENDING");
+    repartition.setVersion(repartition.getVersion() + 1);
+    repartition.setUpdatedAt(QDateTime::currentDateTime());
+
+    if (!repo.update(repartition)) {
         m_dernierErreur = "Annulation échouée : " + repo.getLastError();
         return false;
     }
+
     return true;
 }
 
@@ -207,7 +246,6 @@ bool GestionnaireRepartition::imprimerBonCommande(const QUuid& repartitionId, co
     return true;
 }
 
-// Nouvelle méthode pour le calcul et la mise à jour du montant attendu
 bool GestionnaireRepartition::mettreAJourMontantAttendu(const QUuid& repartitionId, double montant)
 {
     clearErreur();
@@ -218,5 +256,8 @@ bool GestionnaireRepartition::mettreAJourMontantAttendu(const QUuid& repartition
         return false;
     }
     r.setMontantCashAttendu(montant);
+    r.setVersion(r.getVersion()+1);
+    r.setSyncStatus("PENDING");
+    r.setUpdatedAt(QDateTime::currentDateTime());
     return repo.update(r);
 }

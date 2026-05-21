@@ -540,7 +540,7 @@ QList<RetourStock> GestionnaireStock::obtenirHistoriqueRetours(const QUuid& prod
 RetourStock GestionnaireStock::obtenirRetour(const QUuid& retourId)
 {
     if (!m_repoRetours) return RetourStock();
-    return m_repoRetours->getById(retourId);
+    return m_repoRetours->getById(retourId).value_or(RetourStock());
 }
 
 bool GestionnaireStock::supprimerRetour(const QUuid& retourId)
@@ -550,7 +550,7 @@ bool GestionnaireStock::supprimerRetour(const QUuid& retourId)
         return false;
     }
 
-    if (m_repoRetours->remove(retourId)) {
+    if (m_repoRetours->logicalDelete(retourId)) {
         qDebug() << "[GESTIONNAIRE STOCK] ✓ Retour supprimé:" << retourId;
         synchroniserStockSoldes();
         return true;

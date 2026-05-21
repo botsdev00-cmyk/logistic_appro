@@ -79,9 +79,7 @@ void TableauRepartition::remplirTableau()
 
     // Filtrage: on ne garde pas les répartitions complétées dont la dateRetour < aujourd'hui
     for (const auto& rep : repartitionsRaw) {
-        if (rep.getStatut() == Repartition::Statut::Completee &&
-            rep.getDateRetour().isValid() &&
-            rep.getDateRetour() < today)
+        if (rep.getStatut() == Repartition::Statut::Completee)
         {
             continue; // saute la ligne
         }

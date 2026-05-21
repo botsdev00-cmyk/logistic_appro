@@ -1,69 +1,71 @@
-#ifndef ARTICLEREPARTITION_H
-#define ARTICLEREPARTITION_H
+#pragma once
 
 #include <QUuid>
 #include <QString>
 #include <QDateTime>
 
-class ArticleRepartition
-{
+class ArticleRepartition {
 public:
-    enum SyncStatus {
-        PENDING = 0,
-        SYNCED = 1,
-        CONFLICT = 2
+    // SyncState comme la table (Enum string côté offline pour future compatibilité)
+    enum class SyncStatus {
+        PENDING,
+        SYNCED,
+        CONFLICT
     };
 
     ArticleRepartition();
     ~ArticleRepartition();
 
-    // Getters - Core data
+    // Core fields
     QUuid getArticleRepartitionId() const { return m_articleRepartitionId; }
-    QUuid getRepartitionId() const { return m_repartitionId; }
-    QUuid getProduitId() const { return m_produitId; }
-    int getQuantiteVente() const { return m_quantiteVente; }
-    int getQuantiteCadeau() const { return m_quantiteCadeau; }
-    int getQuantiteDegustation() const { return m_quantiteDegustation; }
-    int getQuantiteTotale() const { return m_quantiteVente + m_quantiteCadeau + m_quantiteDegustation; }
-    QString getObservation() const { return m_observation; }
-
-    // Getters - Offline-first / Sync
-    SyncStatus getSyncStatus() const { return m_syncStatus; }
-    int getVersion() const { return m_version; }
-    QDateTime getCreatedAt() const { return m_createdAt; }
-    QDateTime getUpdatedAt() const { return m_updatedAt; }
-    QDateTime getDeletedAt() const { return m_deletedAt; }
-    QUuid getCreatedBy() const { return m_createdBy; }
-    QUuid getUpdatedBy() const { return m_updatedBy; }
-
-    // Setters - Core data
     void setArticleRepartitionId(const QUuid& id) { m_articleRepartitionId = id; }
+
+    QUuid getRepartitionId() const { return m_repartitionId; }
     void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
+
+    QUuid getProduitId() const { return m_produitId; }
     void setProduitId(const QUuid& id) { m_produitId = id; }
+
+    int getQuantiteVente() const { return m_quantiteVente; }
     void setQuantiteVente(int qty) { m_quantiteVente = qty; }
+
+    int getQuantiteCadeau() const { return m_quantiteCadeau; }
     void setQuantiteCadeau(int qty) { m_quantiteCadeau = qty; }
+
+    int getQuantiteDegustation() const { return m_quantiteDegustation; }
     void setQuantiteDegustation(int qty) { m_quantiteDegustation = qty; }
+
+    int getQuantiteTotale() const { return m_quantiteVente + m_quantiteCadeau + m_quantiteDegustation; }
+
+    QString getObservation() const { return m_observation; }
     void setObservation(const QString& obs) { m_observation = obs; }
 
-    // Setters - Offline-first / Sync
-    void setSyncStatus(SyncStatus status) { m_syncStatus = status; }
-    void setVersion(int version) { m_version = version; }
-    void setCreatedAt(const QDateTime& dt) { m_createdAt = dt; }
-    void setUpdatedAt(const QDateTime& dt) { m_updatedAt = dt; }
-    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
-    void setCreatedBy(const QUuid& id) { m_createdBy = id; }
-    void setUpdatedBy(const QUuid& id) { m_updatedBy = id; }
-
-    // Convenience methods
-    bool isDeleted() const { return !m_deletedAt.isNull(); }
-    bool isPending() const { return m_syncStatus == PENDING; }
-    bool isConflict() const { return m_syncStatus == CONFLICT; }
-    bool needsSync() const { return m_syncStatus == PENDING || m_syncStatus == CONFLICT; }
+    // Offline-first fields
+    SyncStatus getSyncStatus() const { return m_syncStatus; }
+    void setSyncStatus(SyncStatus s) { m_syncStatus = s; }
     QString syncStatusString() const;
     static SyncStatus stringToSyncStatus(const QString& str);
 
+    int getVersion() const { return m_version; }
+    void setVersion(int v) { m_version = v; }
+
+    QDateTime getDeletedAt() const { return m_deletedAt; }
+    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
+    bool isDeleted() const { return !m_deletedAt.isNull(); }
+
+    QDateTime getCreatedAt() const { return m_createdAt; }
+    void setCreatedAt(const QDateTime& dt) { m_createdAt = dt; }
+
+    QDateTime getUpdatedAt() const { return m_updatedAt; }
+    void setUpdatedAt(const QDateTime& dt) { m_updatedAt = dt; }
+
+    QUuid getCreatedBy() const { return m_createdBy; }
+    void setCreatedBy(const QUuid& id) { m_createdBy = id; }
+
+    QUuid getUpdatedBy() const { return m_updatedBy; }
+    void setUpdatedBy(const QUuid& id) { m_updatedBy = id; }
+
 private:
-    // Core data
     QUuid m_articleRepartitionId;
     QUuid m_repartitionId;
     QUuid m_produitId;
@@ -72,14 +74,12 @@ private:
     int m_quantiteDegustation;
     QString m_observation;
 
-    // Offline-first / Sync
+    // Offline-first sync/audit
     SyncStatus m_syncStatus;
     int m_version;
+    QDateTime m_deletedAt;
     QDateTime m_createdAt;
     QDateTime m_updatedAt;
-    QDateTime m_deletedAt;
     QUuid m_createdBy;
     QUuid m_updatedBy;
 };
-
-#endif // ARTICLEREPARTITION_H

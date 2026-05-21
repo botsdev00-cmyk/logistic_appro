@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QUuid>
 #include <QList>
-#include "../../business/managers/GestionnaireStock.h"  // ✅ AJOUT: Pour StockInfo
+#include "../../business/managers/GestionnaireStock.h"
 
 class QTableWidget;
 class QTableWidgetItem;

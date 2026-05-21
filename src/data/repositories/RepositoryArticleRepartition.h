@@ -12,7 +12,6 @@ class RepositoryArticleRepartition
 public:
     RepositoryArticleRepartition();
 
-    // CRUD standardisé
     bool create(const ArticleRepartition& article);
     bool update(const ArticleRepartition& article);
     bool remove(const QUuid& articleId);
@@ -20,14 +19,13 @@ public:
     QList<ArticleRepartition> getAll() const;
     QList<ArticleRepartition> getByRepartitionId(const QUuid& repartitionId) const;
 
-    // Offline-first - C++ API pur
+    // Offline-first utilities
     QList<ArticleRepartition> getPendingSync() const;
     QList<ArticleRepartition> getSyncedArticles() const;
     QList<ArticleRepartition> getConflictSync() const;
     QList<ArticleRepartition> getSinceVersion(int minVersion) const;
     int getPendingCount() const;
 
-    // Batch sync - C++ API pur
     struct SyncResult {
         QUuid articleId;
         bool success;
@@ -36,7 +34,6 @@ public:
     };
     QList<SyncResult> syncBatch(const QList<ArticleRepartition>& articles, const QUuid& utilisateurId);
 
-    // Error handling
     QString getLastError() const { return m_dernierErreur; }
 
 private:

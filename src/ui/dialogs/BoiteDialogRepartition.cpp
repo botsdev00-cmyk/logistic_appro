@@ -2,11 +2,13 @@
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryArticleRepartition.h"
+#include "../../data/repositories/RepositoryRepartition.h"
 #include "../../data/repositories/RepositoryRoute.h"
 #include "../../core/entities/Route.h"
 #include "../../core/entities/Equipe.h"
 #include "../../core/entities/Produit.h"
 #include "../../core/entities/ArticleRepartition.h"
+#include "../../core/entities/Repartition.h"
 #include "BoiteDialogNouvelleEquipe.h"
 #include "BoiteDialogNouvelleRoute.h"
 #include <QVBoxLayout>
@@ -170,12 +172,6 @@ void BoiteDialogRepartition::creerRepartition()
         return;
     }
     QUuid equipeId = m_comboEquipe->currentData().toUuid();
-    RepositoryEquipe repoEquipe;
-    auto optEquipe = repoEquipe.getById(equipeId);
-    if (!optEquipe) {
-        QMessageBox::warning(this, "Erreur", "Équipe introuvable.");
-        return;
-    }
 
     int idxRoute = m_comboRoute->currentIndex();
     QUuid routeId = (idxRoute >= 0) ? m_comboRoute->currentData().toUuid() : QUuid();
@@ -187,10 +183,30 @@ void BoiteDialogRepartition::creerRepartition()
         return;
     }
 
-    // Création de la répartition (simulée ici, à adapter si tu as une entité Repartition à stocker)
+    // 1. Générer un UUID et insérer la répartition EN BASE
     m_repartitionId = QUuid::createUuid();
 
-    // Sauvegarde de chaque ArticleRepartition
+    Repartition rep;
+    rep.setRepartitionId(m_repartitionId);
+    rep.setEquipeId(equipeId);
+    rep.setRouteId(routeId);
+    rep.setDateRepartition(dateRep);
+    rep.setStatut(Repartition::Statut::EnCours); // ou autre statut selon le besoin métier
+    rep.setMontantCashAttendu(0.0);
+    rep.setChefId(QUuid()); // ou un vrai chef, si tu en as un
+    rep.setCreatedAt(QDateTime::currentDateTime());
+    rep.setUpdatedAt(QDateTime::currentDateTime());
+    rep.setDeletedAt(QDateTime());
+    rep.setVersion(1);
+    rep.setSyncStatus("PENDING");
+
+    RepositoryRepartition repoRepartition;
+    if (!repoRepartition.create(rep)) {
+        QMessageBox::warning(this, "Erreur", QString("Impossible de créer la répartition : %1").arg(repoRepartition.getLastError()));
+        return;
+    }
+
+    // 2. Ensuite, insérer les articles dans la base
     RepositoryArticleRepartition repoArtRep;
     bool toutOK = true;
     for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
@@ -208,6 +224,9 @@ void BoiteDialogRepartition::creerRepartition()
         artRep.setQuantiteDegustation(degust);
         artRep.setSyncStatus(ArticleRepartition::SyncStatus::PENDING);
         artRep.setVersion(1);
+        artRep.setCreatedAt(QDateTime::currentDateTime());
+        artRep.setUpdatedAt(QDateTime::currentDateTime());
+        artRep.setDeletedAt(QDateTime());
 
         if (!repoArtRep.create(artRep)) {
             toutOK = false;

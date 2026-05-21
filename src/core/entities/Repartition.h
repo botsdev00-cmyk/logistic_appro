@@ -1,10 +1,10 @@
 #pragma once
 
 #include <QUuid>
-#include <QDate>
-#include <QDateTime>
 #include <QString>
 #include <QList>
+#include <QDate>
+#include <QDateTime>
 #include "ArticleRepartition.h"
 
 class Repartition
@@ -15,60 +15,64 @@ public:
     Repartition();
     ~Repartition();
 
+    // Enum helpers
     static QString statutToString(Statut s);
     static Statut stringToStatut(const QString& str);
     QString getStatutLabel() const;
 
-    // Identifiants
-    void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
+    // Getters/Setters
     QUuid getRepartitionId() const { return m_repartitionId; }
+    void setRepartitionId(const QUuid& id) { m_repartitionId = id; }
 
-    void setEquipeId(const QUuid& id) { m_equipeId = id; }
     QUuid getEquipeId() const { return m_equipeId; }
+    void setEquipeId(const QUuid& id) { m_equipeId = id; }
 
-    void setRouteId(const QUuid& id) { m_routeId = id; }
     QUuid getRouteId() const { return m_routeId; }
+    void setRouteId(const QUuid& id) { m_routeId = id; }
 
-    void setStatutRepartitionId(const QUuid& id) { m_statutRepartitionId = id; }
     QUuid getStatutRepartitionId() const { return m_statutRepartitionId; }
+    void setStatutRepartitionId(const QUuid& id) { m_statutRepartitionId = id; }
 
-    void setStatut(Statut s) { m_statut = s; }
     Statut getStatut() const { return m_statut; }
+    void setStatut(Statut s) { m_statut = s; }
 
-    void setDateRepartition(const QDate& d) { m_dateRepartition = d; }
     QDate getDateRepartition() const { return m_dateRepartition; }
+    void setDateRepartition(const QDate& d) { m_dateRepartition = d; }
 
-    void setMontantCashAttendu(double m) { m_montantCashAttendu = m; }
     double getMontantCashAttendu() const { return m_montantCashAttendu; }
+    void setMontantCashAttendu(double val) { m_montantCashAttendu = val; }
 
-    // Chef d'équipe
-    void setChefId(const QUuid& id) { m_chefId = id; }
-    QUuid getChefId() const { return m_chefId; }
-
-    // Créé par (audit)
-    void setCreePar(const QUuid& id) { m_creePar = id; }
-    QUuid getCreePar() const { return m_creePar; }
-
-    void setAnnule(bool v) { m_annule = v; }
-    bool getAnnule() const { return m_annule; }
-
-    void setDateRetour(const QDate& d) { m_dateRetour = d; }
-    QDate getDateRetour() const { return m_dateRetour; }
-
-    // Champs pour audit/synchronisation
-    void setDateMiseAJour(const QDateTime& dt) { m_dateMiseAJour = dt; }
     QDateTime getDateMiseAJour() const { return m_dateMiseAJour; }
+    void setDateMiseAJour(const QDateTime& dt) { m_dateMiseAJour = dt; }
 
-    void setCreatedAt(const QDateTime& dt) { m_createdAt = dt; }
-    QDateTime getCreatedAt() const { return m_createdAt; }
+    QUuid getChefId() const { return m_chefId; }
+    void setChefId(const QUuid& id) { m_chefId = id; }
 
-    void setUpdatedAt(const QDateTime& dt) { m_updatedAt = dt; }
-    QDateTime getUpdatedAt() const { return m_updatedAt; }
+    bool getAnnule() const { return m_annule; }
+    void setAnnule(bool val) { m_annule = val; }
 
-    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
+    bool getMouvementsGeneres() const { return m_mouvementsGeneres; }
+    void setMouvementsGeneres(bool val) { m_mouvementsGeneres = val; }
+
+    // Offline-first sync fields
+    QString getSyncStatus() const { return m_syncStatus; }
+    void setSyncStatus(const QString& s) { m_syncStatus = s; }
+
+    int getVersion() const { return m_version; }
+    void setVersion(int v) { m_version = v; }
+
     QDateTime getDeletedAt() const { return m_deletedAt; }
+    void setDeletedAt(const QDateTime& dt) { m_deletedAt = dt; }
+    bool isDeleted() const { return !m_deletedAt.isNull(); }
 
-    void setArticles(const QList<ArticleRepartition>& a) { m_articles = a; }
+    QDateTime getCreatedAt() const { return m_createdAt; }
+    void setCreatedAt(const QDateTime& dt) { m_createdAt = dt; }
+
+    QDateTime getUpdatedAt() const { return m_updatedAt; }
+    void setUpdatedAt(const QDateTime& dt) { m_updatedAt = dt; }
+
+    // Articles
+    void setArticles(const QList<ArticleRepartition>& list) { m_articles = list; }
     QList<ArticleRepartition> getArticles() const { return m_articles; }
 
 private:
@@ -79,14 +83,18 @@ private:
     Statut m_statut;
     QDate m_dateRepartition;
     double m_montantCashAttendu;
-    QUuid m_chefId;
-    QUuid m_creePar;
-    bool m_annule = false;
-    QDate m_dateRetour;
     QDateTime m_dateMiseAJour;
+    QUuid m_chefId;
+    bool m_annule;
+    bool m_mouvementsGeneres;
+
+    // Offline-first sync
+    QString m_syncStatus; // "PENDING", "SYNCED", ...
+    int m_version;
+    QDateTime m_deletedAt;
     QDateTime m_createdAt;
     QDateTime m_updatedAt;
-    QDateTime m_deletedAt;
 
+    // Relations
     QList<ArticleRepartition> m_articles;
 };

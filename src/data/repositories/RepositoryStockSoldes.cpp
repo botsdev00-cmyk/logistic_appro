@@ -2,436 +2,321 @@
 #include "../database/ConnexionBaseDonnees.h"
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QVariant>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QDebug>
-#include <QMap>
 
 RepositoryStockSoldes::RepositoryStockSoldes()
 {
     qDebug() << "[REPO STOCK SOLDES] Initialisation";
 }
 
-// ============================================================================
-// INTERFACE IREPOSITORY
-// ============================================================================
-
-bool RepositoryStockSoldes::create(const StockSolde&)
+// Création stock_soldes
+bool RepositoryStockSoldes::create(const StockSolde& entity)
 {
-    m_dernierErreur = "Modification directe de stock_soldes interdite. Utilisez stock_mouvements.";
-    return false;
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    query.prepare(R"(
+        INSERT INTO stock_soldes (
+            solde_id, produit_id, quantite_total, quantite_reserve, quantite_disponible,
+            valeur_stock, prix_moyen, location_id, location_historique, derniere_location_id,
+            dernier_mouvement_date, updated_at, sync_status, version, deleted_at, is_deleted, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    )");
+
+    // For location_historique, serialize the three ints as a JSON string (compatible SQL jsonb)
+    QString locationHist = QString(
+                               "{\"RETURNED\": %1, \"WAREHOUSE\": %2, \"IN_TRANSIT\": %3}")
+                               .arg(entity.getHistoryReturned())
+                               .arg(entity.getHistoryWarehouse())
+                               .arg(entity.getHistoryInTransit());
+
+    query.addBindValue(entity.getSoldeId().toString(QUuid::WithoutBraces));
+    query.addBindValue(entity.getProduitId().toString(QUuid::WithoutBraces));
+    query.addBindValue(entity.getQuantiteTotal());
+    query.addBindValue(entity.getQuantiteReserve());
+    query.addBindValue(entity.getQuantiteDisponible());
+    query.addBindValue(entity.getValeurStock());
+    query.addBindValue(entity.getPrixMoyen());
+    query.addBindValue(entity.getLocationId());
+    query.addBindValue(locationHist);
+    query.addBindValue(entity.getDerniereLocationId());
+    query.addBindValue(entity.getDernierMouvementDate());
+    query.addBindValue(entity.getUpdatedAt());
+    query.addBindValue(entity.syncStatusString());
+    query.addBindValue(entity.getVersion());
+    query.addBindValue(entity.getDeletedAt().isNull() ? QVariant() : entity.getDeletedAt());
+    query.addBindValue(entity.getIsDeleted());
+    query.addBindValue(entity.getCreatedAt());
+
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur création stock solde : " + query.lastError().text();
+        return false;
+    }
+    return true;
 }
 
-StockSolde RepositoryStockSoldes::getById(const QUuid& id)
+// Mise à jour stock_soldes
+bool RepositoryStockSoldes::update(const StockSolde& entity)
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
 
-    query.prepare("SELECT * FROM stock_soldes WHERE solde_id = ?");
-    query.addBindValue(id.toString());
+    QString locationHist = QString(
+                               "{\"RETURNED\": %1, \"WAREHOUSE\": %2, \"IN_TRANSIT\": %3}")
+                               .arg(entity.getHistoryReturned())
+                               .arg(entity.getHistoryWarehouse())
+                               .arg(entity.getHistoryInTransit());
 
-    StockSolde solde;
-    if (query.exec() && query.next()) {
-        solde.setSoldeId(QUuid(query.value("solde_id").toString()));
-        solde.setProduitId(QUuid(query.value("produit_id").toString()));
-        solde.setQuantiteTotal(query.value("quantite_total").toInt());
-        solde.setQuantiteReservee(query.value("quantite_reserve").toInt());
-        solde.setValeurStock(query.value("valeur_stock").toDouble());
-        solde.setPrixMoyen(query.value("prix_moyen").toDouble());
-        solde.setDernierMouvementDate(query.value("dernier_mouvement_date").toDateTime());
-        solde.setUpdatedAt(query.value("updated_at").toDateTime());
-        
-        qDebug() << "[REPO-SOLDE] getById: Solde trouvé" << id.toString();
-    } else {
-        m_dernierErreur = "Solde stock non trouvé";
-        qDebug() << "[REPO-SOLDE] getById: Solde NOT FOUND:" << id.toString();
+    query.prepare(R"(
+        UPDATE stock_soldes SET
+            quantite_total = ?, quantite_reserve = ?, quantite_disponible = ?,
+            valeur_stock = ?, prix_moyen = ?, location_id = ?, location_historique = ?,
+            derniere_location_id = ?, dernier_mouvement_date = ?, updated_at = ?,
+            sync_status = ?, version = ?, deleted_at = ?, is_deleted = ?, created_at = ?
+        WHERE solde_id = ?
+    )");
+    query.addBindValue(entity.getQuantiteTotal());
+    query.addBindValue(entity.getQuantiteReserve());
+    query.addBindValue(entity.getQuantiteDisponible());
+    query.addBindValue(entity.getValeurStock());
+    query.addBindValue(entity.getPrixMoyen());
+    query.addBindValue(entity.getLocationId());
+    query.addBindValue(locationHist);
+    query.addBindValue(entity.getDerniereLocationId());
+    query.addBindValue(entity.getDernierMouvementDate());
+    query.addBindValue(entity.getUpdatedAt());
+    query.addBindValue(entity.syncStatusString());
+    query.addBindValue(entity.getVersion());
+    query.addBindValue(entity.getDeletedAt().isNull() ? QVariant() : entity.getDeletedAt());
+    query.addBindValue(entity.getIsDeleted());
+    query.addBindValue(entity.getCreatedAt());
+    query.addBindValue(entity.getSoldeId().toString(QUuid::WithoutBraces));
+
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur mise à jour stock solde : " + query.lastError().text();
+        return false;
     }
+    return query.numRowsAffected() > 0;
+}
 
-    return solde;
+// Soft Delete (logique)
+bool RepositoryStockSoldes::logicalDelete(const QUuid& id)
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    query.prepare(R"(
+        UPDATE stock_soldes SET deleted_at = CURRENT_TIMESTAMP, is_deleted = true, sync_status = 'PENDING', version = version + 1 WHERE solde_id = ?
+    )");
+    query.addBindValue(id.toString(QUuid::WithoutBraces));
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur suppression (soft-delete) stock solde : " + query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+
+StockSolde RepositoryStockSoldes::getById(const QUuid& id) const
+{
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    query.prepare("SELECT * FROM stock_soldes WHERE solde_id = ?");
+    query.addBindValue(id.toString(QUuid::WithoutBraces));
+    if (query.exec() && query.next())
+        return mapRowToStockSolde(query);
+    return StockSolde();
 }
 
 QList<StockSolde> RepositoryStockSoldes::getAll() const
 {
+    QList<StockSolde> list;
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<StockSolde> soldes;
-
-    query.prepare("SELECT * FROM stock_soldes ORDER BY updated_at DESC");
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            StockSolde solde;
-            solde.setSoldeId(QUuid(query.value("solde_id").toString()));
-            solde.setProduitId(QUuid(query.value("produit_id").toString()));
-            solde.setQuantiteTotal(query.value("quantite_total").toInt());
-            solde.setQuantiteReservee(query.value("quantite_reserve").toInt());
-            solde.setValeurStock(query.value("valeur_stock").toDouble());
-            solde.setPrixMoyen(query.value("prix_moyen").toDouble());
-            solde.setDernierMouvementDate(query.value("dernier_mouvement_date").toDateTime());
-            solde.setUpdatedAt(query.value("updated_at").toDateTime());
-            
-            soldes.append(solde);
-            count++;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ getAll: returned" << count << "soldes";
-    } else {
-        m_dernierErreur = "Erreur lecture soldes stock: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] getAll ERROR:" << query.lastError().text();
-    }
-
-    return soldes;
+    query.prepare("SELECT * FROM stock_soldes WHERE is_deleted = false OR is_deleted IS NULL");
+    if (query.exec()) while (query.next()) list.append(mapRowToStockSolde(query));
+    return list;
 }
 
-bool RepositoryStockSoldes::update(const StockSolde&)
-{
-    m_dernierErreur = "Modification directe de stock_soldes interdite. Utilisez stock_mouvements.";
-    return false;
-}
-
-
-bool RepositoryStockSoldes::remove(const QUuid&)
-{
-    m_dernierErreur = "Suppression directe de stock_soldes interdite. Utilisez stock_mouvements.";
-    return false;
-}
-
-
-QList<StockSolde> RepositoryStockSoldes::search(const QString& criterion)
-{
-    QList<StockSolde> all = getAll();
-    QList<StockSolde> filtered;
-    
-    for (const auto& solde : all) {
-        if (solde.getProduitId().toString().contains(criterion, Qt::CaseInsensitive)) {
-            filtered.append(solde);
-        }
-    }
-    
-    qDebug() << "[REPO-SOLDE] search:" << criterion << "=" << filtered.count() << "résultats";
-    return filtered;
-}
-
-bool RepositoryStockSoldes::exists(const QUuid& id)
+bool RepositoryStockSoldes::exists(const QUuid& id) const
 {
     return !getById(id).getSoldeId().isNull();
 }
 
-// ============================================================================
-// MÉTHODES SPÉCIFIQUES
-// ============================================================================
+QList<StockSolde> RepositoryStockSoldes::search(const QString& criterion) const
+{
+    QList<StockSolde> list;
+    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
+    QSqlQuery query(bd.getDatabase());
+    query.prepare("SELECT * FROM stock_soldes WHERE (location_id ILIKE ? OR derniere_location_id ILIKE ?) AND (is_deleted = false OR is_deleted IS NULL)");
+    query.addBindValue("%" + criterion + "%");
+    query.addBindValue("%" + criterion + "%");
+    if (query.exec()) while (query.next()) list.append(mapRowToStockSolde(query));
+    return list;
+}
 
-StockSolde RepositoryStockSoldes::getByProduit(const QUuid& produitId)
+StockSolde RepositoryStockSoldes::getByProduit(const QUuid& produitId) const
 {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-
-    query.prepare("SELECT * FROM stock_soldes WHERE produit_id = ?");
-    query.addBindValue(produitId.toString());
-
-    StockSolde solde;
-    if (query.exec() && query.next()) {
-        solde = getById(QUuid(query.value("solde_id").toString()));
-        qDebug() << "[REPO-SOLDE] ✓ getByProduit: produit_id=" << produitId 
-                 << "quantite_total=" << solde.getQuantiteTotal();
-    } else {
-        qDebug() << "[REPO-SOLDE] getByProduit: NOT FOUND for produit_id=" << produitId;
-    }
-
-    return solde;
+    query.prepare("SELECT * FROM stock_soldes WHERE produit_id = ? AND (is_deleted = false OR is_deleted IS NULL)");
+    query.addBindValue(produitId.toString(QUuid::WithoutBraces));
+    if (query.exec() && query.next())
+        return mapRowToStockSolde(query);
+    return StockSolde();
 }
 
-// ✅ MÉTHODE: Obtenir stocks avec tous les détails du produit
-QList<StockSolde> RepositoryStockSoldes::obtenirStockDetail()
+QList<StockSolde> RepositoryStockSoldes::getPendingSync() const
 {
+    QList<StockSolde> list;
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<StockSolde> soldes;
-
-    query.prepare(
-        "SELECT "
-        "  ss.solde_id, "
-        "  ss.produit_id, "
-        "  p.nom AS produit_nom, "
-        "  p.code_sku, "
-        "  cp.nom AS categorie, "
-        "  tp.nom AS type, "
-        "  p.stock_minimum, "
-        "  ss.quantite_total, "
-        "  ss.quantite_reserve, "
-        "  ss.prix_moyen, "
-        "  ss.valeur_stock, "
-        "  ss.dernier_mouvement_date, "
-        "  ss.updated_at "
-        "FROM stock_soldes ss "
-        "JOIN produits p ON ss.produit_id = p.produit_id "
-        "LEFT JOIN categories_produits cp ON p.categorie_produit_id = cp.categorie_produit_id "
-        "LEFT JOIN types_produits tp ON p.type_produit_id = tp.type_produit_id "
-        "WHERE p.est_actif = true "
-        "ORDER BY ss.updated_at DESC"
-    );
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            StockSolde solde;
-            
-            // IDs
-            solde.setSoldeId(QUuid(query.value("solde_id").toString()));
-            solde.setProduitId(QUuid(query.value("produit_id").toString()));
-            
-            // Données Produit
-            solde.setProduitNom(query.value("produit_nom").toString());
-            solde.setCodeSKU(query.value("code_sku").toString());
-            solde.setCategorie(query.value("categorie").toString());
-            solde.setType(query.value("type").toString());
-            solde.setStockMinimum(query.value("stock_minimum").toInt());
-            
-            // Quantités
-            solde.setQuantiteTotal(query.value("quantite_total").toInt());
-            solde.setQuantiteReservee(query.value("quantite_reserve").toInt());
-            
-            // Valeurs
-            solde.setPrixMoyen(query.value("prix_moyen").toDouble());
-            solde.setValeurStock(query.value("valeur_stock").toDouble());
-            
-            // Dates
-            solde.setDernierMouvementDate(query.value("dernier_mouvement_date").toDateTime());
-            solde.setUpdatedAt(query.value("updated_at").toDateTime());
-            
-            soldes.append(solde);
-            count++;
-            
-            qDebug() << "[REPO-SOLDE] Chargé:" << solde.getProduitNom() 
-                     << "(" << solde.getCodeSKU() << ") - " << solde.getCategorie();
-        }
-        qDebug() << "[REPO-SOLDE] ✓ obtenirStockDetail: " << count << "produits chargés";
-    } else {
-        m_dernierErreur = "Erreur obtenir stock detail: " + query.lastError().text();
-        qDebug() << "[REPO-SOLDE] obtenirStockDetail ERROR:" << query.lastError().text();
-    }
-
-    return soldes;
+    query.prepare("SELECT * FROM stock_soldes WHERE sync_status = 'PENDING' AND (is_deleted = false OR is_deleted IS NULL)");
+    if (query.exec()) while (query.next()) list.append(mapRowToStockSolde(query));
+    return list;
 }
 
-// ============================================================================
-// CONSULTATIONS QUANTITÉS
-// ============================================================================
-
-int RepositoryStockSoldes::obtenirQuantiteDisponible(const QUuid& produitId)
+QList<StockSolde> RepositoryStockSoldes::getSinceVersion(int minVersion) const
 {
-    StockSolde solde = getByProduit(produitId);
-    int disponible = solde.getQuantiteDisponible();
-    qDebug() << "[REPO-SOLDE] Quantité disponible pour" << produitId.toString() << "=" << disponible;
-    return disponible;
-}
-
-int RepositoryStockSoldes::obtenirQuantiteTotal(const QUuid& produitId)
-{
-    StockSolde solde = getByProduit(produitId);
-    int total = solde.getQuantiteTotal();
-    qDebug() << "[REPO-SOLDE] Quantité totale pour" << produitId.toString() << "=" << total;
-    return total;
-}
-
-int RepositoryStockSoldes::obtenirQuantiteReservee(const QUuid& produitId)
-{
-    StockSolde solde = getByProduit(produitId);
-    int reservee = solde.getQuantiteReservee();
-    qDebug() << "[REPO-SOLDE] Quantité réservée pour" << produitId.toString() << "=" << reservee;
-    return reservee;
-}
-
-// ============================================================================
-// CONSULTATIONS VALEURS
-// ============================================================================
-
-double RepositoryStockSoldes::obtenirValeurTotalStock()
-{
+    QList<StockSolde> list;
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    double total = 0.0;
-
-    query.prepare("SELECT COALESCE(SUM(valeur_stock), 0.0) as total FROM stock_soldes");
-
-    if (query.exec() && query.next()) {
-        total = query.value("total").toDouble();
-        qDebug() << "[REPO-SOLDE] ✓ Valeur totale du stock =" << total;
-    } else {
-        qDebug() << "[REPO-SOLDE] Erreur calcul valeur totale:" << query.lastError().text();
-    }
-
-    return total;
+    query.prepare("SELECT * FROM stock_soldes WHERE version >= ? AND (is_deleted = false OR is_deleted IS NULL)");
+    query.addBindValue(minVersion);
+    if (query.exec()) while (query.next()) list.append(mapRowToStockSolde(query));
+    return list;
 }
 
-double RepositoryStockSoldes::obtenirValeurProduit(const QUuid& produitId)
+QList<StockSolde> RepositoryStockSoldes::obtenirStocksBas(int seuil) const
 {
-    StockSolde solde = getByProduit(produitId);
-    return solde.getValeurStock();
+    QList<StockSolde> res;
+    for (const StockSolde& s : getAll())
+        if (s.estBasStock(seuil))
+            res << s;
+    return res;
 }
 
-// ============================================================================
-// ALERTES STOCK
-// ============================================================================
-
-QList<StockSolde> RepositoryStockSoldes::obtenirStocksBas(int seuil)
+QList<StockSolde> RepositoryStockSoldes::obtenirStocksEnRupture() const
 {
+    QList<StockSolde> res;
+    for (const StockSolde& s : getAll())
+        if (s.estEnRupture())
+            res << s;
+    return res;
+}
+
+QList<StockSolde> RepositoryStockSoldes::obtenirStocksParCategorie(const QString& categorie) const
+{
+    QList<StockSolde> res;
+    for (const StockSolde& s : getAll())
+        if (s.getDerniereLocationId() == categorie)
+            res << s;
+    return res;
+}
+
+int RepositoryStockSoldes::obtenirQuantiteDisponible(const QUuid& produitId) const
+{
+    return getByProduit(produitId).getQuantiteDisponible();
+}
+int RepositoryStockSoldes::obtenirQuantiteTotal(const QUuid& produitId) const
+{
+    return getByProduit(produitId).getQuantiteTotal();
+}
+int RepositoryStockSoldes::obtenirQuantiteReservee(const QUuid& produitId) const
+{
+    return getByProduit(produitId).getQuantiteReserve();
+}
+double RepositoryStockSoldes::obtenirValeurProduit(const QUuid& produitId) const
+{
+    return getByProduit(produitId).getValeurStock();
+}
+double RepositoryStockSoldes::obtenirValeurTotalStock() const
+{
+    double sum = 0;
+    for (const StockSolde& s : getAll())
+        sum += s.getValeurStock();
+    return sum;
+}
+
+// Statistiques (rapides, sans performances optimisées)
+QMap<QString, int> RepositoryStockSoldes::obtenirStatistiquesParCategorie() const
+{
+    QMap<QString, int> m;
+    for (const StockSolde& s : getAll())
+        m[s.getDerniereLocationId()] += s.getQuantiteDisponible();
+    return m;
+}
+
+QMap<QString, double> RepositoryStockSoldes::obtenirValeurParCategorie() const
+{
+    QMap<QString, double> m;
+    for (const StockSolde& s : getAll())
+        m[s.getDerniereLocationId()] += s.getValeurStock();
+    return m;
+}
+
+// Méthode - mapping SQL -> objet StockSolde (y compris historique simple)
+StockSolde RepositoryStockSoldes::mapRowToStockSolde(const QSqlQuery& q) const
+{
+    StockSolde s;
+    s.setSoldeId(QUuid(q.value("solde_id").toString()));
+    s.setProduitId(QUuid(q.value("produit_id").toString()));
+    s.setQuantiteTotal(q.value("quantite_total").toInt());
+    s.setQuantiteReserve(q.value("quantite_reserve").toInt());
+    s.setQuantiteDisponible(q.value("quantite_disponible").toInt());
+    s.setValeurStock(q.value("valeur_stock").toDouble());
+    s.setPrixMoyen(q.value("prix_moyen").toDouble());
+    s.setLocationId(q.value("location_id").toString());
+    s.setDerniereLocationId(q.value("derniere_location_id").toString());
+    s.setDernierMouvementDate(q.value("dernier_mouvement_date").toDateTime());
+    s.setUpdatedAt(q.value("updated_at").toDateTime());
+    s.setDeletedAt(q.value("deleted_at").toDateTime());
+    s.setCreatedAt(q.value("created_at").toDateTime());
+    s.setSyncStatus(StockSolde::stringToSyncStatus(q.value("sync_status").toString()));
+    s.setVersion(q.value("version").toInt());
+    s.setIsDeleted(q.value("is_deleted").toBool());
+
+    // Extraction C++ pur du JSONB (ex : {"RETURNED": 0, "WAREHOUSE": 12, "IN_TRANSIT": 3})
+    QString hist = q.value("location_historique").toString();
+    // Extraction manuelle/primitive (tu peux l'améliorer) :
+    s.setHistoryReturned(hist.contains("\"RETURNED\": 0") ? 0 : getJsonInt(hist, "RETURNED"));
+    s.setHistoryWarehouse(hist.contains("\"WAREHOUSE\": 0") ? 0 : getJsonInt(hist, "WAREHOUSE"));
+    s.setHistoryInTransit(hist.contains("\"IN_TRANSIT\": 0") ? 0 : getJsonInt(hist, "IN_TRANSIT"));
+
+    return s;
+}
+
+// Helper C++ pur pour extraire un champ entier d’une string style {"RETURNED": 0, ...}
+int RepositoryStockSoldes::getJsonInt(const QString& str, const char* key) const
+{
+    QString k = QString("\"") + key + "\":";
+    int i = str.indexOf(k);
+    if (i < 0) return 0;
+    i += k.length();
+    while (i < str.size() && str[i] == ' ') ++i;
+    int end = i;
+    while (end < str.size() && str[end].isDigit()) ++end;
+    return str.mid(i, end - i).toInt();
+}
+
+QList<StockSolde> RepositoryStockSoldes::obtenirStockDetail() const
+{
+    return getAll();
+}
+
+bool RepositoryStockSoldes::synchroniserTousSoldes() {
     ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
     QSqlQuery query(bd.getDatabase());
-    QList<StockSolde> soldes;
-
-    query.prepare(
-        "SELECT * FROM stock_soldes "
-        "WHERE (quantite_total - quantite_reserve) > 0 "
-        "AND (quantite_total - quantite_reserve) <= ? "
-        "ORDER BY (quantite_total - quantite_reserve) ASC"
-    );
-    query.addBindValue(seuil);
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            StockSolde solde = getById(QUuid(query.value("solde_id").toString()));
-            soldes.append(solde);
-            count++;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ obtenirStocksBas: trouvé" << count << "produits bas stock";
-    } else {
-        qDebug() << "[REPO-SOLDE] obtenirStocksBas ERROR:" << query.lastError().text();
+    query.prepare(R"(
+        UPDATE stock_soldes
+           SET sync_status = 'SYNCED',
+               updated_at = CURRENT_TIMESTAMP
+         WHERE sync_status = 'PENDING'
+           AND (is_deleted = false OR is_deleted IS NULL)
+    )");
+    if (!query.exec()) {
+        m_dernierErreur = "Erreur synchronisation stock soldes : " + query.lastError().text();
+        return false;
     }
-
-    return soldes;
-}
-
-QList<StockSolde> RepositoryStockSoldes::obtenirStocksEnRupture()
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<StockSolde> soldes;
-
-    query.prepare(
-        "SELECT * FROM stock_soldes "
-        "WHERE (quantite_total - quantite_reserve) <= 0 "
-        "ORDER BY quantite_total ASC"
-    );
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            StockSolde solde = getById(QUuid(query.value("solde_id").toString()));
-            soldes.append(solde);
-            count++;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ obtenirStocksEnRupture: trouvé" << count << "produits en rupture";
-    } else {
-        qDebug() << "[REPO-SOLDE] obtenirStocksEnRupture ERROR:" << query.lastError().text();
-    }
-
-    return soldes;
-}
-
-QList<StockSolde> RepositoryStockSoldes::obtenirStocksParCategorie(const QString& categorie)
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QList<StockSolde> soldes;
-
-    query.prepare(
-        "SELECT ss.* FROM stock_soldes ss "
-        "JOIN produits p ON ss.produit_id = p.produit_id "
-        "JOIN categories_produits cp ON p.categorie_produit_id = cp.categorie_produit_id "
-        "WHERE cp.nom = ? "
-        "ORDER BY p.nom ASC"
-    );
-    query.addBindValue(categorie);
-
-    if (query.exec()) {
-        int count = 0;
-        while (query.next()) {
-            StockSolde solde = getById(QUuid(query.value("solde_id").toString()));
-            soldes.append(solde);
-            count++;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ obtenirStocksParCategorie:" << categorie << "=" << count;
-    } else {
-        qDebug() << "[REPO-SOLDE] obtenirStocksParCategorie ERROR:" << query.lastError().text();
-    }
-
-    return soldes;
-}
-
-// ============================================================================
-// SYNCHRONISATION
-// ============================================================================
-
-bool RepositoryStockSoldes::synchroniserTousSoldes()
-{
-    m_dernierErreur = "Synchronisation directe de stock_soldes interdite. Utilisez stock_mouvements.";
-    return false;
-}
-
-bool RepositoryStockSoldes::mettreAJourSolde(const QUuid&)
-{
-    m_dernierErreur = "Mise à jour directe de stock_soldes interdite. Utilisez stock_mouvements.";
-    return false;
-}
-
-// ============================================================================
-// RAPPORTS
-// ============================================================================
-
-QMap<QString, int> RepositoryStockSoldes::obtenirStatistiquesParCategorie()
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QMap<QString, int> stats;
-
-    query.prepare(
-        "SELECT cp.nom as categorie, COUNT(ss.solde_id) as nombre "
-        "FROM stock_soldes ss "
-        "JOIN produits p ON ss.produit_id = p.produit_id "
-        "JOIN categories_produits cp ON p.categorie_produit_id = cp.categorie_produit_id "
-        "GROUP BY cp.nom "
-        "ORDER BY nombre DESC"
-    );
-
-    if (query.exec()) {
-        while (query.next()) {
-            QString categorie = query.value("categorie").toString();
-            int nombre = query.value("nombre").toInt();
-            stats[categorie] = nombre;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ Statistiques par catégorie:" << stats.count() << "catégories";
-    } else {
-        qDebug() << "[REPO-SOLDE] obtenirStatistiquesParCategorie ERROR:" << query.lastError().text();
-    }
-
-    return stats;
-}
-
-QMap<QString, double> RepositoryStockSoldes::obtenirValeurParCategorie()
-{
-    ConnexionBaseDonnees& bd = ConnexionBaseDonnees::getInstance();
-    QSqlQuery query(bd.getDatabase());
-    QMap<QString, double> valeurs;
-
-    query.prepare(
-        "SELECT cp.nom as categorie, SUM(ss.valeur_stock) as valeur_totale "
-        "FROM stock_soldes ss "
-        "JOIN produits p ON ss.produit_id = p.produit_id "
-        "JOIN categories_produits cp ON p.categorie_produit_id = cp.categorie_produit_id "
-        "GROUP BY cp.nom "
-        "ORDER BY valeur_totale DESC"
-    );
-
-    if (query.exec()) {
-        while (query.next()) {
-            QString categorie = query.value("categorie").toString();
-            double valeur = query.value("valeur_totale").toDouble();
-            valeurs[categorie] = valeur;
-        }
-        qDebug() << "[REPO-SOLDE] ✓ Valeur par catégorie:" << valeurs.count() << "catégories";
-    } else {
-        qDebug() << "[REPO-SOLDE] obtenirValeurParCategorie ERROR:" << query.lastError().text();
-    }
-
-    return valeurs;
+    return query.numRowsAffected() > 0;
 }

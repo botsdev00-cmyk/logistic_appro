@@ -6,16 +6,19 @@
 #include <QString>
 #include <QUuid>
 #include <optional>
+#include <QSqlQuery>
 
 class RepositoryEntreeStock
 {
 public:
     RepositoryEntreeStock();
 
-    // CRUD & logique cycle vie
+    // CRUD & logique de cycle de vie
     bool create(const EntreeStock& entity);
     bool update(const EntreeStock& entity);
     bool logicalDelete(const QUuid& id);
+
+    // Lecture
     std::optional<EntreeStock> getById(const QUuid& id) const;
     QList<EntreeStock> getAll() const;
 
@@ -28,12 +31,15 @@ public:
     bool approuver(const QUuid& entreeId, const QUuid& utilisateurId);
     bool rejeter(const QUuid& entreeId);
 
-    // OFFLINE-FIRST sync/REST
+    // Offline-first / sync
     QList<EntreeStock> getPendingSync() const;
     QList<EntreeStock> getSinceVersion(int minVersion) const;
 
+    // Gestion erreurs
     QString getLastError() const { return m_dernierErreur; }
 private:
+    EntreeStock mapRowToEntreeStock(const QSqlQuery& query) const;
+
     QString m_dernierErreur;
 };
 
