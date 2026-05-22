@@ -21,7 +21,8 @@ GestionnaireStock::GestionnaireStock()
       m_repoRetours(nullptr),
       m_repoSoldes(nullptr),
       m_repoMouvements(nullptr),
-      m_servicePermissions(nullptr)
+      m_servicePermissions(nullptr),
+    m_repositoryProduit(nullptr)
 {
     qDebug() << "[GESTIONNAIRE STOCK] Initialisation";
 }
@@ -63,6 +64,12 @@ void GestionnaireStock::setServicePermissions(ServicePermissions* service)
 {
     m_servicePermissions = service;
     qDebug() << "[GESTIONNAIRE STOCK] Service permissions défini";
+}
+
+void GestionnaireStock::setRepositoryProduit(RepositoryProduit* repo)
+{
+    m_repositoryProduit = repo;
+    qDebug() << "[GESTIONNAIRE STOCK] Repository produit défini";
 }
 
 // ============================================================================
@@ -582,66 +589,119 @@ int GestionnaireStock::obtenirQuantiteTotal(const QUuid& produitId)
     return m_repoSoldes->obtenirQuantiteTotal(produitId);
 }
 
-StockInfo GestionnaireStock::obtenirStockDetail(const QUuid& produitId)
-{
-    StockInfo info;
-    if (!m_repoSoldes) return info;
-    
-    StockSolde solde = m_repoSoldes->getByProduit(produitId);
-    
-    info.produitId = solde.getProduitId();
-    info.produitNom = solde.getProduitNom();
-    info.codeSKU = solde.getCodeSKU();
-    info.categorie = solde.getCategorie();
-    info.type = solde.getType();
-    info.quantiteTotal = solde.getQuantiteTotal();
-    info.quantiteReservee = solde.getQuantiteReservee();
-    info.quantiteDisponible = solde.getQuantiteDisponible();
-    info.prixMoyen = solde.getPrixMoyen();
-    info.valeurStock = solde.getValeurStock();
-    info.stockMinimum = solde.getStockMinimum();
-    info.dernierMouvement = solde.getDernierMouvementDate();
-    info.statut = determinerStatutStock(info.quantiteDisponible, info.stockMinimum);
-    
-    return info;
-}
-
 QList<StockInfo> GestionnaireStock::obtenirTousLesStocks()
 {
     QList<StockInfo> stocks;
-    
-    if (!m_repoSoldes) {
-        qWarning() << "[GESTIONNAIRE STOCK]  Repository soldes non initialisé!";
+
+    if (!m_repoSoldes || !m_repositoryProduit) {
+        qWarning() << "[GESTIONNAIRE STOCK] Repository(s) non initialisé(s)!";
         return stocks;
     }
-    
+
     auto soldes = m_repoSoldes->obtenirStockDetail();
     qDebug() << "[GESTIONNAIRE STOCK] Nombre de stocks à charger:" << soldes.count();
-    
+
+    // 1. DÉCLAREZ CES CACHES JUSTE AVANT LA BOUCLE FOR
+    QMap<QString, QString> cacheCategories;
+    QMap<QString, QString> cacheTypes;
+
     for (const auto& solde : soldes) {
         StockInfo info;
         info.produitId = solde.getProduitId();
-        info.produitNom = solde.getProduitNom();
-        info.codeSKU = solde.getCodeSKU();
-        info.categorie = solde.getCategorie();
-        info.type = solde.getType();
-        info.quantiteTotal = solde.getQuantiteTotal();
-        info.quantiteReservee = solde.getQuantiteReservee();
+
+        auto produitOpt = m_repositoryProduit->getById(info.produitId);
+        if (produitOpt) {
+            const Produit& produit = *produitOpt;
+            info.produitNom = produit.getNom();
+            info.codeSKU = produit.getCodeSku();
+
+            // --- RÉCUPÉRATION DU NOM DE LA CATÉGORIE ---
+            QString catIdStr = produit.getCategorieProduitId().toString();
+            if (!cacheCategories.contains(catIdStr)) {
+                QSqlQuery queryCat(ConnexionBaseDonnees::getInstance().getDatabase());
+                // CORRECTION ICI : categories_produits et categorie_produit_id
+                queryCat.prepare("SELECT nom FROM categories_produits WHERE categorie_produit_id = ?");
+                queryCat.addBindValue(catIdStr);
+                if (queryCat.exec() && queryCat.next()) {
+                    cacheCategories[catIdStr] = queryCat.value(0).toString();
+                } else {
+                    cacheCategories[catIdStr] = "Inconnue";
+                }
+            }
+            info.categorie = cacheCategories[catIdStr];
+
+            // --- RÉCUPÉRATION DU TYPE ---
+            QString typeIdStr = produit.getTypeProduitId().toString();
+            if (!cacheTypes.contains(typeIdStr)) {
+                QSqlQuery queryType(ConnexionBaseDonnees::getInstance().getDatabase());
+                // CORRECTION ICI : type_produit_id
+                queryType.prepare("SELECT nom FROM types_produits WHERE type_produit_id = ?");
+                queryType.addBindValue(typeIdStr);
+                if (queryType.exec() && queryType.next()) {
+                    cacheTypes[typeIdStr] = queryType.value(0).toString();
+                } else {
+                    cacheTypes[typeIdStr] = "Inconnu";
+                }
+            }
+            info.type = cacheTypes[typeIdStr];
+        } else {
+            info.produitNom = "(Nom inconnu)";
+            info.codeSKU = "";
+            info.categorie = "";
+            info.type = "";
+        }
+
+        info.quantiteTotal      = solde.getQuantiteTotal();
+        info.quantiteReservee   = solde.getQuantiteReserve();
         info.quantiteDisponible = solde.getQuantiteDisponible();
-        info.prixMoyen = solde.getPrixMoyen();
-        info.valeurStock = solde.getValeurStock();
-        info.stockMinimum = solde.getStockMinimum();
-        info.dernierMouvement = solde.getDernierMouvementDate();
-        info.statut = determinerStatutStock(info.quantiteDisponible, info.stockMinimum);
-        
+        info.prixMoyen          = solde.getPrixMoyen();
+        info.valeurStock        = solde.getValeurStock();
+        info.stockMinimum       = solde.getStockMinimum();
+        info.dernierMouvement   = solde.getDernierMouvementDate();
+        info.statut             = determinerStatutStock(info.quantiteDisponible, info.stockMinimum);
+
         stocks.append(info);
-        
-        qDebug() << "[GESTIONNAIRE STOCK]" << info.produitNom << "-" << info.codeSKU 
+
+        qDebug() << "[GESTIONNAIRE STOCK]" << info.produitNom << "-" << info.codeSKU
                  << "(" << info.categorie << ") - Dispo:" << info.quantiteDisponible;
     }
-    
+
     qDebug() << "[GESTIONNAIRE STOCK] ✓ Stocks chargés:" << stocks.count();
     return stocks;
+}
+
+StockInfo GestionnaireStock::obtenirStockDetail(const QUuid& produitId)
+{
+    StockInfo info;
+    if (!m_repoSoldes || !m_repositoryProduit) return info;
+
+    StockSolde solde = m_repoSoldes->getByProduit(produitId);
+    info.produitId = solde.getProduitId();
+
+    auto produitOpt = m_repositoryProduit->getById(info.produitId);
+    if (produitOpt) {
+        const Produit& produit = *produitOpt;
+        info.produitNom = produit.getNom();
+        info.codeSKU = produit.getCodeSku();
+        info.categorie = produit.getCategorieProduitId().toString();
+        info.type = produit.getTypeProduitId().toString();
+    } else {
+        info.produitNom = "(Nom inconnu)";
+        info.codeSKU = "";
+        info.categorie = "";
+        info.type = "";
+    }
+
+    info.quantiteTotal      = solde.getQuantiteTotal();
+    info.quantiteReservee   = solde.getQuantiteReserve();
+    info.quantiteDisponible = solde.getQuantiteDisponible();
+    info.prixMoyen          = solde.getPrixMoyen();
+    info.valeurStock        = solde.getValeurStock();
+    info.stockMinimum       = solde.getStockMinimum();
+    info.dernierMouvement   = solde.getDernierMouvementDate();
+    info.statut             = determinerStatutStock(info.quantiteDisponible, info.stockMinimum);
+
+    return info;
 }
 
 QList<Mouvement> GestionnaireStock::obtenirMouvementsRecents(const QUuid& produitId, int jours)

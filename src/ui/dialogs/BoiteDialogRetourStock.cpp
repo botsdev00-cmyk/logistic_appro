@@ -118,8 +118,11 @@ void BoiteDialogRetourStock::chargerRaisons()
 
 void BoiteDialogRetourStock::chargerRepartitionPreremplie()
 {
-    QString label = "(non trouvée)";
+    // 1. Déclare la variable label en haut
+    QString label = m_repartitionId.isNull() ? "(Non renseignée)" : m_repartitionId.toString();
     QString nomEquipe = "(Inconnue)";
+
+    // 2. Essaie de récupérer des infos additionnelles, optionnelles
     if (m_gestionnaireRepartition && !m_repartitionId.isNull()) {
         auto rep = m_gestionnaireRepartition->obtenirRepartition(m_repartitionId, false);
         if (!rep.getRepartitionId().isNull()) {
@@ -130,7 +133,8 @@ void BoiteDialogRetourStock::chargerRepartitionPreremplie()
                 nomEquipe = optEq->getNom();
 
             QString nomRoute  = repoRoute.getById(rep.getRouteId()).getNom();
-            label = QString("%1 | %2 | %3")
+            label = QString("%1 | %2 | %3 | %4")
+                        .arg(m_repartitionId.toString())
                         .arg(nomEquipe)
                         .arg(nomRoute)
                         .arg(rep.getDateRepartition().toString("dd/MM/yy"));

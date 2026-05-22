@@ -290,8 +290,6 @@ void VueStock::chargerDonnees()
     if (m_tableauHistorique) m_tableauHistorique->chargerDonnees();
     if (m_tableauStockLocation) m_tableauStockLocation->chargerDonnees();
     if (m_tableauReconciliation) m_tableauReconciliation->chargerDonnees();
-
-    // Remplit le tableau des retours en attente
     if (m_tableauRetoursEnAttente) {
         auto retours = m_gestionnaire->obtenirRetoursEnAttente();
         m_tableauRetoursEnAttente->setRetoursEnAttente(retours);
@@ -494,7 +492,7 @@ void VueStock::onLigneRetourClicked(const RetourStock& retour)
     // Ouvre le dialog prérenseigné
     GestionnaireRaisonsRetour raisonsMgr;
     GestionnaireRepartition repartitionMgr;
-    BoiteDialogRetourStock dialog(m_gestionnaire, &raisonsMgr, &repartitionMgr, m_utilisateurId, this);
+    BoiteDialogRetourStock dialog(m_gestionnaire, &raisonsMgr, &repartitionMgr, m_utilisateurId, this, repId);
     dialog.setEquipe(nomEquipe);
     dialog.setProduit(retour.getProduitId(), nomProduit);
     dialog.setQuantite(retour.getQuantite());

@@ -10,6 +10,7 @@
 
 class EntreeStock;
 class RetourStock;
+class RepositoryProduit;
 class StockSolde;
 class RepositoryEntreeStock;
 class RepositoryRetourStock;
@@ -107,6 +108,7 @@ public:
     void setRepositoryStockSoldes(RepositoryStockSoldes* repo);
     void setRepositoryStockMouvements(RepositoryStockMouvements* repo);
     void setServicePermissions(ServicePermissions* service);
+    void setRepositoryProduit(RepositoryProduit* repo);
 
     // ====== GESTION DES ENTRÉES ======
     bool creerEntreeStock(const EntreeStock& entree);
@@ -204,6 +206,7 @@ private:
     RepositoryStockSoldes* m_repoSoldes;
     RepositoryStockMouvements* m_repoMouvements;
     ServicePermissions* m_servicePermissions;
+    RepositoryProduit* m_repositoryProduit;
 
     // Cache des erreurs
     QString m_dernierErreur;

@@ -12,11 +12,11 @@
 
 TableauStock::TableauStock(GestionnaireStock* gestionnaire, QWidget* parent)
     : QWidget(parent),
-      m_gestionnaire(gestionnaire)
+    m_gestionnaire(gestionnaire)
 {
     qDebug() << "[TABLEAU STOCK] Initialisation";
     initializeUI();
-    chargerDonnees();  // ✅ Charger les données au démarrage
+    chargerDonnees();
 }
 
 TableauStock::~TableauStock()
@@ -30,7 +30,7 @@ void TableauStock::initializeUI()
     m_table = new QTableWidget();
     m_table->setColumnCount(9);
     m_table->setHorizontalHeaderLabels({
-        "Produit", "SKU", "Catégorie", "Quantité", "Réservée", 
+        "Produit", "SKU", "Catégorie", "Quantité", "Réservée",
         "Disponible", "Prix Moyen", "Statut", "Actions"
     });
 
@@ -53,8 +53,14 @@ void TableauStock::chargerDonnees()
     }
 
     m_donneesCourantes = m_gestionnaire->obtenirTousLesStocks();
-    qDebug() << "[TABLEAU STOCK] Nombre de stocks:" << m_donneesCourantes.count();
-    
+    qDebug() << "[TABLEAU STOCK] Nombre de stocks reçus:" << m_donneesCourantes.count();
+
+    // log debug des produits reçus :
+    for (int i = 0; i < m_donneesCourantes.size(); ++i) {
+        const auto& stock = m_donneesCourantes[i];
+        qDebug() << QString("Stock[%1] nom=%2 sku=%3 cat=%4 qte=%5").arg(i).arg(stock.produitNom).arg(stock.codeSKU).arg(stock.categorie).arg(stock.quantiteTotal);
+    }
+
     remplirTableau(m_donneesCourantes);
 }
 
@@ -140,7 +146,7 @@ void TableauStock::remplirTableau(const QList<StockInfo>& stocks)
     m_table->resizeColumnsToContents();
     m_table->horizontalHeader()->setStretchLastSection(true);
 
-    qDebug() << "[TABLEAU STOCK] ✓ Tableau rempli avec" << stocks.count() << "produits";
+    qDebug() << "[TABLEAU STOCK] ✓ Tableau rempli avec" << stocks.count() << "lignes";
 }
 
 void TableauStock::filtrer(const QString& critere)
@@ -172,45 +178,42 @@ void TableauStock::filtrerParStatut(const QString& statut)
 
 void TableauStock::onAfficherDetail(int row)
 {
-    // ✅ Vérification de l'index
     if (row < 0 || row >= m_donneesCourantes.count()) {
         QMessageBox::warning(this, "Erreur", "Produit non trouvé");
         return;
     }
-
     const auto& stock = m_donneesCourantes[row];
 
-    // ✅ Affichage amélioré avec tous les détails
     QString detail = QString(
-        "═══════════════════════════════════════════\n"
-        "DÉTAIL PRODUIT\n"
-        "═══════════════════════════════════════════\n\n"
-        "Nom: %1\n"
-        "SKU: %2\n"
-        "Catégorie: %3\n"
-        "Type: %4\n"
-        "Stock Minimum: %5\n\n"
-        "═══════════════════════════════════════════\n"
-        "STOCK\n"
-        "═══════════════════════════════════════════\n"
-        "Quantité totale: %6 unités\n"
-        "Quantité réservée: %7 unités\n"
-        "Quantité disponible: %8 unités\n\n"
-        "═══════════════════════════════════════════\n"
-        "VALEUR\n"
-        "═══════════════════════════════════════════\n"
-        "Prix moyen: %9 €\n"
-        "Valeur stock: %10 €\n\n"
-        "═══════════════════════════════════════════\n"
-        "STATUT: %11\n"
-        "═══════════════════════════════════════════\n"
-        "Dernier mouvement: %12"
-    ).arg(stock.produitNom, stock.codeSKU, stock.categorie, stock.type)
-     .arg(stock.stockMinimum)
-     .arg(stock.quantiteTotal).arg(stock.quantiteReservee).arg(stock.quantiteDisponible)
-     .arg(stock.prixMoyen, 0, 'f', 2).arg(stock.valeurStock, 0, 'f', 2)
-     .arg(stock.statut)
-     .arg(stock.dernierMouvement.toString("dd/MM/yyyy HH:mm:ss"));
+                         "═══════════════════════════════════════════\n"
+                         "DÉTAIL PRODUIT\n"
+                         "═══════════════════════════════════════════\n\n"
+                         "Nom: %1\n"
+                         "SKU: %2\n"
+                         "Catégorie: %3\n"
+                         "Type: %4\n"
+                         "Stock Minimum: %5\n\n"
+                         "═══════════════════════════════════════════\n"
+                         "STOCK\n"
+                         "═══════════════════════════════════════════\n"
+                         "Quantité totale: %6 unités\n"
+                         "Quantité réservée: %7 unités\n"
+                         "Quantité disponible: %8 unités\n\n"
+                         "═══════════════════════════════════════════\n"
+                         "VALEUR\n"
+                         "═══════════════════════════════════════════\n"
+                         "Prix moyen: %9 €\n"
+                         "Valeur stock: %10 €\n\n"
+                         "═══════════════════════════════════════════\n"
+                         "STATUT: %11\n"
+                         "═══════════════════════════════════════════\n"
+                         "Dernier mouvement: %12"
+                         ).arg(stock.produitNom, stock.codeSKU, stock.categorie, stock.type)
+                         .arg(stock.stockMinimum)
+                         .arg(stock.quantiteTotal).arg(stock.quantiteReservee).arg(stock.quantiteDisponible)
+                         .arg(stock.prixMoyen, 0, 'f', 2).arg(stock.valeurStock, 0, 'f', 2)
+                         .arg(stock.statut)
+                         .arg(stock.dernierMouvement.toString("dd/MM/yyyy HH:mm:ss"));
 
     QMessageBox::information(this, "Détail Stock", detail);
 }
@@ -222,7 +225,6 @@ void TableauStock::onModifierStockMinimum(int row)
 
 void TableauStock::onAfficherHistorique(int row)
 {
-    // ✅ Vérification de l'index
     if (row < 0 || row >= m_donneesCourantes.count()) {
         QMessageBox::warning(this, "Erreur", "Produit non trouvé");
         return;
@@ -234,32 +236,32 @@ void TableauStock::onAfficherHistorique(int row)
     auto mouvements = m_gestionnaire->obtenirHistoriqueProduit(stock.produitId);
 
     QString historique = QString(
-        "════��══════════════════════════════════════\n"
-        "HISTORIQUE - %1\n"
-        "═══════════════════════════════════════════\n"
-        "Total mouvements: %2\n"
-        "═══════════════════════════════════════════\n\n"
-    ).arg(stock.produitNom).arg(mouvements.count());
+                             "═══════════════════════════════════════════\n"
+                             "HISTORIQUE - %1\n"
+                             "═══════════════════════════════════════════\n"
+                             "Total mouvements: %2\n"
+                             "═══════════════════════════════════════════\n\n"
+                             ).arg(stock.produitNom).arg(mouvements.count());
 
     if (mouvements.isEmpty()) {
         historique += "Aucun mouvement trouvé";
     } else {
         for (const auto& mvt : mouvements) {
             historique += QString(
-                "📅 %1\n"
-                "   Type: %2\n"
-                "   Produit: %3\n"
-                "   Raison: %4\n"
-                "   Quantité: %5\n"
-                "   Utilisateur: %6\n"
-                "   Source: %7\n\n"
-            ).arg(mvt.dateCreation,
-                  mvt.type,
-                  mvt.nomProduit,
-                  mvt.raison,
-                  QString::number(mvt.quantiteDelta),
-                  mvt.nomUtilisateur,
-                  mvt.source);
+                              "📅 %1\n"
+                              "   Type: %2\n"
+                              "   Produit: %3\n"
+                              "   Raison: %4\n"
+                              "   Quantité: %5\n"
+                              "   Utilisateur: %6\n"
+                              "   Source: %7\n\n"
+                              ).arg(mvt.dateCreation,
+                                   mvt.type,
+                                   mvt.nomProduit,
+                                   mvt.raison,
+                                   QString::number(mvt.quantiteDelta),
+                                   mvt.nomUtilisateur,
+                                   mvt.source);
         }
     }
 
