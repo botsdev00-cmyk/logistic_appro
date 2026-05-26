@@ -10,7 +10,6 @@ class QLineEdit;
 class QComboBox;
 class QListWidget;
 class QPushButton;
-class QTextEdit;
 
 class BoiteDialogNouvelleEquipe : public QDialog
 {
@@ -27,8 +26,6 @@ private slots:
 private:
     QLineEdit* m_editNom;
     QComboBox* m_comboChef;
-    QLineEdit* m_editTelephoneChef;
-    // QTextEdit* m_editDescription;
     QListWidget* m_listeMembres;
     QPushButton* m_btnValider;
     QPushButton* m_btnAnnuler;

@@ -696,10 +696,14 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/core/entities/Client.h \
 	/home/bots/semuliki_logistic/src/core/entities/Credit.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Credit.h \
+	/home/bots/semuliki_logistic/src/core/entities/Employee.cpp \
+	/home/bots/semuliki_logistic/src/core/entities/Employee.h \
 	/home/bots/semuliki_logistic/src/core/entities/EntreeStock.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/EntreeStock.h \
 	/home/bots/semuliki_logistic/src/core/entities/Equipe.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Equipe.h \
+	/home/bots/semuliki_logistic/src/core/entities/Grade.cpp \
+	/home/bots/semuliki_logistic/src/core/entities/Grade.h \
 	/home/bots/semuliki_logistic/src/core/entities/Produit.cpp \
 	/home/bots/semuliki_logistic/src/core/entities/Produit.h \
 	/home/bots/semuliki_logistic/src/core/entities/ReceptionCaisse.cpp \
@@ -731,10 +735,14 @@ logistic_appro_autogen/timestamp: \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryClient.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCredit.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryCredit.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEmployee.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEmployee.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryGrade.cpp \
+	/home/bots/semuliki_logistic/src/data/repositories/RepositoryGrade.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryProduit.cpp \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryProduit.h \
 	/home/bots/semuliki_logistic/src/data/repositories/RepositoryReceptionCaisse.cpp \

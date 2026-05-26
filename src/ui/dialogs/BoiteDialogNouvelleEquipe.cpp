@@ -1,8 +1,7 @@
 #include "BoiteDialogNouvelleEquipe.h"
 #include "../../business/managers/GestionnaireEquipe.h"
-#include "../../core/entities/Utilisateur.h"
-#include "../../data/repositories/RepositoryUtilisateur.h"
-
+#include "../../core/entities/Employee.h"
+#include "../../data/repositories/RepositoryEmployee.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -12,6 +11,8 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QTextEdit>
+#include <QSqlQuery>
+#include <QUuid>
 
 BoiteDialogNouvelleEquipe::BoiteDialogNouvelleEquipe(QWidget* parent)
     : QDialog(parent)
@@ -35,32 +36,39 @@ BoiteDialogNouvelleEquipe::BoiteDialogNouvelleEquipe(QWidget* parent)
     chefLayout->addWidget(m_comboChef);
     layout->addLayout(chefLayout);
 
-    // // Description
-    // QHBoxLayout* descLayout = new QHBoxLayout;
-    // descLayout->addWidget(new QLabel("Description :"));
-    // m_editDescription = new QTextEdit;
-    // m_editDescription->setFixedHeight(40);
-    // descLayout->addWidget(m_editDescription);
-    // layout->addLayout(descLayout);
-
     // Membres
     layout->addWidget(new QLabel("Membres :"));
     m_listeMembres = new QListWidget;
     m_listeMembres->setSelectionMode(QAbstractItemView::MultiSelection);
     layout->addWidget(m_listeMembres);
 
-    // Récupération des utilisateurs
-    RepositoryUtilisateur repoUtil;
-    QList<Utilisateur> userList = repoUtil.getAll();
-    for (const Utilisateur& u : userList) {
-        QString displayName = u.getNomComplet();
-        QUuid uid = u.getUtilisateurId();
+    // Récupération des employés et du grade Chef d'équipe
+    RepositoryEmployee repoEmp;
+    QList<Employee> allEmployees = repoEmp.getAll();
 
-        m_comboChef->addItem(displayName, uid);
-        m_utilisateurs[displayName] = uid;
+    // Trouver le grade_id du Chef d'équipe
+    QUuid chefEquipeGradeId;
+    QSqlQuery q("SELECT grade_id FROM grade WHERE nom = 'Chef équipe' LIMIT 1");
+    if (q.next()) {
+        chefEquipeGradeId = q.value(0).toUuid();
+    }
 
+    // Remplir la combo chef
+    for (const Employee& e : allEmployees) {
+        QString displayName = e.nom() + " " + e.prenom();
+        QUuid eid = e.employeId();
+        if (e.gradeId() == chefEquipeGradeId) {
+            m_comboChef->addItem(displayName, eid);
+            m_utilisateurs[displayName] = eid;
+        }
+    }
+
+    // Remplir la liste membres (tous les employés)
+    for (const Employee& e : allEmployees) {
+        QString displayName = e.nom() + " " + e.prenom();
+        QUuid eid = e.employeId();
         QListWidgetItem* item = new QListWidgetItem(displayName, m_listeMembres);
-        item->setData(Qt::UserRole, uid);
+        item->setData(Qt::UserRole, eid);
     }
 
     // Boutons

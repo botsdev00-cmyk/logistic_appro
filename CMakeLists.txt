@@ -49,7 +49,7 @@ set(VENDOR_DIR      ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
 add_library(bcrypt_vendor STATIC
     ${VENDOR_DIR}/bcrypt/bcrypt.c
-)
+    )
 target_include_directories(bcrypt_vendor PUBLIC
     ${VENDOR_DIR}/bcrypt
 )
@@ -73,6 +73,8 @@ set(CORE_ENTITIES
     ${SRC_DIR}/core/entities/EntreeStock.cpp
     ${SRC_DIR}/core/entities/RetourStock.cpp
     ${SRC_DIR}/core/entities/StockSolde.cpp
+    ${SRC_DIR}/core/entities/Grade.cpp
+    ${SRC_DIR}/core/entities/Employee.cpp
 )
 
 set(CORE_CONSTANTS
@@ -113,6 +115,8 @@ set(DATA_REPOSITORIES
     ${SRC_DIR}/data/repositories/RepositoryRetourStock.cpp
     ${SRC_DIR}/data/repositories/RepositoryStockSoldes.cpp
     ${SRC_DIR}/data/repositories/RepositoryStockMouvements.cpp
+    ${SRC_DIR}/data/repositories/RepositoryGrade.cpp
+    ${SRC_DIR}/data/repositories/RepositoryEmployee.cpp
 
 )
 

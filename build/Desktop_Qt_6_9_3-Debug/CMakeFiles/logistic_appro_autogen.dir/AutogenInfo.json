@@ -954,6 +954,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/core/entities/Employee.h",
+			"MU",
+			"AWUCPG6CAX/moc_Employee.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/core/entities/EntreeStock.h",
 			"MU",
 			"AWUCPG6CAX/moc_EntreeStock.cpp",
@@ -963,6 +969,12 @@
 			"/home/bots/semuliki_logistic/src/core/entities/Equipe.h",
 			"MU",
 			"AWUCPG6CAX/moc_Equipe.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/core/entities/Grade.h",
+			"MU",
+			"AWUCPG6CAX/moc_Grade.cpp",
 			null
 		],
 		[
@@ -1056,6 +1068,12 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEmployee.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryEmployee.cpp",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryEntreeStock.cpp",
@@ -1065,6 +1083,12 @@
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.h",
 			"MU",
 			"UGUDSNX6ZT/moc_RepositoryEquipe.cpp",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryGrade.h",
+			"MU",
+			"UGUDSNX6ZT/moc_RepositoryGrade.cpp",
 			null
 		],
 		[
@@ -1565,12 +1589,22 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/core/entities/Employee.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/core/entities/EntreeStock.cpp",
 			"MU",
 			null
 		],
 		[
 			"/home/bots/semuliki_logistic/src/core/entities/Equipe.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/core/entities/Grade.cpp",
 			"MU",
 			null
 		],
@@ -1650,12 +1684,22 @@
 			null
 		],
 		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEmployee.cpp",
+			"MU",
+			null
+		],
+		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEntreeStock.cpp",
 			"MU",
 			null
 		],
 		[
 			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryEquipe.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/bots/semuliki_logistic/src/data/repositories/RepositoryGrade.cpp",
 			"MU",
 			null
 		],
