@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict Ahr17crVdMFvPgWaOsMkSCeppYRfLqg7op5R9dyYgf1k9lAgpKBDIoESRsq0qT7
+\restrict UfSVEiRmAom28oRzJ8hxV0mPsjKEaDrIh46ABIfkHUxuMPQAqhcMlAORhiGpKzH
 
--- Dumped from database version 17.9 (Debian 17.9-0+deb13u1)
--- Dumped by pg_dump version 17.9 (Debian 17.9-0+deb13u1)
+-- Dumped from database version 17.10 (Debian 17.10-0+deb13u1)
+-- Dumped by pg_dump version 17.10 (Debian 17.10-0+deb13u1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -192,30 +192,42 @@ CREATE FUNCTION public.fn_create_retour_on_retour_stock() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    v_location_destination TEXT := 'RETURNED'; -- Par défaut pour les avaries/pertes
+    v_location_destination TEXT := 'RETURNED';
     v_code_raison TEXT;
 BEGIN
-    -- Récupérer le code de la raison pour décider de la destination
+    -- 1. Récupérer le code de la raison pour décider de la destination
     SELECT code INTO v_code_raison FROM raisons_retour WHERE raison_retour_id = NEW.raison_retour_id;
 
-    -- Si la raison n'est pas une avarie (ex: SURPLUS, NON_VENDU), on remet en stock global
     IF v_code_raison NOT IN ('AVARIE', 'PERTE', 'ENDOMMAGE') THEN
         v_location_destination := 'WAREHOUSE';
     END IF;
 
     IF NEW.statut_validation IN ('APPROUVE', 'EN_ATTENTE') THEN
+        -- (A) On sort du IN_TRANSIT
         INSERT INTO public.stock_mouvements (
             produit_id, type_mouvement, quantite_delta,
             reference_id, reference_type, utilisateur_id,
             location_id, raison, observations
         ) VALUES (
-            NEW.produit_id, 'RETOUR', NEW.quantite,
+            NEW.produit_id, 'SORTIE', -NEW.quantite,           -- négatif
+            NEW.retour_stock_id, 'RETOUR_STOCK',
+            NEW.cree_par, 'IN_TRANSIT',
+            'Retour depuis tournée', NEW.observations
+        );
+
+        -- (B) On rentre au magasin ou avarie
+        INSERT INTO public.stock_mouvements (
+            produit_id, type_mouvement, quantite_delta,
+            reference_id, reference_type, utilisateur_id,
+            location_id, raison, observations
+        ) VALUES (
+            NEW.produit_id, 'ENTREE', NEW.quantite,           -- positif
             NEW.retour_stock_id, 'RETOUR_STOCK',
             NEW.cree_par, v_location_destination,
-            'Retour ' || v_code_raison,
-            NEW.observations
+            'Retour ' || v_code_raison, NEW.observations
         );
     END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -233,14 +245,29 @@ CREATE FUNCTION public.fn_create_sortie_on_repartition() RETURNS trigger
 DECLARE
     v_utilisateur_id UUID;
 BEGIN
-    -- Récupérer l'utilisateur (chef) depuis la repartition
+    -- 1. Tenter de récupérer le chef d'équipe depuis la répartition
     SELECT chef_id INTO v_utilisateur_id
     FROM public.repartitions
     WHERE repartition_id = NEW.repartition_id
     LIMIT 1;
 
-    -- Créer mouvement SORTIE
+    -- 2. Si aucun chef n'est défini, on tente de récupérer le créateur de l'article
+    IF v_utilisateur_id IS NULL THEN
+        v_utilisateur_id := NEW.created_by;
+    END IF;
+
+    -- 3. Fallback de sécurité : on prend le premier utilisateur du système (l'Admin)
+    -- Cela garantit qu'on ne violera jamais la contrainte de clé étrangère
+    IF v_utilisateur_id IS NULL THEN
+        SELECT utilisateur_id INTO v_utilisateur_id 
+        FROM public.utilisateurs 
+        ORDER BY date_creation ASC 
+        LIMIT 1;
+    END IF;
+
+    -- Création de la double écriture
     IF NEW.quantite_totale > 0 THEN
+        -- Décrémenter le magasin principal (WAREHOUSE)
         INSERT INTO public.stock_mouvements (
             produit_id, type_mouvement, quantite_delta,
             reference_id, reference_type, utilisateur_id,
@@ -248,8 +275,20 @@ BEGIN
         ) VALUES (
             NEW.produit_id, 'SORTIE', -(NEW.quantite_totale),
             NEW.article_repartition_id, 'ARTICLE_REPARTITION',
-            COALESCE(v_utilisateur_id, gen_random_uuid()),
-            'IN_TRANSIT', 'Repartition équipe'
+            v_utilisateur_id, -- <--- Utilisation de l'ID sécurisé
+            'WAREHOUSE', 'Repartition équipe (Sortie Magasin)'
+        );
+
+        -- Incrémenter le stock de l'équipe (IN_TRANSIT)
+        INSERT INTO public.stock_mouvements (
+            produit_id, type_mouvement, quantite_delta,
+            reference_id, reference_type, utilisateur_id,
+            location_id, raison
+        ) VALUES (
+            NEW.produit_id, 'ENTREE', NEW.quantite_totale,
+            NEW.article_repartition_id, 'ARTICLE_REPARTITION',
+            v_utilisateur_id, -- <--- Utilisation de l'ID sécurisé
+            'IN_TRANSIT', 'Repartition équipe (Entrée Transit)'
         );
     END IF;
 
@@ -524,6 +563,45 @@ $$;
 
 
 ALTER FUNCTION public.fn_prevent_stock_movements_deletion() OWNER TO postgres;
+
+--
+-- Name: fn_recalculer_montant_attendu(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fn_recalculer_montant_attendu() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_repartition_id UUID;
+    v_total_attendu NUMERIC(15,2);
+BEGIN
+    -- Identifier la répartition concernée selon l'opération du trigger
+    IF TG_OP = 'DELETE' THEN
+        v_repartition_id := OLD.repartition_id;
+    ELSE
+        v_repartition_id := NEW.repartition_id;
+    END IF;
+
+    -- Calcul strict : uniquement (quantite_vente * prix_unitaire)
+    -- Les cadeaux (bonus) et dégustations sont exclus (valent 0.00 dans le calcul)
+    SELECT COALESCE(SUM(ar.quantite_vente * p.prix_unitaire), 0.00)
+    INTO v_total_attendu
+    FROM public.articles_repartition ar
+    JOIN public.produits p ON ar.produit_id = p.produit_id
+    WHERE ar.repartition_id = v_repartition_id;
+
+    -- Mettre à jour le montant attendu dans la table parente
+    UPDATE public.repartitions
+    SET montant_cash_attendu = v_total_attendu,
+        updated_at = NOW()
+    WHERE repartition_id = v_repartition_id;
+
+    RETURN NULL; -- Trigger AFTER : le retour n'affecte pas l'écriture de la ligne
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_recalculer_montant_attendu() OWNER TO postgres;
 
 --
 -- Name: fn_refresh_stock_cache(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1235,7 +1313,7 @@ CREATE TABLE public.stock_mouvements (
     quantite_delta integer NOT NULL,
     reference_id uuid,
     reference_type character varying(50),
-    utilisateur_id uuid NOT NULL,
+    utilisateur_id uuid,
     location_id character varying(50) DEFAULT 'WAREHOUSE'::character varying,
     raison character varying(255),
     observations text,
@@ -1932,6 +2010,15 @@ e3a88637-ae66-48b9-bf94-74a09aea8b24	20d5464d-478c-4b45-b717-fee8e4be07a9	03dc33
 5cae1f6d-d1e5-427f-92d4-18c02dde2155	bbdca2ec-e5ee-4143-9ac5-992126fc94ce	f547b468-aee0-4109-acde-7ebb93d207d8	20	5	\N	5	PENDING	1	\N	2026-05-12 08:43:59.944	2026-05-12 08:43:59.944	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
 8774fde5-3c61-4e27-ac04-b44287100b91	0a16c20e-220d-4642-a514-e242fe533775	857f7c59-4ff6-45af-81fc-81d534af18de	20	2	\N	3	PENDING	1	\N	2026-05-13 14:49:26.268	2026-05-13 14:49:26.268	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
 73cc5af1-12a4-4f58-9e6e-e5f8c67820ed	0a16c20e-220d-4642-a514-e242fe533775	03dc330a-6da1-41ca-86ba-60945244182a	20	2	\N	3	PENDING	1	\N	2026-05-13 14:49:26.79	2026-05-13 14:49:26.79	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+669ab353-3643-4469-a590-617fa255ff95	d7dad7cb-09ac-45ce-ab7e-ad9d1a88b6b8	03dc330a-6da1-41ca-86ba-60945244182a	20	3	\N	1	PENDING	1	\N	2026-05-22 06:11:27.183	2026-05-22 06:11:27.183	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+dcb12704-a43a-42b7-8a41-f2d35a749675	26eb868d-380b-4a9d-8ff8-fb0adc624c68	03dc330a-6da1-41ca-86ba-60945244182a	20	3	\N	2	PENDING	1	\N	2026-05-22 06:21:49.504	2026-05-22 06:21:49.504	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+2aac8375-b6ac-4ad4-9dc8-441728d65e15	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	f547b468-aee0-4109-acde-7ebb93d207d8	20	3	\N	2	PENDING	1	\N	2026-05-22 10:26:37.553	2026-05-22 10:26:37.553	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+7d7b9752-ced6-4b5d-aa74-ffc556a0abbc	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	857f7c59-4ff6-45af-81fc-81d534af18de	20	3	\N	2	PENDING	1	\N	2026-05-22 10:26:37.576	2026-05-22 10:26:37.576	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+a6a76322-f970-45bd-a56a-710c7bb52ea8	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	03dc330a-6da1-41ca-86ba-60945244182a	20	3	\N	2	PENDING	1	\N	2026-05-22 10:26:37.587	2026-05-22 10:26:37.587	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+eeb8ca78-0383-4822-9f29-00f15c6604e9	d94096f9-8387-4dc8-97f7-b2548f7da022	f547b468-aee0-4109-acde-7ebb93d207d8	50	3	\N	2	PENDING	1	\N	2026-05-22 10:57:22.66	2026-05-22 10:57:22.66	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+4a109978-3009-4dd0-9cf4-9fdc6bce2ff5	b660928b-87b8-4689-ab2d-e8255a436db8	f547b468-aee0-4109-acde-7ebb93d207d8	30	3	\N	2	PENDING	1	\N	2026-05-22 11:01:14.142	2026-05-22 11:01:14.142	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+60078d73-e860-482c-936e-1de5a6bc7016	b577d44b-6a1a-4aa7-abd0-2dc52488afd7	f547b468-aee0-4109-acde-7ebb93d207d8	25	3	\N	2	PENDING	1	\N	2026-05-22 11:33:10.097	2026-05-22 11:33:10.097	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
+5bc59df8-9267-4ca8-8f13-6ef8f4a54354	12dbbe48-cd1f-4dfd-adac-f0c286280c91	f547b468-aee0-4109-acde-7ebb93d207d8	45	3	\N	2	PENDING	1	\N	2026-05-22 11:46:11.965	2026-05-22 11:46:11.965	00000000-0000-0000-0000-000000000000	00000000-0000-0000-0000-000000000000
 \.
 
 
@@ -1941,12 +2028,12 @@ e3a88637-ae66-48b9-bf94-74a09aea8b24	20d5464d-478c-4b45-b717-fee8e4be07a9	03dc33
 
 COPY public.categories_produits (categorie_produit_id, nom, code_categorie, description, est_actif, ordre_affichage, date_mise_a_jour, sync_status, version, deleted_at, created_at, updated_at) FROM stdin;
 53cd8cb8-c163-43a4-8864-5ea57153dbad	Soft Drinks	SOFT	Boissons non alcoolisées	t	4	2026-04-14 18:23:07.500727	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
-41414f5b-0968-4d4c-a71b-26473a0abce4	Alimentaire	ALIM	Aliments - Test	f	0	2026-04-14 16:36:42.488393	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
-df14e1fd-7f15-4f4e-8bce-d8ab5fda2282	Vins Test	VNS	Test category	f	1	2026-04-14 17:06:08.93193	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
 357241c2-6e79-4952-b103-50e1b52b3f96	Vins	VINS	Vins alcooliques	t	1	2026-04-14 17:06:50.960208	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
 a84c2258-5abd-4d9b-b103-c3b3d2f8460c	Bières	BIERES	Bières	t	2	2026-04-14 17:07:06.559007	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
 98559eb1-06d7-42c0-b6f1-c31197d4e212	Spiritueux	SPIRITUEUX	Spiritueux premium et liqueurs	t	3	2026-04-14 17:07:22.832042	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
 31fbd8a3-ed3e-4f76-939a-fffd58fda88f	Accessoires	ACC	Accessoires non comestibles	t	0	2026-04-21 12:31:32.155759	PENDING	1	\N	2026-05-07 12:44:02.59207	2026-05-07 12:44:02.59207
+41414f5b-0968-4d4c-a71b-26473a0abce4	Alimentaire	ALIM	Aliments - Test	f	0	2026-04-14 16:36:42.488393	PENDING	2	2026-05-21 18:56:19.345772	2026-05-07 12:44:02.59207	2026-05-21 18:56:19.345772
+df14e1fd-7f15-4f4e-8bce-d8ab5fda2282	Vins Test	VNS	Test category	f	1	2026-04-14 17:06:08.93193	PENDING	2	2026-05-21 18:56:26.957822	2026-05-07 12:44:02.59207	2026-05-21 18:56:26.957822
 \.
 
 
@@ -2122,6 +2209,52 @@ df46911f-ec1a-4bb9-abfc-5bdd2ec005b4	78a24f11-9714-4014-ae40-f38318fef119	MOUVEM
 e35a2f98-f2a4-4d18-94ad-cd9a9605fd1b	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	06e099f6-baff-442e-987e-b937fdbfeea6	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "0a16c20e-220d-4642-a514-e242fe533775", "quantite_delta": -25}	2026-05-13 14:50:03.174026	2026-05-13 14:50:03.174026
 482560ad-862f-4c35-b477-bd8206adbc1d	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	e6034348-44f1-41aa-8074-2fa43b345d50	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "3be91456-c77a-481d-a002-2d805d293c53", "quantite_delta": 10}	2026-05-13 14:50:03.185084	2026-05-13 14:50:03.185084
 10a85d19-5e32-4e27-be1b-7a6718a04cfd	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	f7e9c2a8-3332-491e-86e5-ae9501f7b2dd	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "0a16c20e-220d-4642-a514-e242fe533775", "quantite_delta": -25}	2026-05-13 14:50:03.196028	2026-05-13 14:50:03.196028
+12ab9a06-e3df-4164-9ba7-894730752ce8	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	90b73084-64af-4e21-9f36-8b54c45a8805	\N	{"type": "ENTREE", "raison": "Approvisionnement - PRODUCTION", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "86858a9e-b5da-4004-be05-ff066be9e6e7", "quantite_delta": 500}	2026-05-15 07:52:38.232859	2026-05-15 07:52:38.232859
+0535dbfb-6ae5-4a87-bce4-7cb4f47e9dbb	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	6d0a453c-0c4b-44b1-9dd1-d5924bc2372d	\N	{"type": "ENTREE", "raison": "Approvisionnement - PRODUCTION", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "0d42db4e-f79b-4fd0-99e0-2dbe46b06246", "quantite_delta": 5000}	2026-05-15 07:53:05.746976	2026-05-15 07:53:05.746976
+b3c0fb62-a00f-4a2a-b148-2f2b591f12a1	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	d816ae37-4cd1-4822-9ff2-083405b47222	\N	{"type": "ENTREE", "raison": "Approvisionnement - PRODUCTION", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "0c7a1444-a662-467f-933f-db717e79291e", "quantite_delta": 1000}	2026-05-20 10:00:38.840165	2026-05-20 10:00:38.840165
+50bdf712-cf18-478d-8e67-5a856455cdf2	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	2c97096b-ce2e-4b0d-98f8-8f8ac6e0ed1a	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "669ab353-3643-4469-a590-617fa255ff95", "quantite_delta": -24}	2026-05-22 06:11:27.183852	2026-05-22 06:11:27.183852
+d0a39b02-25f5-46a1-97fa-95fdf9b8b9b6	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	55650eac-0bd9-4a88-adaf-9f19a7f31fb8	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "dcb12704-a43a-42b7-8a41-f2d35a749675", "quantite_delta": -25}	2026-05-22 06:21:49.504563	2026-05-22 06:21:49.504563
+01aaee83-2857-498e-a2e3-36c27f048942	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	53dd36fc-1667-4d3d-92ea-082c12bebefe	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "82ef6f87-c951-4101-a7e6-3bd6b48eb170", "quantite_delta": 7}	2026-05-22 06:23:02.102084	2026-05-22 06:23:02.102084
+056bb3f6-16ae-436d-a85a-d4ac41b33eb8	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	2d44a42a-22b4-48e2-9f56-7617f628510a	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "26eb868d-380b-4a9d-8ff8-fb0adc624c68", "quantite_delta": -25}	2026-05-22 06:23:02.162282	2026-05-22 06:23:02.162282
+9ece23e5-ead7-4de1-b16f-6d1ece45e8d8	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	d69ba9cc-4c1b-4a99-8978-9e9b8158d7d2	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "d7dad7cb-09ac-45ce-ab7e-ad9d1a88b6b8", "quantite_delta": -24}	2026-05-22 06:24:08.808796	2026-05-22 06:24:08.808796
+96407438-53bc-4255-9a56-e02789fee991	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	3652f551-9309-4069-b07c-555df07daf4b	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "f0d96b28-5569-431b-a522-d61c3a786ff0", "quantite_delta": 12}	2026-05-22 07:20:16.261333	2026-05-22 07:20:16.261333
+31add88b-1149-4d6a-9e64-e739f188cf8f	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	073e37dc-46a8-4be2-8104-875526839a62	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "ca676ca3-4117-430d-9471-9b3215731aea", "quantite_delta": 12}	2026-05-22 07:20:58.604691	2026-05-22 07:20:58.604691
+397339b8-8e4e-4cf2-821a-e2c3bfc2bd50	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	70479992-1283-43b6-821b-4a81f592d9f2	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "aa023695-0807-46ac-bbbb-1bc02f8ec042", "quantite_delta": 12}	2026-05-22 07:22:36.264782	2026-05-22 07:22:36.264782
+c7161bd1-3a50-4b10-a0c5-c7a98f2bdec9	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	7472af47-0c10-47e0-9dbb-586c9754c863	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "2aac8375-b6ac-4ad4-9dc8-441728d65e15", "quantite_delta": -25}	2026-05-22 10:26:37.553405	2026-05-22 10:26:37.553405
+a78a79c3-134f-475c-86d7-c6e1c5b0c2b3	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	689ca846-ab77-48bc-9066-5786fbdc26ef	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "7d7b9752-ced6-4b5d-aa74-ffc556a0abbc", "quantite_delta": -25}	2026-05-22 10:26:37.576037	2026-05-22 10:26:37.576037
+0a8f62f3-391e-4fdd-bd5a-5da2e71e4f62	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	9784a895-ce34-4a81-8637-e197092b04a6	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "a6a76322-f970-45bd-a56a-710c7bb52ea8", "quantite_delta": -25}	2026-05-22 10:26:37.587169	2026-05-22 10:26:37.587169
+1ef06d4e-10b2-4233-b158-793753cb0da8	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	eb84612c-02fa-48ea-9979-77898db0e9cc	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "6879e651-4c2c-4f48-a042-2cdc64c6665f", "quantite_delta": 10}	2026-05-22 10:28:06.518142	2026-05-22 10:28:06.518142
+1ed59ae3-cf54-47ee-8e9a-12784c19ff0f	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	e29b2874-aec4-46cd-924c-34a0f3bf8e4d	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab", "quantite_delta": -25}	2026-05-22 10:28:06.552259	2026-05-22 10:28:06.552259
+ee53e5ba-afa3-44f4-b3f9-088dbacc1e27	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	60dba8ca-9f3a-49be-ba7b-d2ba6dd7045a	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "52e808e3-476c-4170-9bc3-da46e3962406", "quantite_delta": 10}	2026-05-22 10:28:06.563549	2026-05-22 10:28:06.563549
+c38ef3a3-8cc8-43cc-a186-853f14652215	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	3337befd-711b-458b-93cf-97efc0462a30	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "857f7c59-4ff6-45af-81fc-81d534af18de", "reference_id": "4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab", "quantite_delta": -25}	2026-05-22 10:28:06.574424	2026-05-22 10:28:06.574424
+9eb650d2-63a7-4879-bce4-5add8f667b23	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	07848b6a-d916-4a9a-a0ea-8ef1ca3aad1c	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "7d1a6e72-85cd-45e0-a8a7-7e650f199da6", "quantite_delta": 7}	2026-05-22 10:28:06.585676	2026-05-22 10:28:06.585676
+f90747d8-6d7f-4d7b-a73d-79e88e8d31b5	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	81933be0-4f84-46a9-99d8-aa9fb9ddda03	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab", "quantite_delta": -25}	2026-05-22 10:28:06.597441	2026-05-22 10:28:06.597441
+371f0edc-ec2d-4ebb-a5b6-b97aef023e86	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	f58ce103-fc28-4b17-a5ea-f792c734bfae	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "03dc330a-6da1-41ca-86ba-60945244182a", "reference_id": "603e688c-b835-4d1a-aaba-a73d2729d6a4", "quantite_delta": 10}	2026-05-22 10:38:48.933999	2026-05-22 10:38:48.933999
+1c03ec8f-51fa-4bf4-b9d0-a3ad4eb534ff	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	7dc816a9-7270-4eaf-8e15-de21dc4ef2ad	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "eeb8ca78-0383-4822-9f29-00f15c6604e9", "quantite_delta": -55}	2026-05-22 10:57:22.660993	2026-05-22 10:57:22.660993
+1cdea394-0d99-45e7-aae7-bbd00644f918	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	2d86866c-83d8-4d56-9956-a7d337ec073f	\N	{"type": "SORTIE", "raison": "Purge IN_TRANSIT lors du retour de répartition", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "85574d94-41e7-48f1-80c0-107a0da08806", "quantite_delta": -25}	2026-05-22 10:58:20.473701	2026-05-22 10:58:20.473701
+080eeec1-2a23-46c8-8ccf-3fac2358074b	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	8ed9e668-4a03-44ec-9abb-c4fd650afaa3	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "85574d94-41e7-48f1-80c0-107a0da08806", "quantite_delta": 25}	2026-05-22 10:58:20.473701	2026-05-22 10:58:20.473701
+8d507d53-e907-45ed-9942-033da24d0f6f	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	c023aa0a-c597-4ed1-ba22-49f4e04c1d32	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "d94096f9-8387-4dc8-97f7-b2548f7da022", "quantite_delta": -55}	2026-05-22 10:58:20.505842	2026-05-22 10:58:20.505842
+1cd12770-9ef7-4af0-bf09-f0578b02b756	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	543514e2-b514-4326-b346-c705e43c1c17	\N	{"type": "SORTIE", "raison": "Purge IN_TRANSIT lors du retour de répartition", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "55a2115a-52ea-413f-b81c-66da3aa450c1", "quantite_delta": -25}	2026-05-22 10:58:46.765189	2026-05-22 10:58:46.765189
+41bf8fc1-d57b-4e9f-8975-4bad407f431e	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	968fe1b3-017b-4ad7-bbe4-dc59922f2e01	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "55a2115a-52ea-413f-b81c-66da3aa450c1", "quantite_delta": 25}	2026-05-22 10:58:46.765189	2026-05-22 10:58:46.765189
+5ad3678d-7131-444c-a74b-41878cd5f765	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	c766f99a-369a-460b-a160-81d20bbb826e	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "4a109978-3009-4dd0-9cf4-9fdc6bce2ff5", "quantite_delta": -35}	2026-05-22 11:01:14.142574	2026-05-22 11:01:14.142574
+cb98907b-997c-48d8-93a9-bc04bc11c32b	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	6b20f7f9-0f65-4b4f-a65b-722f63e43008	\N	{"type": "SORTIE", "raison": "Purge IN_TRANSIT lors du retour de répartition", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "974b9cbc-1fcd-4bf7-9f66-a4357a09b7ca", "quantite_delta": -20}	2026-05-22 11:01:46.940654	2026-05-22 11:01:46.940654
+9da34b16-502d-4bc8-a628-966b0951460b	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	303f6a6a-024d-4411-a2ad-b7a40693efd8	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "974b9cbc-1fcd-4bf7-9f66-a4357a09b7ca", "quantite_delta": 20}	2026-05-22 11:01:46.940654	2026-05-22 11:01:46.940654
+f39dab29-c2e4-4e7d-a550-49f521d69069	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	028c0569-08ac-4f91-a984-16a6fde5dcae	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "b660928b-87b8-4689-ab2d-e8255a436db8", "quantite_delta": -35}	2026-05-22 11:01:46.97954	2026-05-22 11:01:46.97954
+b4ff15a9-40a7-424b-b3df-f93d5175fe60	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	5f758d1b-114d-4f98-a6ac-bf716057681c	\N	{"type": "SORTIE", "raison": "Purge IN_TRANSIT lors du retour de répartition", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "97e765a9-6c61-4866-a44e-022058c960ed", "quantite_delta": -20}	2026-05-22 11:02:35.26866	2026-05-22 11:02:35.26866
+3987ad31-5865-4608-a07a-e904f4ca8201	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	2982046b-0c4f-4f21-9203-f10ecd81ad4e	\N	{"type": "RETOUR", "raison": "Retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "97e765a9-6c61-4866-a44e-022058c960ed", "quantite_delta": 20}	2026-05-22 11:02:35.26866	2026-05-22 11:02:35.26866
+e236b19c-b86f-48dd-b697-1b6a0d44355d	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	a2129f95-1914-42a3-aa4f-4eb9e35a256b	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "60078d73-e860-482c-936e-1de5a6bc7016", "quantite_delta": -30}	2026-05-22 11:33:10.097277	2026-05-22 11:33:10.097277
+9b369a06-4178-4b67-b52a-48afb8e109b3	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	095a1f39-c95e-4d31-bc33-cd8643f2c625	\N	{"type": "RETOUR", "raison": "Rapatriement retour INVENDU", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "0bdc44e8-d714-4976-a013-6ce3dcce7c05", "quantite_delta": 15}	2026-05-22 11:34:46.627074	2026-05-22 11:34:46.627074
+8a760f15-d4ac-4805-8f62-18302748e23a	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	657f679e-4271-4eb4-80fa-58b16cefad03	\N	{"type": "ENTREE", "raison": "Arrivée retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "0bdc44e8-d714-4976-a013-6ce3dcce7c05", "quantite_delta": 15}	2026-05-22 11:34:46.627074	2026-05-22 11:34:46.627074
+761efb8d-e88b-4e3b-822b-c4228be216e0	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	701e183c-4e11-4ac7-9d98-9718c88168c8	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "b577d44b-6a1a-4aa7-abd0-2dc52488afd7", "quantite_delta": -30}	2026-05-22 11:34:46.665531	2026-05-22 11:34:46.665531
+0815612e-455f-43ab-8689-8238172d5c71	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	a53c4523-dedf-46ba-9682-575e30bc76df	\N	{"type": "RETOUR", "raison": "Rapatriement retour INVENDU", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "35824fb2-b8aa-46f1-b195-881cd1860398", "quantite_delta": 15}	2026-05-22 11:35:19.524608	2026-05-22 11:35:19.524608
+6cbeb588-fc37-4e0b-9645-c7f9cdad171f	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	0c7f0fa8-3b42-42dc-bddb-e43b8468cc08	\N	{"type": "ENTREE", "raison": "Arrivée retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "35824fb2-b8aa-46f1-b195-881cd1860398", "quantite_delta": 15}	2026-05-22 11:35:19.524608	2026-05-22 11:35:19.524608
+2a580df4-7a9e-425f-9f80-d7b4b9f6eae3	\N	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	4de6f808-29c3-4ddb-9ae6-db610f7e86ae	\N	{"type": "SORTIE", "raison": "Repartition équipe", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "5bc59df8-9267-4ca8-8f13-6ef8f4a54354", "quantite_delta": -50}	2026-05-22 11:46:11.965691	2026-05-22 11:46:11.965691
+04a121f7-c784-4598-a46b-7b48b1a15297	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	4cf9eb76-4bc2-41c1-ad23-6bd90cc62e00	\N	{"type": "RETOUR", "raison": "Rapatriement retour INVENDU", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "ba5be9ef-7536-49b7-a9b0-5b3ffb341de7", "quantite_delta": 25}	2026-05-22 11:47:10.147429	2026-05-22 11:47:10.147429
+6bee1965-da99-4ec1-ad49-e7e1449b179b	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	9db75758-89eb-4351-89ae-60bb0d54a3ae	\N	{"type": "ENTREE", "raison": "Arrivée retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "ba5be9ef-7536-49b7-a9b0-5b3ffb341de7", "quantite_delta": 25}	2026-05-22 11:47:10.147429	2026-05-22 11:47:10.147429
+b7a45eb9-1d80-4ff4-a811-a44e67b3501f	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_SORTIE	STOCK_MOUVEMENT	9554e621-67a7-4ee8-83e6-167f97da72ff	\N	{"type": "SORTIE", "raison": "Clôture répartition : purge transit", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "12dbbe48-cd1f-4dfd-adac-f0c286280c91", "quantite_delta": -50}	2026-05-22 11:47:10.229725	2026-05-22 11:47:10.229725
+5164783b-715a-437b-9f6c-6e72b41a3d41	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_RETOUR	STOCK_MOUVEMENT	be472eac-2456-4a24-a84f-30b22f401960	\N	{"type": "RETOUR", "raison": "Rapatriement retour INVENDU", "location": "IN_TRANSIT", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "225ccdd0-f433-4669-b41e-1583d3141932", "quantite_delta": 25}	2026-05-22 11:47:42.447615	2026-05-22 11:47:42.447615
+1e9af88c-5e03-4e9f-9ecc-d78f1d88d562	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	fc1f50f8-a6ab-4c3b-9486-d4274b7437c6	\N	{"type": "ENTREE", "raison": "Arrivée retour INVENDU", "location": "WAREHOUSE", "produit_id": "f547b468-aee0-4109-acde-7ebb93d207d8", "reference_id": "225ccdd0-f433-4669-b41e-1583d3141932", "quantite_delta": 25}	2026-05-22 11:47:42.447615	2026-05-22 11:47:42.447615
+6d34ea7e-6e30-4958-ae76-542d8717b345	78a24f11-9714-4014-ae40-f38318fef119	MOUVEMENT_STOCK_ENTREE	STOCK_MOUVEMENT	9b4e3aed-8a9b-42a5-b4d5-dc48383f1792	\N	{"type": "ENTREE", "raison": "Approvisionnement - PRODUCTION", "location": "WAREHOUSE", "produit_id": "dc44ba05-b72e-40b1-b83c-11ac6a9bbe8a", "reference_id": "a056b9bb-23f1-46c1-a61a-9ab2cb1dd7ce", "quantite_delta": 100}	2026-05-22 11:51:10.947675	2026-05-22 11:51:10.947675
 \.
 
 
@@ -2163,10 +2296,11 @@ ab845788-0800-489a-9129-9be7e29d7c55	CAISSE_VALIDER	Valider la caisse	Caisse	PEN
 COPY public.produits (produit_id, categorie_produit_id, type_produit_id, nom, code_sku, prix_unitaire, stock_minimum, est_actif, date_mise_a_jour, description, sync_status, version, deleted_at, created_at, updated_at, date_creation) FROM stdin;
 857f7c59-4ff6-45af-81fc-81d534af18de	357241c2-6e79-4952-b103-50e1b52b3f96	187835d8-22a6-4a08-bb6e-e93d2a334147	Vin SEMULIKI-13	VIN-SEM-13	1200.00	1500	t	2026-04-15 05:44:56.894016	13% Alc.\nAphrodisiaque	PENDING	1	\N	2026-05-07 12:43:15.300845	2026-05-07 12:43:15.300845	2026-05-13 22:55:51.454719
 03dc330a-6da1-41ca-86ba-60945244182a	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI-20	VIN-SEM-20	1000.00	2000	t	2026-04-15 05:44:42.449737	20% Alc.\nApperitif	PENDING	1	\N	2026-05-07 12:43:15.300845	2026-05-07 12:43:15.300845	2026-05-13 22:55:51.454719
-f547b468-aee0-4109-acde-7ebb93d207d8	53cd8cb8-c163-43a4-8864-5ea57153dbad	372480eb-993e-4ac0-862f-39466beb1863	Eau Semuliki	EAU-SEM	0.50	10	t	2026-05-05 17:16:19.050505	Eau minerale Semuliki	PENDING	1	\N	2026-05-07 12:43:15.300845	2026-05-07 12:43:15.300845	2026-05-13 22:55:51.454719
 6f7b704d-99c4-4837-a04b-be52c27f33d9	357241c2-6e79-4952-b103-50e1b52b3f96	372480eb-993e-4ac0-862f-39466beb1863	Vin SEMULIKI	VIN-SEM	1200.00	50	f	2026-04-14 18:09:32.24038	13% Alc.\nAphrodisiaque	PENDING	2	2026-05-13 20:51:40.878366	2026-05-07 12:43:15.300845	2026-05-13 20:51:40.878366	2026-05-13 22:55:51.454719
 5058c2e2-506f-42bf-aa45-9105b435f4dc	31fbd8a3-ed3e-4f76-939a-fffd58fda88f	372480eb-993e-4ac0-862f-39466beb1863	Chapeau	CHP	12.00	10	f	2026-04-21 12:32:13.769856	Couleur:\nBlanc\nNoir\nRouge	PENDING	2	2026-05-13 20:51:46.057959	2026-05-07 12:43:15.300845	2026-05-13 20:51:46.057959	2026-05-13 22:55:51.454719
-33459426-c441-4526-910c-4e2c1d38bb7a	31fbd8a3-ed3e-4f76-939a-fffd58fda88f	187835d8-22a6-4a08-bb6e-e93d2a334147	Chapeau	CHU	0.01	10	t	2026-05-13 20:56:09.862	Chapeau SEMULIKI pour agents	PENDING	1	\N	2026-05-13 20:56:09.863248	2026-05-13 20:56:09.863248	2026-05-13 20:56:09.862
+f547b468-aee0-4109-acde-7ebb93d207d8	53cd8cb8-c163-43a4-8864-5ea57153dbad	187835d8-22a6-4a08-bb6e-e93d2a334147	Eau Semuliki	EAU-SEM	1.50	10	t	2026-05-21 19:01:23.626	Eau minerale Semuliki	PENDING	2	\N	2026-05-07 12:43:15.300845	2026-05-21 19:01:23.626905	2026-05-13 22:55:51.454719
+33459426-c441-4526-910c-4e2c1d38bb7a	31fbd8a3-ed3e-4f76-939a-fffd58fda88f	187835d8-22a6-4a08-bb6e-e93d2a334147	Chapeau	CHU	0.01	10	t	2026-05-13 20:56:09.862	Chapeau SEMULIKI pour agents	PENDING	2	2026-05-22 06:27:55.848815	2026-05-13 20:56:09.863248	2026-05-22 06:27:55.848815	2026-05-13 20:56:09.862
+dc44ba05-b72e-40b1-b83c-11ac6a9bbe8a	31fbd8a3-ed3e-4f76-939a-fffd58fda88f	187835d8-22a6-4a08-bb6e-e93d2a334147	test	TST	100.00	10	t	2026-05-22 11:50:45.79		PENDING	1	\N	2026-05-22 11:50:45.790229	2026-05-22 11:50:45.790229	2026-05-22 11:50:45.79
 \.
 
 
@@ -2215,6 +2349,19 @@ a06967d2-05c4-4339-a6a0-40af47736438	5071bf90-d610-404f-a14f-6364881c3f53	\N	202
 8168ad3d-a153-4312-ad12-fcd68f2aa3ac	20d5464d-478c-4b45-b717-fee8e4be07a9	\N	2026-05-05 17:20:16.017529	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-07 12:49:13.339664
 21a06091-425a-496c-8ee0-980b621551d0	bbdca2ec-e5ee-4143-9ac5-992126fc94ce	\N	2026-05-12 11:52:13.940742	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-12 11:52:13.940742
 426525dd-80a2-4eaf-9281-23deb517c37d	0a16c20e-220d-4642-a514-e242fe533775	\N	2026-05-13 14:50:03.207885	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-13 14:50:03.207885
+acdfa1b6-3f3b-46ac-9801-697b64a5c283	08195626-23d1-4283-af87-c0dae9148552	\N	2026-05-21 18:57:26.193302	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-21 18:57:26.193302
+f52bf6a9-fc21-4a1b-b5a1-42710f82d1b4	be935cdf-5063-42d0-83c3-2dd125e4beee	\N	2026-05-21 18:57:35.160963	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-21 18:57:35.160963
+ef871a87-35b9-4886-9bde-d8d2e72df2a3	380467b1-70dd-4388-a393-4e8e213e724e	\N	2026-05-22 06:10:59.605708	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 06:10:59.605708
+e1a2ae7d-209d-4f13-b13b-6b4a4a0b0978	f7b9b0ae-312f-4df0-b5f0-505eb1849e85	\N	2026-05-22 06:11:05.367519	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 06:11:05.367519
+d9118d7d-6873-44da-87d0-0c27a4663e3a	26eb868d-380b-4a9d-8ff8-fb0adc624c68	\N	2026-05-22 06:23:02.175098	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 06:23:02.175098
+7c3fd48b-6077-4edc-8dc0-231e8bc8e8fa	d7dad7cb-09ac-45ce-ab7e-ad9d1a88b6b8	\N	2026-05-22 06:24:08.837073	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 06:24:08.837073
+58b70b89-72d0-4544-a475-318f07e4539f	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	\N	2026-05-22 10:28:06.608594	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 10:28:06.608594
+5485a821-40d9-4330-9d11-6770e51b59fa	d94096f9-8387-4dc8-97f7-b2548f7da022	\N	2026-05-22 10:58:20.551082	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 10:58:20.551082
+f7feb573-2717-4dfb-964a-939f3baed87e	b660928b-87b8-4689-ab2d-e8255a436db8	\N	2026-05-22 11:01:46.987358	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 11:01:46.987358
+145e3c57-7a31-4373-90fe-46b28a0f4afc	b577d44b-6a1a-4aa7-abd0-2dc52488afd7	\N	2026-05-22 11:34:46.67397	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 11:34:46.67397
+55240f73-8c6f-4d9c-aea2-9c9908b37187	12dbbe48-cd1f-4dfd-adac-f0c286280c91	\N	2026-05-22 11:47:10.262999	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 11:47:10.262999
+eaf8dfc5-b10f-4f76-a121-e399528e2d78	f60ffc3d-9375-48d0-994f-de66d5762bae	\N	2026-05-22 11:54:37.19518	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-22 11:54:37.19518
+1e3350a3-0da8-4dcf-ac7d-44efff1c8259	3197ad04-325b-4b7e-a560-68f6869384b5	\N	2026-05-23 08:56:54.893648	e0059987-5a9f-44bd-b806-18434792491d	936c875a-f441-410d-9098-98531a60c073	\N	2026-05-23 08:56:54.893648
 \.
 
 
@@ -2236,13 +2383,27 @@ f7e5acf1-0475-4ff2-8041-1aa6a9e0a08a	9a66d049-23a2-4db6-a271-10db9cc28ec0	4465ed
 e8a75968-4626-4769-b5f6-2a5200aa7663	9a66d049-23a2-4db6-a271-10db9cc28ec0	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-04	60000.00	2026-05-04 07:56:09.802	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
 1aa032bf-704f-4d1e-ac0b-5c2553129ebc	5fa8cb53-b61e-4be1-8c8e-2a45fd2072d8	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-04	60000.00	2026-05-04 17:57:43.38	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
 9571c0a8-b3ca-4698-b334-dbefbc474511	614554c2-9d3d-4165-8092-10b1fe4cc816	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-04	42000.00	2026-05-04 10:56:33.982	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
+08195626-23d1-4283-af87-c0dae9148552	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-16	0.00	2026-05-16 08:27:54.498	\N	f	t	PENDING	3	\N	2026-05-16 08:27:54.497915	2026-05-21 18:57:26.193302
 b6447295-d74c-4010-80cd-885e6c40021a	923a217f-6939-49ab-b54a-c25844713d88	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-04	60000.00	2026-05-04 11:06:46.739	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
 85875f9b-3b0f-42a4-80ac-5cc89f36357b	5fa8cb53-b61e-4be1-8c8e-2a45fd2072d8	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-04	60000.00	2026-05-04 18:06:48.627	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
 2e46ff74-a9f5-4842-894c-c4331f221242	923a217f-6939-49ab-b54a-c25844713d88	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-04	60000.00	2026-05-04 11:24:30.661	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
+be935cdf-5063-42d0-83c3-2dd125e4beee	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-18	0.00	2026-05-18 05:26:55.785	\N	f	t	PENDING	3	\N	2026-05-18 05:26:55.785087	2026-05-21 18:57:35.160963
 c007eff7-e557-4369-a534-ca3b01652221	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-04	50000.00	2026-05-04 18:09:57.104	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
+d94096f9-8387-4dc8-97f7-b2548f7da022	9a66d049-23a2-4db6-a271-10db9cc28ec0	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-22	75.00	2026-05-22 10:57:22.635	\N	f	t	PENDING	4	\N	2026-05-22 10:57:22.635294	2026-05-22 10:58:20.551082
 5071bf90-d610-404f-a14f-6364881c3f53	9a66d049-23a2-4db6-a271-10db9cc28ec0	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-05	90000.00	2026-05-05 11:46:13.401	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
+380467b1-70dd-4388-a393-4e8e213e724e	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-21	0.00	2026-05-21 19:05:12.288	\N	f	t	PENDING	3	\N	2026-05-21 19:05:12.288122	2026-05-22 06:10:59.605708
 20d5464d-478c-4b45-b717-fee8e4be07a9	9a66d049-23a2-4db6-a271-10db9cc28ec0	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-05	46825.00	2026-05-05 17:18:25.298	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	1	\N	2026-05-07 12:51:04.077872	2026-05-07 12:51:04.077872
+f7b9b0ae-312f-4df0-b5f0-505eb1849e85	614554c2-9d3d-4165-8092-10b1fe4cc816	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-21	0.00	2026-05-21 19:10:31.399	\N	f	t	PENDING	3	\N	2026-05-21 19:10:31.399101	2026-05-22 06:11:05.367519
 bbdca2ec-e5ee-4143-9ac5-992126fc94ce	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-12	10.00	2026-05-12 08:43:59.922	78a24f11-9714-4014-ae40-f38318fef119	f	t	PENDING	4	\N	2026-05-12 08:43:59.92225	2026-05-12 11:52:13.940742
+3197ad04-325b-4b7e-a560-68f6869384b5	5fa8cb53-b61e-4be1-8c8e-2a45fd2072d8	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-22	0.00	2026-05-22 11:54:57.994	\N	f	t	PENDING	3	\N	2026-05-22 11:54:57.994216	2026-05-23 08:56:54.893648
+b660928b-87b8-4689-ab2d-e8255a436db8	9a66d049-23a2-4db6-a271-10db9cc28ec0	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-22	45.00	2026-05-22 11:01:14.129	\N	f	t	PENDING	4	\N	2026-05-22 11:01:14.129486	2026-05-22 11:01:46.987358
+26eb868d-380b-4a9d-8ff8-fb0adc624c68	614554c2-9d3d-4165-8092-10b1fe4cc816	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-22	20000.00	2026-05-22 06:18:09.295	\N	f	t	PENDING	4	\N	2026-05-22 06:18:09.294569	2026-05-22 06:23:02.175098
+d7dad7cb-09ac-45ce-ab7e-ad9d1a88b6b8	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-22	0.00	2026-05-22 06:11:27.155	\N	f	t	PENDING	3	\N	2026-05-22 06:11:27.154833	2026-05-22 06:24:08.837073
+4e313299-eb04-43f8-8183-3528e81d1765	9a66d049-23a2-4db6-a271-10db9cc28ec0	1359e5dd-e4e2-4289-8881-f8f81f229199	e0059987-5a9f-44bd-b806-18434792491d	2026-05-23	0.00	2026-05-23 08:57:14.562966	\N	f	f	PENDING	1	\N	2026-05-23 08:57:14.562966	2026-05-23 08:57:14.562966
+b577d44b-6a1a-4aa7-abd0-2dc52488afd7	614554c2-9d3d-4165-8092-10b1fe4cc816	99c124c9-2e02-40ba-a792-7494bc094fc3	936c875a-f441-410d-9098-98531a60c073	2026-05-22	37.50	2026-05-22 11:33:10.077	\N	f	t	PENDING	4	\N	2026-05-22 11:33:10.077213	2026-05-22 11:34:46.67397
+4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	614554c2-9d3d-4165-8092-10b1fe4cc816	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-22	44030.00	2026-05-22 10:26:37.52	\N	f	t	PENDING	6	\N	2026-05-22 10:26:37.520477	2026-05-22 10:28:06.608594
+12dbbe48-cd1f-4dfd-adac-f0c286280c91	5fa8cb53-b61e-4be1-8c8e-2a45fd2072d8	1359e5dd-e4e2-4289-8881-f8f81f229199	936c875a-f441-410d-9098-98531a60c073	2026-05-22	67.50	2026-05-22 11:46:11.94	\N	f	t	PENDING	4	\N	2026-05-22 11:46:11.939786	2026-05-22 11:47:10.262999
+f60ffc3d-9375-48d0-994f-de66d5762bae	5fa8cb53-b61e-4be1-8c8e-2a45fd2072d8	4465ed8d-443d-4ac2-a13f-468a885367d0	936c875a-f441-410d-9098-98531a60c073	2026-05-22	0.00	2026-05-22 11:51:51.965	\N	f	t	PENDING	3	\N	2026-05-22 11:51:51.965276	2026-05-22 11:54:37.19518
 \.
 
 
@@ -2266,6 +2427,22 @@ d455d0c8-c14f-4034-aaf6-5052206df4fa	857f7c59-4ff6-45af-81fc-81d534af18de	18	9cd
 2586205a-d29e-493d-8cdd-a7ad1e957e66	f547b468-aee0-4109-acde-7ebb93d207d8	18	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-12 11:52:13.908169	bbdca2ec-e5ee-4143-9ac5-992126fc94ce	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-12 11:52:13.908169	PENDING	1	\N	2026-05-12 11:52:13.908169	2026-05-12 11:52:13.908169
 359100df-be9e-4da4-8469-03a344196975	03dc330a-6da1-41ca-86ba-60945244182a	10	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-13 14:50:03.139295	0a16c20e-220d-4642-a514-e242fe533775	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-13 14:50:03.139295	PENDING	1	\N	2026-05-13 14:50:03.139295	2026-05-13 14:50:03.139295
 3be91456-c77a-481d-a002-2d805d293c53	857f7c59-4ff6-45af-81fc-81d534af18de	10	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-13 14:50:03.185084	0a16c20e-220d-4642-a514-e242fe533775	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-13 14:50:03.185084	PENDING	1	\N	2026-05-13 14:50:03.185084	2026-05-13 14:50:03.185084
+82ef6f87-c951-4101-a7e6-3bd6b48eb170	03dc330a-6da1-41ca-86ba-60945244182a	7	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 06:23:02.101	26eb868d-380b-4a9d-8ff8-fb0adc624c68	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 06:23:02.101	PENDING	1	\N	2026-05-22 06:23:02.101	2026-05-22 06:23:02.101
+f0d96b28-5569-431b-a522-d61c3a786ff0	03dc330a-6da1-41ca-86ba-60945244182a	12	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 07:20:16.261	c5bcbf38-8256-4aba-9af5-06a8f1bc82a4		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 07:20:16.261	PENDING	1	\N	2026-05-22 07:20:16.261	2026-05-22 07:20:16.261
+ca676ca3-4117-430d-9471-9b3215731aea	03dc330a-6da1-41ca-86ba-60945244182a	12	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 07:20:58.604	c5bcbf38-8256-4aba-9af5-06a8f1bc82a4		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 07:20:58.604	PENDING	1	\N	2026-05-22 07:20:58.604	2026-05-22 07:20:58.604
+aa023695-0807-46ac-bbbb-1bc02f8ec042	03dc330a-6da1-41ca-86ba-60945244182a	12	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 07:22:36.264	c5bcbf38-8256-4aba-9af5-06a8f1bc82a4		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 07:22:36.264	PENDING	1	\N	2026-05-22 07:22:36.264	2026-05-22 07:22:36.264
+6879e651-4c2c-4f48-a042-2cdc64c6665f	03dc330a-6da1-41ca-86ba-60945244182a	10	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:28:06.518	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:28:06.518	PENDING	1	\N	2026-05-22 10:28:06.518	2026-05-22 10:28:06.518
+52e808e3-476c-4170-9bc3-da46e3962406	857f7c59-4ff6-45af-81fc-81d534af18de	10	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:28:06.563	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:28:06.563	PENDING	1	\N	2026-05-22 10:28:06.563	2026-05-22 10:28:06.563
+7d1a6e72-85cd-45e0-a8a7-7e650f199da6	f547b468-aee0-4109-acde-7ebb93d207d8	7	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:28:06.585	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:28:06.585	PENDING	1	\N	2026-05-22 10:28:06.585	2026-05-22 10:28:06.585
+603e688c-b835-4d1a-aaba-a73d2729d6a4	03dc330a-6da1-41ca-86ba-60945244182a	10	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:38:48.933	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:38:48.934	PENDING	1	\N	2026-05-22 10:38:48.934	2026-05-22 10:38:48.934
+85574d94-41e7-48f1-80c0-107a0da08806	f547b468-aee0-4109-acde-7ebb93d207d8	25	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:58:20.473	d94096f9-8387-4dc8-97f7-b2548f7da022	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:58:20.473	PENDING	1	\N	2026-05-22 10:58:20.473	2026-05-22 10:58:20.473
+55a2115a-52ea-413f-b81c-66da3aa450c1	f547b468-aee0-4109-acde-7ebb93d207d8	25	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 10:58:46.765	d94096f9-8387-4dc8-97f7-b2548f7da022		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 10:58:46.765	PENDING	1	\N	2026-05-22 10:58:46.765	2026-05-22 10:58:46.765
+974b9cbc-1fcd-4bf7-9f66-a4357a09b7ca	f547b468-aee0-4109-acde-7ebb93d207d8	20	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:01:46.94	b660928b-87b8-4689-ab2d-e8255a436db8	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:01:46.94	PENDING	1	\N	2026-05-22 11:01:46.94	2026-05-22 11:01:46.94
+97e765a9-6c61-4866-a44e-022058c960ed	f547b468-aee0-4109-acde-7ebb93d207d8	20	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:02:35.268	b660928b-87b8-4689-ab2d-e8255a436db8		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:02:35.268	PENDING	1	\N	2026-05-22 11:02:35.268	2026-05-22 11:02:35.268
+0bdc44e8-d714-4976-a013-6ce3dcce7c05	f547b468-aee0-4109-acde-7ebb93d207d8	15	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:34:46.627	b577d44b-6a1a-4aa7-abd0-2dc52488afd7	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:34:46.627	PENDING	1	\N	2026-05-22 11:34:46.627	2026-05-22 11:34:46.627
+35824fb2-b8aa-46f1-b195-881cd1860398	f547b468-aee0-4109-acde-7ebb93d207d8	15	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:35:19.524	b577d44b-6a1a-4aa7-abd0-2dc52488afd7		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:35:19.524	PENDING	1	\N	2026-05-22 11:35:19.524	2026-05-22 11:35:19.524
+ba5be9ef-7536-49b7-a9b0-5b3ffb341de7	f547b468-aee0-4109-acde-7ebb93d207d8	25	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:47:10.147	12dbbe48-cd1f-4dfd-adac-f0c286280c91	Retour invendus répartition	78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:47:10.147	PENDING	1	\N	2026-05-22 11:47:10.147	2026-05-22 11:47:10.147
+225ccdd0-f433-4669-b41e-1583d3141932	f547b468-aee0-4109-acde-7ebb93d207d8	25	9cd4e12b-4938-48c9-8e62-1c4f892410d8	2026-05-22 11:47:42.447	12dbbe48-cd1f-4dfd-adac-f0c286280c91		78a24f11-9714-4014-ae40-f38318fef119	\N	EN_ATTENTE	2026-05-22 11:47:42.447	PENDING	1	\N	2026-05-22 11:47:42.447	2026-05-22 11:47:42.447
 \.
 
 
@@ -2444,6 +2621,52 @@ f7edef20-2d5c-41f5-8247-10836d9e18f5	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE
 06e099f6-baff-442e-987e-b937fdbfeea6	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-25	0a16c20e-220d-4642-a514-e242fe533775	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-13 14:50:03.174026	2026-05-13 14:50:03.174026	\N	PENDING	1	\N	f	\N	\N
 e6034348-44f1-41aa-8074-2fa43b345d50	857f7c59-4ff6-45af-81fc-81d534af18de	RETOUR	10	3be91456-c77a-481d-a002-2d805d293c53	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-13 14:50:03.185084	2026-05-13 14:50:03.185084	\N	PENDING	1	\N	f	\N	\N
 f7e9c2a8-3332-491e-86e5-ae9501f7b2dd	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE	-25	0a16c20e-220d-4642-a514-e242fe533775	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-13 14:50:03.196028	2026-05-13 14:50:03.196028	\N	PENDING	1	\N	f	\N	\N
+90b73084-64af-4e21-9f36-8b54c45a8805	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	500	86858a9e-b5da-4004-be05-ff066be9e6e7	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement - PRODUCTION	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-05-15 07:52:38.232859	2026-05-15 07:52:38.232859	\N	PENDING	1	\N	f	\N	\N
+6d0a453c-0c4b-44b1-9dd1-d5924bc2372d	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	5000	0d42db4e-f79b-4fd0-99e0-2dbe46b06246	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement - PRODUCTION	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-05-15 07:53:05.746976	2026-05-15 07:53:05.746976	\N	PENDING	1	\N	f	\N	\N
+d816ae37-4cd1-4822-9ff2-083405b47222	857f7c59-4ff6-45af-81fc-81d534af18de	ENTREE	1000	0c7a1444-a662-467f-933f-db717e79291e	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement - PRODUCTION	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-05-20 10:00:38.840165	2026-05-20 10:00:38.840165	\N	PENDING	1	\N	f	\N	\N
+2c97096b-ce2e-4b0d-98f8-8f8ac6e0ed1a	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-24	669ab353-3643-4469-a590-617fa255ff95	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 06:11:27.183852	2026-05-22 06:11:27.183852	\N	PENDING	1	\N	f	\N	\N
+55650eac-0bd9-4a88-adaf-9f19a7f31fb8	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-25	dcb12704-a43a-42b7-8a41-f2d35a749675	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 06:21:49.504563	2026-05-22 06:21:49.504563	\N	PENDING	1	\N	f	\N	\N
+53dd36fc-1667-4d3d-92ea-082c12bebefe	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	7	82ef6f87-c951-4101-a7e6-3bd6b48eb170	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 06:23:02.102084	2026-05-22 06:23:02.102084	\N	PENDING	1	\N	f	\N	\N
+2d44a42a-22b4-48e2-9f56-7617f628510a	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-25	26eb868d-380b-4a9d-8ff8-fb0adc624c68	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 06:23:02.162282	2026-05-22 06:23:02.162282	\N	PENDING	1	\N	f	\N	\N
+d69ba9cc-4c1b-4a99-8978-9e9b8158d7d2	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-24	d7dad7cb-09ac-45ce-ab7e-ad9d1a88b6b8	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 06:24:08.808796	2026-05-22 06:24:08.808796	\N	PENDING	1	\N	f	\N	\N
+3652f551-9309-4069-b07c-555df07daf4b	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	12	f0d96b28-5569-431b-a522-d61c3a786ff0	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 07:20:16.261333	2026-05-22 07:20:16.261333	\N	PENDING	1	\N	f	\N	\N
+073e37dc-46a8-4be2-8104-875526839a62	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	12	ca676ca3-4117-430d-9471-9b3215731aea	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 07:20:58.604691	2026-05-22 07:20:58.604691	\N	PENDING	1	\N	f	\N	\N
+70479992-1283-43b6-821b-4a81f592d9f2	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	12	aa023695-0807-46ac-bbbb-1bc02f8ec042	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 07:22:36.264782	2026-05-22 07:22:36.264782	\N	PENDING	1	\N	f	\N	\N
+7472af47-0c10-47e0-9dbb-586c9754c863	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-25	2aac8375-b6ac-4ad4-9dc8-441728d65e15	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 10:26:37.553405	2026-05-22 10:26:37.553405	\N	PENDING	1	\N	f	\N	\N
+689ca846-ab77-48bc-9066-5786fbdc26ef	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE	-25	7d7b9752-ced6-4b5d-aa74-ffc556a0abbc	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 10:26:37.576037	2026-05-22 10:26:37.576037	\N	PENDING	1	\N	f	\N	\N
+9784a895-ce34-4a81-8637-e197092b04a6	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-25	a6a76322-f970-45bd-a56a-710c7bb52ea8	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 10:26:37.587169	2026-05-22 10:26:37.587169	\N	PENDING	1	\N	f	\N	\N
+eb84612c-02fa-48ea-9979-77898db0e9cc	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	10	6879e651-4c2c-4f48-a042-2cdc64c6665f	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 10:28:06.518142	2026-05-22 10:28:06.518142	\N	PENDING	1	\N	f	\N	\N
+e29b2874-aec4-46cd-924c-34a0f3bf8e4d	03dc330a-6da1-41ca-86ba-60945244182a	SORTIE	-25	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 10:28:06.552259	2026-05-22 10:28:06.552259	\N	PENDING	1	\N	f	\N	\N
+60dba8ca-9f3a-49be-ba7b-d2ba6dd7045a	857f7c59-4ff6-45af-81fc-81d534af18de	RETOUR	10	52e808e3-476c-4170-9bc3-da46e3962406	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 10:28:06.563549	2026-05-22 10:28:06.563549	\N	PENDING	1	\N	f	\N	\N
+3337befd-711b-458b-93cf-97efc0462a30	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE	-25	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 10:28:06.574424	2026-05-22 10:28:06.574424	\N	PENDING	1	\N	f	\N	\N
+07848b6a-d916-4a9a-a0ea-8ef1ca3aad1c	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	7	7d1a6e72-85cd-45e0-a8a7-7e650f199da6	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 10:28:06.585676	2026-05-22 10:28:06.585676	\N	PENDING	1	\N	f	\N	\N
+81933be0-4f84-46a9-99d8-aa9fb9ddda03	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-25	4c5d0f47-e3dd-454e-9c50-d3e6c5ce23ab	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 10:28:06.597441	2026-05-22 10:28:06.597441	\N	PENDING	1	\N	f	\N	\N
+f58ce103-fc28-4b17-a5ea-f792c734bfae	03dc330a-6da1-41ca-86ba-60945244182a	RETOUR	10	603e688c-b835-4d1a-aaba-a73d2729d6a4	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 10:38:48.933999	2026-05-22 10:38:48.933999	\N	PENDING	1	\N	f	\N	\N
+7dc816a9-7270-4eaf-8e15-de21dc4ef2ad	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-55	eeb8ca78-0383-4822-9f29-00f15c6604e9	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 10:57:22.660993	2026-05-22 10:57:22.660993	\N	PENDING	1	\N	f	\N	\N
+2d86866c-83d8-4d56-9956-a7d337ec073f	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-25	85574d94-41e7-48f1-80c0-107a0da08806	RETOUR_PURGE_TRANSIT	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Purge IN_TRANSIT lors du retour de répartition	Retour invendus répartition	2026-05-22 10:58:20.473701	2026-05-22 10:58:20.473701	\N	PENDING	1	\N	f	\N	\N
+8ed9e668-4a03-44ec-9abb-c4fd650afaa3	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	25	85574d94-41e7-48f1-80c0-107a0da08806	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 10:58:20.473701	2026-05-22 10:58:20.473701	\N	PENDING	1	\N	f	\N	\N
+c023aa0a-c597-4ed1-ba22-49f4e04c1d32	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-55	d94096f9-8387-4dc8-97f7-b2548f7da022	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 10:58:20.505842	2026-05-22 10:58:20.505842	\N	PENDING	1	\N	f	\N	\N
+543514e2-b514-4326-b346-c705e43c1c17	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-25	55a2115a-52ea-413f-b81c-66da3aa450c1	RETOUR_PURGE_TRANSIT	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Purge IN_TRANSIT lors du retour de répartition		2026-05-22 10:58:46.765189	2026-05-22 10:58:46.765189	\N	PENDING	1	\N	f	\N	\N
+968fe1b3-017b-4ad7-bbe4-dc59922f2e01	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	25	55a2115a-52ea-413f-b81c-66da3aa450c1	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 10:58:46.765189	2026-05-22 10:58:46.765189	\N	PENDING	1	\N	f	\N	\N
+c766f99a-369a-460b-a160-81d20bbb826e	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-35	4a109978-3009-4dd0-9cf4-9fdc6bce2ff5	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 11:01:14.142574	2026-05-22 11:01:14.142574	\N	PENDING	1	\N	f	\N	\N
+6b20f7f9-0f65-4b4f-a65b-722f63e43008	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-20	974b9cbc-1fcd-4bf7-9f66-a4357a09b7ca	RETOUR_PURGE_TRANSIT	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Purge IN_TRANSIT lors du retour de répartition	Retour invendus répartition	2026-05-22 11:01:46.940654	2026-05-22 11:01:46.940654	\N	PENDING	1	\N	f	\N	\N
+303f6a6a-024d-4411-a2ad-b7a40693efd8	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	20	974b9cbc-1fcd-4bf7-9f66-a4357a09b7ca	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU	Retour invendus répartition	2026-05-22 11:01:46.940654	2026-05-22 11:01:46.940654	\N	PENDING	1	\N	f	\N	\N
+028c0569-08ac-4f91-a984-16a6fde5dcae	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-35	b660928b-87b8-4689-ab2d-e8255a436db8	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 11:01:46.97954	2026-05-22 11:01:46.97954	\N	PENDING	1	\N	f	\N	\N
+5f758d1b-114d-4f98-a6ac-bf716057681c	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-20	97e765a9-6c61-4866-a44e-022058c960ed	RETOUR_PURGE_TRANSIT	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Purge IN_TRANSIT lors du retour de répartition		2026-05-22 11:02:35.26866	2026-05-22 11:02:35.26866	\N	PENDING	1	\N	f	\N	\N
+2982046b-0c4f-4f21-9203-f10ecd81ad4e	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	20	97e765a9-6c61-4866-a44e-022058c960ed	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Retour INVENDU		2026-05-22 11:02:35.26866	2026-05-22 11:02:35.26866	\N	PENDING	1	\N	f	\N	\N
+a2129f95-1914-42a3-aa4f-4eb9e35a256b	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-30	60078d73-e860-482c-936e-1de5a6bc7016	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 11:33:10.097277	2026-05-22 11:33:10.097277	\N	PENDING	1	\N	f	\N	\N
+095a1f39-c95e-4d31-bc33-cd8643f2c625	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	15	0bdc44e8-d714-4976-a013-6ce3dcce7c05	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Rapatriement retour INVENDU	Retour invendus répartition	2026-05-22 11:34:46.627074	2026-05-22 11:34:46.627074	\N	PENDING	1	\N	f	\N	\N
+657f679e-4271-4eb4-80fa-58b16cefad03	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	15	0bdc44e8-d714-4976-a013-6ce3dcce7c05	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Arrivée retour INVENDU	Retour invendus répartition	2026-05-22 11:34:46.627074	2026-05-22 11:34:46.627074	\N	PENDING	1	\N	f	\N	\N
+701e183c-4e11-4ac7-9d98-9718c88168c8	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-30	b577d44b-6a1a-4aa7-abd0-2dc52488afd7	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 11:34:46.665531	2026-05-22 11:34:46.665531	\N	PENDING	1	\N	f	\N	\N
+a53c4523-dedf-46ba-9682-575e30bc76df	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	15	35824fb2-b8aa-46f1-b195-881cd1860398	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Rapatriement retour INVENDU		2026-05-22 11:35:19.524608	2026-05-22 11:35:19.524608	\N	PENDING	1	\N	f	\N	\N
+0c7f0fa8-3b42-42dc-bddb-e43b8468cc08	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	15	35824fb2-b8aa-46f1-b195-881cd1860398	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Arrivée retour INVENDU		2026-05-22 11:35:19.524608	2026-05-22 11:35:19.524608	\N	PENDING	1	\N	f	\N	\N
+4de6f808-29c3-4ddb-9ae6-db610f7e86ae	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-50	5bc59df8-9267-4ca8-8f13-6ef8f4a54354	ARTICLE_REPARTITION	\N	IN_TRANSIT	Repartition équipe	\N	2026-05-22 11:46:11.965691	2026-05-22 11:46:11.965691	\N	PENDING	1	\N	f	\N	\N
+4cf9eb76-4bc2-41c1-ad23-6bd90cc62e00	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	25	ba5be9ef-7536-49b7-a9b0-5b3ffb341de7	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Rapatriement retour INVENDU	Retour invendus répartition	2026-05-22 11:47:10.147429	2026-05-22 11:47:10.147429	\N	PENDING	1	\N	f	\N	\N
+9db75758-89eb-4351-89ae-60bb0d54a3ae	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	25	ba5be9ef-7536-49b7-a9b0-5b3ffb341de7	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Arrivée retour INVENDU	Retour invendus répartition	2026-05-22 11:47:10.147429	2026-05-22 11:47:10.147429	\N	PENDING	1	\N	f	\N	\N
+9554e621-67a7-4ee8-83e6-167f97da72ff	f547b468-aee0-4109-acde-7ebb93d207d8	SORTIE	-50	12dbbe48-cd1f-4dfd-adac-f0c286280c91	REPARTITION	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Clôture répartition : purge transit	\N	2026-05-22 11:47:10.229725	2026-05-22 11:47:10.229725	\N	PENDING	1	\N	f	\N	\N
+be472eac-2456-4a24-a84f-30b22f401960	f547b468-aee0-4109-acde-7ebb93d207d8	RETOUR	25	225ccdd0-f433-4669-b41e-1583d3141932	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	IN_TRANSIT	Rapatriement retour INVENDU		2026-05-22 11:47:42.447615	2026-05-22 11:47:42.447615	\N	PENDING	1	\N	f	\N	\N
+fc1f50f8-a6ab-4c3b-9486-d4274b7437c6	f547b468-aee0-4109-acde-7ebb93d207d8	ENTREE	25	225ccdd0-f433-4669-b41e-1583d3141932	RETOUR_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Arrivée retour INVENDU		2026-05-22 11:47:42.447615	2026-05-22 11:47:42.447615	\N	PENDING	1	\N	f	\N	\N
+9b4e3aed-8a9b-42a5-b4d5-dc48383f1792	dc44ba05-b72e-40b1-b83c-11ac6a9bbe8a	ENTREE	100	a056b9bb-23f1-46c1-a61a-9ab2cb1dd7ce	ENTREE_STOCK	78a24f11-9714-4014-ae40-f38318fef119	WAREHOUSE	Approvisionnement - PRODUCTION	Facture: N/A | Lot: N/A | Source: {c656b280-7660-4ebf-b20c-28880d7cd5f7}	2026-05-22 11:51:10.947675	2026-05-22 11:51:10.947675	\N	PENDING	1	\N	f	\N	\N
 \.
 
 
@@ -2452,11 +2675,10 @@ f7e9c2a8-3332-491e-86e5-ae9501f7b2dd	857f7c59-4ff6-45af-81fc-81d534af18de	SORTIE
 --
 
 COPY public.stock_soldes (solde_id, produit_id, quantite_total, quantite_reserve, valeur_stock, prix_moyen, dernier_mouvement_date, updated_at, location_id, location_historique, derniere_location_id, sync_status, version, deleted_at, is_deleted, created_at) FROM stdin;
-c15897c2-6e21-44dd-9d29-58f7298cbe81	5058c2e2-506f-42bf-aa45-9105b435f4dc	100	0	0.00	12.00	2026-04-21 12:43:15.444513	2026-05-04 12:09:38.774611	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	1	\N	f	2026-05-07 12:50:05.292801
-50cdebdd-781b-4700-9f6b-8cdd5a526d6f	6f7b704d-99c4-4837-a04b-be52c27f33d9	0	0	0.00	1200.00	\N	2026-05-04 12:09:38.774611	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	1	\N	f	2026-05-07 12:50:05.292801
-20a266ea-c8c5-40cf-88dd-e6fae3f8ae65	f547b468-aee0-4109-acde-7ebb93d207d8	878	0	0.00	\N	2026-05-12 11:52:13.929132	2026-05-12 11:52:13.929132	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	4	\N	f	2026-05-07 12:50:05.292801
-b78a830c-afc2-47d9-b981-9e9c78d220fb	03dc330a-6da1-41ca-86ba-60945244182a	1056	0	0.00	1000.00	2026-05-13 14:50:03.174026	2026-05-13 14:50:03.174026	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	7	\N	f	2026-05-07 12:50:05.292801
-a18952cf-dfd5-44a8-9bed-3bbe36c7c343	857f7c59-4ff6-45af-81fc-81d534af18de	2773	0	0.00	1200.00	2026-05-13 14:50:03.196028	2026-05-13 14:50:03.196028	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	4	\N	f	2026-05-07 12:50:05.292801
+b78a830c-afc2-47d9-b981-9e9c78d220fb	03dc330a-6da1-41ca-86ba-60945244182a	971	0	0.00	1000.00	2026-05-22 10:38:48.933999	2026-05-22 11:03:19.22525	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	27	\N	f	2026-05-07 12:50:05.292801
+20a266ea-c8c5-40cf-88dd-e6fae3f8ae65	f547b468-aee0-4109-acde-7ebb93d207d8	6155	0	0.00	\N	2026-05-22 11:47:42.447615	2026-05-22 11:47:42.447615	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	41	\N	f	2026-05-07 12:50:05.292801
+a18952cf-dfd5-44a8-9bed-3bbe36c7c343	857f7c59-4ff6-45af-81fc-81d534af18de	3733	0	0.00	1200.00	2026-05-22 10:28:06.574424	2026-05-22 11:03:19.22525	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	16	\N	f	2026-05-07 12:50:05.292801
+5f9b0e79-77f1-438e-9932-9de9e5bcb87f	dc44ba05-b72e-40b1-b83c-11ac6a9bbe8a	100	0	0.00	\N	2026-05-22 11:51:10.947675	2026-05-22 11:51:10.947675	WAREHOUSE	{"RETURNED": 0, "WAREHOUSE": 0, "IN_TRANSIT": 0}	WAREHOUSE	PENDING	1	\N	f	2026-05-22 11:51:10.947675
 \.
 
 
@@ -3318,6 +3540,13 @@ CREATE INDEX idx_ventes_repartition ON public.ventes USING btree (repartition_id
 --
 
 CREATE INDEX idx_ventes_sync_status ON public.ventes USING btree (sync_status) WHERE (sync_status = 'PENDING'::public.sync_state);
+
+
+--
+-- Name: articles_repartition trg_articles_repartition_montant_audit; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_articles_repartition_montant_audit AFTER INSERT OR DELETE OR UPDATE ON public.articles_repartition FOR EACH ROW EXECUTE FUNCTION public.fn_recalculer_montant_attendu();
 
 
 --
@@ -4311,5 +4540,5 @@ REFRESH MATERIALIZED VIEW public.mv_stock_cache;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Ahr17crVdMFvPgWaOsMkSCeppYRfLqg7op5R9dyYgf1k9lAgpKBDIoESRsq0qT7
+\unrestrict UfSVEiRmAom28oRzJ8hxV0mPsjKEaDrIh46ABIfkHUxuMPQAqhcMlAORhiGpKzH
 
