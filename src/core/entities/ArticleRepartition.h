@@ -14,6 +14,7 @@ public:
     };
 
     ArticleRepartition();
+    explicit ArticleRepartition(const QUuid& utilisateurCourant);
     ~ArticleRepartition();
 
     // Core fields

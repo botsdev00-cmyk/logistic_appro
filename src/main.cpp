@@ -140,11 +140,16 @@ int main(int argc, char* argv[])
 
 cleanup:
     // Nettoyage mémoire managers et pointeur d'article si besoin
-    delete g_repartitionMgr; g_repartitionMgr = nullptr;
-    delete g_venteMgr;       g_venteMgr = nullptr;
-    delete g_creditMgr;      g_creditMgr = nullptr;
-    delete g_stockMgr;       g_stockMgr = nullptr;
-    delete art;              art = nullptr;
+    delete g_repartitionMgr;
+    g_repartitionMgr = nullptr;
+    delete g_venteMgr;
+    g_venteMgr = nullptr;
+    delete g_creditMgr;
+    g_creditMgr = nullptr;
+    delete g_stockMgr;
+    g_stockMgr = nullptr;
+    delete art;
+    art = nullptr;
     delete repoRetours;
     delete repoEntrees;
     delete repoSoldes;

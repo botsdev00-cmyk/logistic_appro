@@ -1,4 +1,5 @@
 #include "BoiteDialogRepartition.h"
+#include "utils/globals/globals.h"
 #include "../../data/repositories/RepositoryEquipe.h"
 #include "../../data/repositories/RepositoryProduit.h"
 #include "../../data/repositories/RepositoryArticleRepartition.h"
@@ -207,6 +208,7 @@ void BoiteDialogRepartition::creerRepartition()
     }
 
     // 2. Ensuite, insérer les articles dans la base
+    // 2. Ensuite, insérer les articles dans la base
     RepositoryArticleRepartition repoArtRep;
     bool toutOK = true;
     for (int row = 0; row < m_tableArticles->rowCount(); ++row) {
@@ -215,7 +217,9 @@ void BoiteDialogRepartition::creerRepartition()
         int cadeau = m_tableArticles->item(row, 2)->text().toInt();
         int degust = m_tableArticles->item(row, 3)->text().toInt();
 
-        ArticleRepartition artRep;
+        // 💡 UTILISATION DU CONSTRUCTEUR SURCHARGÉ AVEC L'ID GLOBAL
+        ArticleRepartition artRep(g_utilisateurId);
+
         artRep.setArticleRepartitionId(QUuid::createUuid());
         artRep.setRepartitionId(m_repartitionId);
         artRep.setProduitId(produitId);
@@ -228,12 +232,16 @@ void BoiteDialogRepartition::creerRepartition()
         artRep.setUpdatedAt(QDateTime::currentDateTime());
         artRep.setDeletedAt(QDateTime());
 
+        // Optionnel : Si tu n'utilises pas le constructeur surchargé,
+        // tu peux aussi forcer l'assignation via les setters :
+        // artRep.setCreatedBy(g_utilisateurId);
+        // artRep.setUpdatedBy(g_utilisateurId);
+
         if (!repoArtRep.create(artRep)) {
             toutOK = false;
             QMessageBox::warning(this, "Erreur", QString("Impossible de sauvegarder un article : %1").arg(repoArtRep.getLastError()));
         }
     }
-
     if (toutOK) {
         QMessageBox::information(this, "Succès", "Répartition enregistrée avec succès !");
         accept();
